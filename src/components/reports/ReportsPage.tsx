@@ -1,11 +1,14 @@
-import { BarChart3, Calendar, Download, Filter, TrendingUp } from "lucide-react";
-import { useState } from "react";
+import { BarChart3, Calendar, DollarSign, Download, Filter, Package, TrendingUp } from "lucide-react";
+import { useMemo, useState } from "react";
 import { useRawMaterials } from "../../hooks/useRawMaterials";
 import { useSections } from "../../hooks/useSections";
-import { useStockLevels } from "../../hooks/useStock";
+import { useStockEntries, useStockLevels, useStockMovements } from "../../hooks/useStock";
+import { MovementType } from "../../types";
 import Button from "../ui/Button";
 import Select from "../ui/Select";
 import CategoryBreakdown from "./CategoryBreakdown";
+import ConsumptionReport from "./ConsumptionReport";
+import ExpenseReport from "./ExpenseReport";
 import LowStockReport from "./LowStockReport";
 import StockValueChart from "./StockValueChart";
 
@@ -19,12 +22,14 @@ const ReportsPage = () => {
   const { data: stockLevels = [] } = useStockLevels();
   const { data: rawMaterials = [] } = useRawMaterials({ isActive: true });
   const { data: sections = [] } = useSections({ isActive: true });
+  const { data: stockEntries = [] } = useStockEntries();
+  const { data: stockMovements = [] } = useStockMovements();
 
   const reports = [
     { id: "overview" as ReportType, label: "Overview", icon: BarChart3 },
     { id: "stock-levels" as ReportType, label: "Stock Levels", icon: TrendingUp },
     { id: "consumption" as ReportType, label: "Consumption", icon: Calendar },
-    { id: "expenses" as ReportType, label: "Expenses", icon: BarChart3 }
+    { id: "expenses" as ReportType, label: "Expenses", icon: DollarSign }
   ];
 
   const sectionOptions = sections.map(section => ({
@@ -39,44 +44,151 @@ const ReportsPage = () => {
     { value: "365", label: "Last year" }
   ];
 
-  // Calculate key metrics
-  const totalInventoryValue = stockLevels.reduce((sum, level) => sum + level.availableQuantity * (level.rawMaterial?.unitCost || 0), 0);
+  // Date filtering helper
+  const getDateFilter = () => {
+    const days = parseInt(dateRange);
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - days);
+    return cutoffDate;
+  };
 
-  const lowStockItems = stockLevels.filter(level => level.isLowStock);
-  const categoryBreakdown = rawMaterials.reduce(
-    (acc, material) => {
-      const level = stockLevels.find(l => l.rawMaterialId === material.id);
-      const value = level ? level.availableQuantity * material.unitCost : 0;
+  // Filtered data based on date range
+  const filteredStockEntries = useMemo(() => {
+    const days = parseInt(dateRange);
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - days);
+    return stockEntries.filter(entry => new Date(entry.receivedDate) >= cutoffDate);
+  }, [stockEntries, dateRange]);
 
-      acc[material.category] = (acc[material.category] || 0) + value;
-      return acc;
-    },
-    {} as Record<string, number>
-  );
+  const filteredStockMovements = useMemo(() => {
+    const days = parseInt(dateRange);
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - days);
+    return stockMovements.filter(movement => new Date(movement.createdAt) >= cutoffDate);
+  }, [stockMovements, dateRange]);
+
+  // Calculate comprehensive metrics
+  const metrics = useMemo(() => {
+    const totalInventoryValue = stockLevels.reduce((sum, level) => sum + level.availableQuantity * (level.rawMaterial?.unitCost || 0), 0);
+
+    const lowStockItems = stockLevels.filter(level => level.isLowStock);
+
+    const totalPurchaseValue = filteredStockEntries.reduce((sum, entry) => sum + entry.totalCost, 0);
+
+    const consumptionMovements = filteredStockMovements.filter(movement => movement.type === MovementType.OUT || movement.type === MovementType.EXPIRED || movement.type === MovementType.DAMAGED);
+
+    const totalConsumptionValue = consumptionMovements.reduce((sum, movement) => {
+      const material = rawMaterials.find(m => {
+        const entry = stockEntries.find(e => e.id === movement.stockEntryId);
+        return entry?.rawMaterialId === m.id;
+      });
+      return sum + movement.quantity * (material?.unitCost || 0);
+    }, 0);
+
+    const wasteValue = filteredStockMovements
+      .filter(movement => movement.type === MovementType.EXPIRED || movement.type === MovementType.DAMAGED)
+      .reduce((sum, movement) => {
+        const material = rawMaterials.find(m => {
+          const entry = stockEntries.find(e => e.id === movement.stockEntryId);
+          return entry?.rawMaterialId === m.id;
+        });
+        return sum + movement.quantity * (material?.unitCost || 0);
+      }, 0);
+
+    return {
+      totalInventoryValue,
+      lowStockCount: lowStockItems.length,
+      totalPurchaseValue,
+      totalConsumptionValue,
+      wasteValue,
+      totalMovements: filteredStockMovements.length,
+      totalEntries: filteredStockEntries.length
+    };
+  }, [stockLevels, filteredStockEntries, filteredStockMovements, rawMaterials, stockEntries]);
+
+  // Category breakdown with real values
+  const categoryBreakdown = useMemo(() => {
+    return rawMaterials.reduce(
+      (acc, material) => {
+        const level = stockLevels.find(l => l.rawMaterialId === material.id);
+        const value = level ? level.availableQuantity * material.unitCost : 0;
+        acc[material.category] = (acc[material.category] || 0) + value;
+        return acc;
+      },
+      {} as Record<string, number>
+    );
+  }, [rawMaterials, stockLevels]);
+
+  // Consumption by category
+  const consumptionByCategory = useMemo(() => {
+    return filteredStockMovements
+      .filter(movement => movement.type === MovementType.OUT)
+      .reduce(
+        (acc, movement) => {
+          const entry = stockEntries.find(e => e.id === movement.stockEntryId);
+          const material = rawMaterials.find(m => m.id === entry?.rawMaterialId);
+          if (material) {
+            const value = movement.quantity * material.unitCost;
+            acc[material.category] = (acc[material.category] || 0) + value;
+          }
+          return acc;
+        },
+        {} as Record<string, number>
+      );
+  }, [filteredStockMovements, stockEntries, rawMaterials]);
+
+  // Expense breakdown
+  const expenseBreakdown = useMemo(() => {
+    const purchasesByCategory = filteredStockEntries.reduce(
+      (acc, entry) => {
+        const material = rawMaterials.find(m => m.id === entry.rawMaterialId);
+        if (material) {
+          acc[material.category] = (acc[material.category] || 0) + entry.totalCost;
+        }
+        return acc;
+      },
+      {} as Record<string, number>
+    );
+
+    const totalPurchases = Object.values(purchasesByCategory).reduce((sum, val) => sum + val, 0);
+
+    return {
+      purchases: purchasesByCategory,
+      totalPurchases,
+      averageOrderValue: filteredStockEntries.length > 0 ? totalPurchases / filteredStockEntries.length : 0,
+      topSuppliers: [...new Set(filteredStockEntries.map(e => e.supplier).filter(Boolean))]
+        .map(supplier => ({
+          name: supplier!,
+          total: filteredStockEntries.filter(e => e.supplier === supplier).reduce((sum, e) => sum + e.totalCost, 0)
+        }))
+        .sort((a, b) => b.total - a.total)
+        .slice(0, 5)
+    };
+  }, [filteredStockEntries, rawMaterials]);
 
   const renderReportContent = () => {
     switch (activeReport) {
       case "overview":
         return (
           <div className="space-y-6">
-            {/* Key Metrics */}
+            {/* Enhanced Key Metrics */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
               <div className="bg-blue-50 p-6 rounded-lg">
                 <div className="flex items-center">
-                  <TrendingUp className="w-8 h-8 text-blue-600" />
+                  <Package className="w-8 h-8 text-blue-600" />
                   <div className="ml-4">
                     <p className="text-sm font-medium text-blue-600">Total Inventory Value</p>
-                    <p className="text-2xl font-bold text-blue-900">${totalInventoryValue.toFixed(2)}</p>
+                    <p className="text-2xl font-bold text-blue-900">${metrics.totalInventoryValue.toFixed(2)}</p>
                   </div>
                 </div>
               </div>
 
               <div className="bg-green-50 p-6 rounded-lg">
                 <div className="flex items-center">
-                  <BarChart3 className="w-8 h-8 text-green-600" />
+                  <TrendingUp className="w-8 h-8 text-green-600" />
                   <div className="ml-4">
-                    <p className="text-sm font-medium text-green-600">Active Materials</p>
-                    <p className="text-2xl font-bold text-green-900">{rawMaterials.length}</p>
+                    <p className="text-sm font-medium text-green-600">Purchase Value ({dateRange} days)</p>
+                    <p className="text-2xl font-bold text-green-900">${metrics.totalPurchaseValue.toFixed(2)}</p>
                   </div>
                 </div>
               </div>
@@ -86,19 +198,39 @@ const ReportsPage = () => {
                   <Calendar className="w-8 h-8 text-red-600" />
                   <div className="ml-4">
                     <p className="text-sm font-medium text-red-600">Low Stock Alerts</p>
-                    <p className="text-2xl font-bold text-red-900">{lowStockItems.length}</p>
+                    <p className="text-2xl font-bold text-red-900">{metrics.lowStockCount}</p>
                   </div>
                 </div>
               </div>
 
               <div className="bg-purple-50 p-6 rounded-lg">
                 <div className="flex items-center">
-                  <BarChart3 className="w-8 h-8 text-purple-600" />
+                  <DollarSign className="w-8 h-8 text-purple-600" />
                   <div className="ml-4">
-                    <p className="text-sm font-medium text-purple-600">Active Sections</p>
-                    <p className="text-2xl font-bold text-purple-900">{sections.length}</p>
+                    <p className="text-sm font-medium text-purple-600">Consumption Value</p>
+                    <p className="text-2xl font-bold text-purple-900">${metrics.totalConsumptionValue.toFixed(2)}</p>
                   </div>
                 </div>
+              </div>
+            </div>
+
+            {/* Additional Metrics Row */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <p className="text-sm font-medium text-gray-600">Active Materials</p>
+                <p className="text-xl font-bold text-gray-900">{rawMaterials.length}</p>
+              </div>
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <p className="text-sm font-medium text-gray-600">Active Sections</p>
+                <p className="text-xl font-bold text-gray-900">{sections.length}</p>
+              </div>
+              <div className="bg-yellow-50 p-4 rounded-lg">
+                <p className="text-sm font-medium text-yellow-600">Waste Value</p>
+                <p className="text-xl font-bold text-yellow-900">${metrics.wasteValue.toFixed(2)}</p>
+              </div>
+              <div className="bg-indigo-50 p-4 rounded-lg">
+                <p className="text-sm font-medium text-indigo-600">Stock Entries</p>
+                <p className="text-xl font-bold text-indigo-900">{metrics.totalEntries}</p>
               </div>
             </div>
 
@@ -113,22 +245,10 @@ const ReportsPage = () => {
         return <LowStockReport stockLevels={stockLevels} />;
 
       case "consumption":
-        return (
-          <div className="text-center py-12">
-            <Calendar className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Consumption Reports</h3>
-            <p className="text-gray-600">Detailed consumption analytics will be available here</p>
-          </div>
-        );
+        return <ConsumptionReport movements={filteredStockMovements} stockEntries={stockEntries} rawMaterials={rawMaterials} sections={sections} selectedSection={selectedSection} dateRange={parseInt(dateRange)} consumptionByCategory={consumptionByCategory} />;
 
       case "expenses":
-        return (
-          <div className="text-center py-12">
-            <BarChart3 className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Expense Reports</h3>
-            <p className="text-gray-600">Cost analysis and expense tracking will be available here</p>
-          </div>
-        );
+        return <ExpenseReport stockEntries={filteredStockEntries} rawMaterials={rawMaterials} expenseBreakdown={expenseBreakdown} dateRange={parseInt(dateRange)} />;
 
       default:
         return null;
@@ -141,7 +261,7 @@ const ReportsPage = () => {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Reports & Analytics</h1>
-          <p className="text-gray-600">Insights into your inventory performance</p>
+          <p className="text-gray-600">Comprehensive insights into your inventory performance</p>
         </div>
         <Button leftIcon={<Download className="w-4 h-4" />} variant="outline">
           Export Reports

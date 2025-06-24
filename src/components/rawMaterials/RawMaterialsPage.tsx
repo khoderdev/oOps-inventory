@@ -57,8 +57,8 @@ const RawMaterialsPage = () => {
 
     // Sort
     filtered.sort((a, b) => {
-      const aValue = (a as Record<string, unknown>)[sortConfig.field];
-      const bValue = (b as Record<string, unknown>)[sortConfig.field];
+      const aValue = (a as unknown as Record<string, unknown>)[sortConfig.field];
+      const bValue = (b as unknown as Record<string, unknown>)[sortConfig.field];
 
       if (aValue < bValue) return sortConfig.order === "asc" ? -1 : 1;
       if (aValue > bValue) return sortConfig.order === "asc" ? 1 : -1;
