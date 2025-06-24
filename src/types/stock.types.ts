@@ -70,3 +70,8 @@ export interface CreateStockMovementInput {
   performedBy: string;
   referenceId?: string;
 }
+
+export interface StockEntryFormProps {
+  onSuccess: () => void;
+  onCancel: () => void;
+}

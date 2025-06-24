@@ -1,6 +1,6 @@
-import { useEffect, type ReactNode } from "react";
-import { X } from "lucide-react";
 import { clsx } from "clsx";
+import { X } from "lucide-react";
+import { useEffect, type ReactNode } from "react";
 import Button from "./Button";
 
 interface ModalProps {
@@ -14,7 +14,7 @@ interface ModalProps {
   className?: string;
 }
 
-const Modal = ({ isOpen, onClose, title, children, size = "md", showCloseButton = true, closeOnOverlayClick = true, className }: ModalProps) => {
+const Modal = ({ isOpen, onClose, title, children, size = "md", showCloseButton = true, className }: ModalProps) => {
   // Handle escape key
   useEffect(() => {
     const handleEscape = (event: KeyboardEvent) => {
@@ -44,14 +44,8 @@ const Modal = ({ isOpen, onClose, title, children, size = "md", showCloseButton 
     full: "max-w-full mx-4"
   };
 
-  const handleOverlayClick = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget && closeOnOverlayClick) {
-      onClose();
-    }
-  };
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50" onClick={handleOverlayClick}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75">
       <div className={clsx("bg-white rounded-lg shadow-xl w-full", sizes[size], "transform transition-all duration-200 ease-out", "scale-100 opacity-100", className)} onClick={e => e.stopPropagation()}>
         {/* Header */}
         {(title || showCloseButton) && (

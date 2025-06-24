@@ -126,7 +126,17 @@ const StockAssignmentModal = ({ section, isOpen, onClose, onSuccess }: StockAssi
             </div>
           )}
 
-          <Input label="Quantity to Assign" type="number" min="0" max={selectedStockLevel?.availableQuantity || undefined} step="0.01" value={quantity} onChange={e => handleInputChange("quantity", parseFloat(e.target.value) || 0)} error={errors.quantity} required helperText={selectedStockLevel ? `Max: ${selectedStockLevel.availableQuantity} ${selectedStockLevel.rawMaterial?.unit}` : undefined} disabled={!selectedMaterialId} />
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="block text-sm font-medium text-gray-700">Quantity to Assign</label>
+              {selectedStockLevel && (
+                <Button type="button" variant="outline" size="sm" onClick={() => handleInputChange("quantity", selectedStockLevel.availableQuantity)} disabled={!selectedMaterialId}>
+                  Assign All
+                </Button>
+              )}
+            </div>
+            <Input type="number" min="0" max={selectedStockLevel?.availableQuantity || undefined} step="0.01" value={quantity} onChange={e => handleInputChange("quantity", parseFloat(e.target.value) || 0)} error={errors.quantity} required helperText={selectedStockLevel ? `Max: ${selectedStockLevel.availableQuantity} ${selectedStockLevel.rawMaterial?.unit}` : undefined} disabled={!selectedMaterialId} />
+          </div>
 
           {quantity > 0 && selectedStockLevel && (
             <div className="bg-gray-50 p-4 rounded-lg">
