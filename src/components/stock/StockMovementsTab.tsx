@@ -41,8 +41,8 @@ const StockMovementsTab = () => {
       const aValue = (a as unknown as Record<string, unknown>)[sortConfig.field];
       const bValue = (b as unknown as Record<string, unknown>)[sortConfig.field];
 
-      if (aValue < bValue) return sortConfig.order === "asc" ? -1 : 1;
-      if (aValue > bValue) return sortConfig.order === "asc" ? 1 : -1;
+      if (aValue && bValue && typeof aValue === "number" && typeof bValue === "number" && aValue < bValue) return sortConfig.order === "asc" ? -1 : 1;
+      if (aValue && bValue && typeof aValue === "number" && typeof bValue === "number" && aValue > bValue) return sortConfig.order === "asc" ? 1 : -1;
       return 0;
     });
 
@@ -173,7 +173,7 @@ const StockMovementsTab = () => {
       </div>
 
       {/* Table */}
-      <Table data={filteredData} columns={columns} loading={isLoading} emptyMessage="No stock movements found." sortConfig={sortConfig} onSort={handleSort} />
+      <Table data={filteredData as unknown as Record<string, unknown>[]} columns={columns as unknown as any} loading={isLoading} emptyMessage="No stock movements found." sortConfig={sortConfig} onSort={handleSort} />
     </div>
   );
 };

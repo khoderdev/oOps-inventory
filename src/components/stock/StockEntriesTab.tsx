@@ -53,11 +53,11 @@ const StockEntriesTab = () => {
 
     // Sort
     filtered.sort((a, b) => {
-      const aValue = (a as any)[sortConfig.field];
-      const bValue = (b as any)[sortConfig.field];
+      const aValue = (a as unknown as Record<string, unknown>)[sortConfig.field] as string | number | undefined;
+      const bValue = (b as unknown as Record<string, unknown>)[sortConfig.field] as string | number | undefined;
 
-      if (aValue < bValue) return sortConfig.order === "asc" ? -1 : 1;
-      if (aValue > bValue) return sortConfig.order === "asc" ? 1 : -1;
+      if (aValue && bValue && aValue < bValue) return sortConfig.order === "asc" ? -1 : 1;
+      if (aValue && bValue && aValue > bValue) return sortConfig.order === "asc" ? 1 : -1;
       return 0;
     });
 
@@ -79,8 +79,8 @@ const StockEntriesTab = () => {
         const material = rawMaterials.find(m => m.id === item.rawMaterialId);
         return (
           <div>
-            <p className="font-medium text-gray-900">{material?.name || "Unknown"}</p>
-            <p className="text-sm text-gray-500">{material?.category}</p>
+            <p className="font-medium text-gray-900 dark:text-white">{material?.name || "Unknown"}</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">{material?.category}</p>
           </div>
         );
       }
@@ -111,7 +111,7 @@ const StockEntriesTab = () => {
       title: "Supplier",
       render: (item: StockEntry) => (
         <div className="flex items-center space-x-2">
-          <Truck className="w-4 h-4 text-gray-400" />
+          <Truck className="w-4 h-4 text-gray-400 dark:text-gray-400" />
           <span>{item.supplier || "-"}</span>
         </div>
       )
@@ -136,7 +136,7 @@ const StockEntriesTab = () => {
         const isExpired = expiry < new Date();
         const isExpiringSoon = expiry < new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
-        return <span className={`text-sm ${isExpired ? "text-red-600 font-medium" : isExpiringSoon ? "text-yellow-600 font-medium" : "text-gray-900"}`}>{expiry.toLocaleDateString()}</span>;
+        return <span className={`text-sm ${isExpired ? "text-red-600 font-medium" : isExpiringSoon ? "text-yellow-600 font-medium" : "text-gray-900 dark:text-white"}`}>{expiry.toLocaleDateString()}</span>;
       }
     },
     {
@@ -150,22 +150,22 @@ const StockEntriesTab = () => {
     <div className="space-y-6">
       {/* Summary Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-blue-50 p-4 rounded-lg">
+        <div className="bg-blue-50 dark:bg-blue-900/10 p-4 rounded-lg">
           <div className="flex items-center">
-            <Package className="w-8 h-8 text-blue-600" />
+            <Package className="w-8 h-8 text-blue-600 dark:text-blue-400" />
             <div className="ml-3">
-              <p className="text-sm font-medium text-blue-600">Total Entries</p>
-              <p className="text-2xl font-bold text-blue-900">{stockEntries.length}</p>
+              <p className="text-sm font-medium text-blue-600 dark:text-blue-400">Total Entries</p>
+              <p className="text-2xl font-bold text-blue-900 dark:text-blue-300">{stockEntries.length}</p>
             </div>
           </div>
         </div>
 
-        <div className="bg-green-50 p-4 rounded-lg">
+        <div className="bg-green-50 dark:bg-green-900/10 p-4 rounded-lg">
           <div className="flex items-center">
-            <Package className="w-8 h-8 text-green-600" />
+            <Package className="w-8 h-8 text-green-600 dark:text-green-400" />
             <div className="ml-3">
-              <p className="text-sm font-medium text-green-600">This Month</p>
-              <p className="text-2xl font-bold text-green-900">
+              <p className="text-sm font-medium text-green-600 dark:text-green-400">This Month</p>
+              <p className="text-2xl font-bold text-green-900 dark:text-green-300">
                 {
                   stockEntries.filter(entry => {
                     const entryDate = new Date(entry.receivedDate);
@@ -178,22 +178,22 @@ const StockEntriesTab = () => {
           </div>
         </div>
 
-        <div className="bg-purple-50 p-4 rounded-lg">
+        <div className="bg-purple-50 dark:bg-purple-900/10 p-4 rounded-lg">
           <div className="flex items-center">
-            <Package className="w-8 h-8 text-purple-600" />
+            <Package className="w-8 h-8 text-purple-600 dark:text-purple-400" />
             <div className="ml-3">
-              <p className="text-sm font-medium text-purple-600">Total Value</p>
-              <p className="text-2xl font-bold text-purple-900">${stockEntries.reduce((sum, entry) => sum + entry.totalCost, 0).toFixed(2)}</p>
+              <p className="text-sm font-medium text-purple-600 dark:text-purple-400">Total Value</p>
+              <p className="text-2xl font-bold text-purple-900 dark:text-purple-300">${stockEntries.reduce((sum, entry) => sum + entry.totalCost, 0).toFixed(2)}</p>
             </div>
           </div>
         </div>
 
-        <div className="bg-red-50 p-4 rounded-lg">
+        <div className="bg-red-50 dark:bg-red-900/10 p-4 rounded-lg">
           <div className="flex items-center">
-            <Calendar className="w-8 h-8 text-red-600" />
+            <Calendar className="w-8 h-8 text-red-600 dark:text-red-400" />
             <div className="ml-3">
-              <p className="text-sm font-medium text-red-600">Expiring Soon</p>
-              <p className="text-2xl font-bold text-red-900">
+              <p className="text-sm font-medium text-red-600 dark:text-red-400">Expiring Soon</p>
+              <p className="text-2xl font-bold text-red-900 dark:text-red-300">
                 {
                   stockEntries.filter(entry => {
                     if (!entry.expiryDate) return false;
@@ -220,7 +220,7 @@ const StockEntriesTab = () => {
       </div>
 
       {/* Table */}
-      <Table data={filteredData} columns={columns} loading={isLoading} emptyMessage="No stock entries found." sortConfig={sortConfig} onSort={handleSort} />
+      <Table data={filteredData as unknown as Record<string, unknown>[]} columns={columns as unknown as any} loading={isLoading} emptyMessage="No stock entries found." sortConfig={sortConfig} onSort={handleSort} />
     </div>
   );
 };
