@@ -1,15 +1,15 @@
-import { Activity, ArrowRight, Search } from 'lucide-react';
-import { useMemo, useState } from 'react';
-import { useStockMovements } from '../../hooks/useStock';
-import { MovementType, type SortConfig, type StockMovement } from '../../types';
-import Input from '../ui/Input';
-import Select from '../ui/Select';
-import Table from '../ui/Table';
+import { Activity, ArrowRight, Search } from "lucide-react";
+import { useMemo, useState } from "react";
+import { useStockMovements } from "../../hooks/useStock";
+import { MovementType, type SortConfig, type StockMovement } from "../../types";
+import Input from "../ui/Input";
+import Select from "../ui/Select";
+import Table from "../ui/Table";
 
 const StockMovementsTab = () => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [typeFilter, setTypeFilter] = useState<MovementType | ''>('');
-  const [sortConfig, setSortConfig] = useState<SortConfig>({ field: 'createdAt', order: 'desc' });
+  const [searchTerm, setSearchTerm] = useState("");
+  const [typeFilter, setTypeFilter] = useState<MovementType | "">("");
+  const [sortConfig, setSortConfig] = useState<SortConfig>({ field: "createdAt", order: "desc" });
 
   const { data: stockMovements = [], isLoading } = useStockMovements();
 
@@ -23,8 +23,7 @@ const StockMovementsTab = () => {
       // Search filter
       if (searchTerm) {
         const searchLower = searchTerm.toLowerCase();
-        if (!movement.reason?.toLowerCase().includes(searchLower) &&
-            !movement.performedBy?.toLowerCase().includes(searchLower)) {
+        if (!movement.reason?.toLowerCase().includes(searchLower) && !movement.performedBy?.toLowerCase().includes(searchLower)) {
           return false;
         }
       }
@@ -39,11 +38,11 @@ const StockMovementsTab = () => {
 
     // Sort
     filtered.sort((a, b) => {
-      const aValue = (a as Record<string, unknown>)[sortConfig.field];
-      const bValue = (b as Record<string, unknown>)[sortConfig.field];
+      const aValue = (a as unknown as Record<string, unknown>)[sortConfig.field];
+      const bValue = (b as unknown as Record<string, unknown>)[sortConfig.field];
 
-      if (aValue < bValue) return sortConfig.order === 'asc' ? -1 : 1;
-      if (aValue > bValue) return sortConfig.order === 'asc' ? 1 : -1;
+      if (aValue < bValue) return sortConfig.order === "asc" ? -1 : 1;
+      if (aValue > bValue) return sortConfig.order === "asc" ? 1 : -1;
       return 0;
     });
 
@@ -53,77 +52,92 @@ const StockMovementsTab = () => {
   const handleSort = (field: string) => {
     setSortConfig(prev => ({
       field,
-      order: prev.field === field && prev.order === 'asc' ? 'desc' : 'asc'
+      order: prev.field === field && prev.order === "asc" ? "desc" : "asc"
     }));
   };
 
   const getTypeColor = (type: MovementType) => {
     switch (type) {
       case MovementType.IN:
-        return 'bg-green-100 text-green-800';
+        return "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300";
       case MovementType.OUT:
-        return 'bg-red-100 text-red-800';
+        return "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300";
       case MovementType.TRANSFER:
-        return 'bg-blue-100 text-blue-800';
+        return "bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300";
       case MovementType.ADJUSTMENT:
-        return 'bg-yellow-100 text-yellow-800';
+        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300";
       case MovementType.EXPIRED:
-        return 'bg-gray-100 text-gray-800';
+        return "bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-300";
       case MovementType.DAMAGED:
-        return 'bg-red-100 text-red-800';
+        return "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300";
       default:
-        return 'bg-gray-100 text-gray-800';
+        return "bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-300";
+    }
+  };
+
+  const getTypeTextColor = (type: MovementType) => {
+    switch (type) {
+      case MovementType.IN:
+        return "text-green-600 dark:text-green-400";
+      case MovementType.OUT:
+        return "text-red-600 dark:text-red-400";
+      case MovementType.TRANSFER:
+        return "text-blue-600 dark:text-blue-400";
+      case MovementType.ADJUSTMENT:
+        return "text-yellow-600 dark:text-yellow-400";
+      case MovementType.EXPIRED:
+        return "text-gray-600 dark:text-gray-400";
+      case MovementType.DAMAGED:
+        return "text-red-600 dark:text-red-400";
+      default:
+        return "text-gray-600 dark:text-gray-400";
     }
   };
 
   const columns = [
     {
-      key: 'type',
-      title: 'Type',
-      render: (item: StockMovement) => (
-        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getTypeColor(item.type)}`}>
-          {item.type.charAt(0).toUpperCase() + item.type.slice(1)}
-        </span>
-      ),
+      key: "type",
+      title: "Type",
+      render: (item: StockMovement) => <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getTypeColor(item.type)}`}>{item.type.charAt(0).toUpperCase() + item.type.slice(1)}</span>
     },
     {
-      key: 'quantity',
-      title: 'Quantity',
+      key: "quantity",
+      title: "Quantity",
       sortable: true,
-      render: (item: StockMovement) => `${item.quantity}`,
+      render: (item: StockMovement) => `${item.quantity}`
     },
     {
-      key: 'direction',
-      title: 'Direction',
+      key: "direction",
+      title: "Direction",
       render: (item: StockMovement) => {
         if (item.type === MovementType.TRANSFER) {
           return (
             <div className="flex items-center space-x-2">
-              <span className="text-sm text-gray-600">{item.fromSectionId || 'Stock'}</span>
+              <span className="text-sm text-gray-600">{item.fromSectionId || "Stock"}</span>
               <ArrowRight className="w-4 h-4 text-gray-400" />
-              <span className="text-sm text-gray-600">{item.toSectionId || 'Stock'}</span>
+              <span className="text-sm text-gray-600">{item.toSectionId || "Stock"}</span>
             </div>
           );
         }
-        return item.type === MovementType.IN ? 'Incoming' : 'Outgoing';
-      },
+        return item.type === MovementType.IN ? "Incoming" : "Outgoing";
+      }
     },
     {
-      key: 'reason',
-      title: 'Reason',
-      render: (item: StockMovement) => item.reason,
+      key: "reason",
+      title: "Reason",
+      render: (item: StockMovement) => item.reason
     },
     {
-      key: 'performedBy',
-      title: 'Performed By',
-      render: (item: StockMovement) => item.performedBy,
+      key: "performedBy",
+      title: "Performed By",
+      render: (item: StockMovement) => item.performedBy
     },
     {
-      key: 'createdAt',
-      title: 'Date',
+      key: "createdAt",
+      title: "Date",
       sortable: true,
-      render: (item: StockMovement) => new Date(item.createdAt).toLocaleString(),
-    },
+      render: (item: StockMovement) => new Date(item.createdAt).toLocaleString()
+    }
   ];
 
   return (
@@ -132,20 +146,16 @@ const StockMovementsTab = () => {
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         {Object.values(MovementType).map(type => {
           const count = stockMovements.filter(m => m.type === type).length;
-          const totalQuantity = stockMovements
-            .filter(m => m.type === type)
-            .reduce((sum, m) => sum + m.quantity, 0);
-          
+          const totalQuantity = stockMovements.filter(m => m.type === type).reduce((sum, m) => sum + m.quantity, 0);
+
           return (
-            <div key={type} className="bg-white p-4 rounded-lg border">
+            <div key={type} className="bg-white dark:bg-gray-800 p-4 rounded-lg border-2 border-gray-200 dark:border-gray-700">
               <div className="flex items-center">
-                <Activity className="w-6 h-6 text-gray-600" />
+                <Activity className="w-6 h-6 text-gray-600 dark:text-gray-400" />
                 <div className="ml-3">
-                  <p className="text-sm font-medium text-gray-600">
-                    {type.charAt(0).toUpperCase() + type.slice(1)}
-                  </p>
-                  <p className="text-xl font-bold text-gray-900">{count}</p>
-                  <p className="text-xs text-gray-500">Total: {totalQuantity}</p>
+                  <p className={`text-sm font-medium ${getTypeTextColor(type)}`}>{type.charAt(0).toUpperCase() + type.slice(1)}</p>
+                  <p className="text-xl font-bold text-gray-900 dark:text-white">{count}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Total: {totalQuantity}</p>
                 </div>
               </div>
             </div>
@@ -155,34 +165,17 @@ const StockMovementsTab = () => {
 
       {/* Filters */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Input
-          placeholder="Search movements..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          leftIcon={<Search className="w-4 h-4" />}
-        />
-        
-        <Select
-          placeholder="Filter by type"
-          options={[{ value: '', label: 'All Types' }, ...typeOptions]}
-          value={typeFilter}
-          onChange={(e) => setTypeFilter(e.target.value as MovementType | '')}
-        />
+        <Input placeholder="Search movements..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} leftIcon={<Search className="w-4 h-4" />} />
+
+        <Select placeholder="Filter by type" options={[{ value: "", label: "All Types" }, ...typeOptions]} value={typeFilter} onChange={e => setTypeFilter(e.target.value as MovementType | "")} />
 
         <div></div>
       </div>
 
       {/* Table */}
-      <Table
-        data={filteredData}
-        columns={columns}
-        loading={isLoading}
-        emptyMessage="No stock movements found."
-        sortConfig={sortConfig}
-        onSort={handleSort}
-      />
+      <Table data={filteredData} columns={columns} loading={isLoading} emptyMessage="No stock movements found." sortConfig={sortConfig} onSort={handleSort} />
     </div>
   );
 };
 
-export default StockMovementsTab; 
+export default StockMovementsTab;

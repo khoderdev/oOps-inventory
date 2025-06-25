@@ -19,80 +19,71 @@ const Layout = () => {
   const location = useLocation();
 
   return (
-    <div className="w-full h-screen bg-gray-50 flex overflow-hidden">
+    <div className="flex h-screen overflow-hidden bg-gray-50 dark:bg-gray-900">
       {/* Sidebar */}
-      <div className={clsx("bg-white shadow-lg transition-all duration-300 ease-in-out", "fixed inset-y-0 left-0 z-50 w-64 transform", sidebarOpen ? "translate-x-0" : "-translate-x-full", "lg:relative lg:translate-x-0")}>
+      <aside className={clsx("fixed inset-y-0 left-0 z-40 w-64 bg-white dark:bg-gray-800 shadow-md transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0", sidebarOpen ? "translate-x-0" : "-translate-x-full")}>
         <div className="flex flex-col h-full">
-          {/* Logo/Header */}
-          <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200">
-            <h1 className="text-xl font-bold text-gray-900">Inventory Pro</h1>
-            <Button variant="ghost" size="sm" onClick={toggleSidebar} className="lg:hidden">
+          {/* Sidebar Header */}
+          <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200 dark:border-gray-700">
+            <h1 className="text-lg font-semibold text-gray-900 dark:text-white tracking-tight">Inventory Pro</h1>
+            <Button variant="ghost" size="sm" onClick={toggleSidebar} className="lg:hidden" aria-label="Close sidebar">
               <X className="w-5 h-5" />
             </Button>
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 px-4 py-6 space-y-2">
-            {navigationItems.map(item => {
-              const IconComponent = item.icon;
-              const isActive = location.pathname === item.to || (item.to === "/dashboard" && location.pathname === "/");
-
+          <nav className="flex-1 overflow-y-auto px-4 py-6 space-y-2">
+            {navigationItems.map(({ name, to, icon: Icon }) => {
+              const isActive = location.pathname === to || (to === "/dashboard" && location.pathname === "/");
               return (
-                <NavLink key={item.name} to={item.to} className={clsx("flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors", isActive ? "bg-blue-100 text-blue-700" : "text-gray-700 hover:bg-gray-100 hover:text-gray-900")}>
-                  <IconComponent className="w-5 h-5 mr-3" />
-                  {item.name}
+                <NavLink key={name} to={to} className={clsx("flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200", isActive ? "bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300" : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white")}>
+                  <Icon className="w-5 h-5 mr-3" />
+                  {name}
                 </NavLink>
               );
             })}
           </nav>
 
           {/* User Info */}
-          <div className="p-4 border-t border-gray-200">
-            <div className="flex items-center">
-              <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
-                <span className="text-sm font-medium text-white">{user?.name?.charAt(0).toUpperCase()}</span>
-              </div>
-              <div className="ml-3">
-                <p className="text-sm font-medium text-gray-900">{user?.name}</p>
-                <p className="text-xs text-gray-500 capitalize">{user?.role}</p>
+          <div className="px-4 py-4 border-t border-gray-200 dark:border-gray-700">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center justify-center w-9 h-9 bg-blue-600 dark:bg-blue-500 rounded-full text-white text-sm font-semibold">{user?.name?.[0]?.toUpperCase()}</div>
+              <div>
+                <p className="text-sm font-medium text-gray-900 dark:text-white">{user?.name}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">{user?.role}</p>
               </div>
             </div>
           </div>
         </div>
-      </div>
+      </aside>
 
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      {/* Main Content Area */}
+      <div className="flex flex-col flex-1 overflow-hidden">
         {/* Top Bar */}
-        <header className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
-          <div className="flex items-center justify-between">
-            <Button variant="ghost" size="sm" onClick={toggleSidebar} className="lg:hidden">
-              <Menu className="w-5 h-5" />
-            </Button>
-
-            <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-500">
-                {new Date().toLocaleDateString("en-US", {
-                  weekday: "long",
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric"
-                })}
-              </span>
-            </div>
-          </div>
+        <header className="sticky top-0 z-30 flex items-center justify-between bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-3 shadow-sm lg:py-4">
+          <Button variant="ghost" size="sm" onClick={toggleSidebar} className="lg:hidden" aria-label="Open sidebar">
+            <Menu className="w-5 h-5" />
+          </Button>
+          <span className="text-sm text-gray-600 dark:text-gray-400 hidden sm:inline">
+            {new Date().toLocaleDateString("en-US", {
+              weekday: "long",
+              year: "numeric",
+              month: "long",
+              day: "numeric"
+            })}
+          </span>
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50">
-          <div className="container mx-auto px-6 py-8">
+        <main className="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-900">
+          <div className="mx-auto max-w-screen-xl px-4 py-8">
             <Outlet />
           </div>
         </main>
       </div>
 
-      {/* Sidebar overlay for mobile */}
-      {sidebarOpen && <div className="fixed inset-0 z-40 bg-black bg-opacity-50 lg:hidden" onClick={toggleSidebar} />}
+      {/* Overlay for mobile */}
+      {sidebarOpen && <div className="fixed inset-0 z-30 bg-black/60 backdrop-blur-sm lg:hidden" onClick={toggleSidebar} />}
     </div>
   );
 };

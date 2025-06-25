@@ -120,8 +120,8 @@ const RawMaterialsPage = () => {
       sortable: true,
       render: (item: RawMaterial) => (
         <div>
-          <p className="font-medium text-gray-900">{item.name}</p>
-          <p className="text-sm text-gray-500">{item.description}</p>
+          <p className="font-medium text-gray-900 dark:text-white">{item.name}</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{item.description}</p>
         </div>
       )
     },
@@ -129,7 +129,7 @@ const RawMaterialsPage = () => {
       key: "category",
       title: "Category",
       sortable: true,
-      render: (item: RawMaterial) => <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 capitalize">{item.category.replace("_", " ")}</span>
+      render: (item: RawMaterial) => <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 capitalize">{item.category.replace("_", " ")}</span>
     },
     {
       key: "unit",
@@ -188,8 +188,8 @@ const RawMaterialsPage = () => {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Raw Materials</h1>
-          <p className="text-gray-600">Manage your inventory materials and ingredients</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Raw Materials</h1>
+          <p className="text-gray-600 dark:text-gray-400">Manage your inventory materials and ingredients</p>
         </div>
         <Button onClick={() => setShowCreateModal(true)} leftIcon={<Plus className="w-4 h-4" />}>
           Add Material
@@ -240,7 +240,7 @@ const RawMaterialsPage = () => {
       </div>
 
       {/* Filters */}
-      <div className="bg-white p-6 rounded-lg shadow-sm">
+      <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Input placeholder="Search materials..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} leftIcon={<Search className="w-4 h-4" />} />
 
@@ -255,8 +255,8 @@ const RawMaterialsPage = () => {
       </div>
 
       {/* Materials Table */}
-      <div className="bg-white rounded-lg shadow-sm">
-        <Table data={filteredData} columns={columns} loading={isLoading} emptyMessage="No raw materials found. Add your first material to get started." sortConfig={sortConfig} onSort={handleSort} />
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+        <Table data={filteredData as any} columns={columns} loading={isLoading} emptyMessage="No raw materials found. Add your first material to get started." sortConfig={sortConfig} onSort={handleSort} />
       </div>
 
       {/* Create Material Modal */}

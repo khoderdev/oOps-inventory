@@ -52,7 +52,7 @@ const SettingsPage = () => {
         return (
           <div className="space-y-6">
             <div>
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Profile Information</h3>
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Profile Information</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <Input label="Full Name" value={profileData.name} onChange={e => setProfileData(prev => ({ ...prev, name: e.target.value }))} placeholder="Enter your full name" />
 
@@ -82,12 +82,12 @@ const SettingsPage = () => {
         return (
           <div className="space-y-6">
             <div>
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Notification Preferences</h3>
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Notification Preferences</h3>
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="font-medium text-gray-900">Low Stock Alerts</p>
-                    <p className="text-sm text-gray-600">Get notified when items are running low</p>
+                    <p className="font-medium text-gray-900 dark:text-white">Low Stock Alerts</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Get notified when items are running low</p>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
                     <input
@@ -107,8 +107,8 @@ const SettingsPage = () => {
 
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="font-medium text-gray-900">Expiry Alerts</p>
-                    <p className="text-sm text-gray-600">Get notified about expiring items</p>
+                    <p className="font-medium text-gray-900 dark:text-white">Expiry Alerts</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Get notified about expiring items</p>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
                     <input
@@ -128,8 +128,8 @@ const SettingsPage = () => {
 
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="font-medium text-gray-900">System Updates</p>
-                    <p className="text-sm text-gray-600">Get notified about system updates</p>
+                    <p className="font-medium text-gray-900 dark:text-white">System Updates</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Get notified about system updates</p>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
                     <input
@@ -155,7 +155,7 @@ const SettingsPage = () => {
         return (
           <div className="space-y-6">
             <div>
-              <h3 className="text-lg font-medium text-gray-900 mb-4">System Configuration</h3>
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">System Configuration</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <Input
                   label="Low Stock Threshold (%)"
@@ -208,7 +208,7 @@ const SettingsPage = () => {
         return (
           <div className="space-y-6">
             <div>
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Security Settings</h3>
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Security Settings</h3>
               <div className="space-y-4">
                 <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                   <p className="text-sm text-yellow-800">
@@ -230,21 +230,34 @@ const SettingsPage = () => {
         return (
           <div className="space-y-6">
             <div>
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Appearance</h3>
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Appearance</h3>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Theme</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Theme</label>
                   <div className="grid grid-cols-2 gap-4">
-                    <button onClick={() => setTheme("light")} className={`p-4 rounded-lg border-2 transition-colors ${state.theme === "light" ? "border-blue-500 bg-blue-50" : "border-gray-200 hover:border-gray-300"}`}>
-                      <div className="w-full h-8 bg-white rounded mb-2 border"></div>
-                      <p className="text-sm font-medium">Light</p>
+                    <button onClick={() => setTheme("light")} className={`p-4 rounded-lg border-2 transition-all duration-200 ${state.theme === "light" ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-200 dark:ring-blue-800" : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 bg-white dark:bg-gray-800"}`}>
+                      <div className="w-full h-8 bg-white border border-gray-200 rounded mb-2 flex items-center justify-center">
+                        <div className="w-3 h-3 bg-gray-300 rounded-full mr-1"></div>
+                        <div className="w-8 h-1 bg-gray-200 rounded"></div>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">Light</p>
+                        {state.theme === "light" && <div className="w-2 h-2 bg-blue-500 rounded-full"></div>}
+                      </div>
                     </button>
 
-                    <button onClick={() => setTheme("dark")} className={`p-4 rounded-lg border-2 transition-colors ${state.theme === "dark" ? "border-blue-500 bg-blue-50" : "border-gray-200 hover:border-gray-300"}`}>
-                      <div className="w-full h-8 bg-gray-800 rounded mb-2"></div>
-                      <p className="text-sm font-medium">Dark</p>
+                    <button onClick={() => setTheme("dark")} className={`p-4 rounded-lg border-2 transition-all duration-200 ${state.theme === "dark" ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-200 dark:ring-blue-800" : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 bg-white dark:bg-gray-800"}`}>
+                      <div className="w-full h-8 bg-gray-800 border border-gray-700 rounded mb-2 flex items-center justify-center">
+                        <div className="w-3 h-3 bg-gray-600 rounded-full mr-1"></div>
+                        <div className="w-8 h-1 bg-gray-700 rounded"></div>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">Dark</p>
+                        {state.theme === "dark" && <div className="w-2 h-2 bg-blue-500 rounded-full"></div>}
+                      </div>
                     </button>
                   </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">Choose your preferred theme. Changes are applied immediately and saved automatically.</p>
                 </div>
               </div>
             </div>
@@ -260,20 +273,20 @@ const SettingsPage = () => {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
-        <p className="text-gray-600">Manage your application preferences and configuration</p>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Settings</h1>
+        <p className="text-gray-600 dark:text-gray-400">Manage your application preferences and configuration</p>
       </div>
 
       {/* Settings Content */}
-      <div className="bg-white rounded-lg shadow-sm">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm">
         <div className="grid grid-cols-1 lg:grid-cols-4">
           {/* Sidebar */}
-          <div className="lg:col-span-1 border-b lg:border-b-0 lg:border-r border-gray-200">
+          <div className="lg:col-span-1 border-b lg:border-b-0 lg:border-r border-gray-200 dark:border-gray-700">
             <nav className="space-y-1 p-6">
               {tabs.map(tab => {
                 const IconComponent = tab.icon;
                 return (
-                  <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg text-left ${activeTab === tab.id ? "bg-blue-100 text-blue-700" : "text-gray-700 hover:bg-gray-100"}`}>
+                  <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg text-left ${activeTab === tab.id ? "bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300" : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white"}`}>
                     <IconComponent className="w-5 h-5 mr-3" />
                     {tab.label}
                   </button>
@@ -283,7 +296,7 @@ const SettingsPage = () => {
           </div>
 
           {/* Content */}
-          <div className="lg:col-span-3 p-6">{renderTabContent()}</div>
+          <div className="lg:col-span-3 p-6 dark:bg-gray-800">{renderTabContent()}</div>
         </div>
       </div>
     </div>

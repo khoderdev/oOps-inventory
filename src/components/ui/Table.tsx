@@ -39,18 +39,18 @@ function Table<T extends Record<string, unknown>>({ data, columns, loading = fal
   if (loading) {
     return (
       <div className="flex justify-center items-center h-48">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-400"></div>
       </div>
     );
   }
 
   return (
     <div className={clsx("overflow-x-auto", className)}>
-      <table className="min-w-full divide-y divide-gray-200">
-        <thead className="bg-gray-50">
+      <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+        <thead className="bg-gray-50 dark:bg-gray-800">
           <tr>
             {columns.map(column => (
-              <th key={column.key} className={clsx("px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider", column.align === "center" && "text-center", column.align === "right" && "text-right", column.sortable && "cursor-pointer hover:bg-gray-100")} style={{ width: column.width }} onClick={column.sortable ? () => handleSort(column.key) : undefined}>
+              <th key={column.key} className={clsx("px-6 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider", column.align === "center" && "text-center", column.align === "right" && "text-right", column.sortable && "cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700")} style={{ width: column.width }} onClick={column.sortable ? () => handleSort(column.key) : undefined}>
                 <div className="flex items-center space-x-1">
                   <span>{column.title}</span>
                   {column.sortable && getSortIcon(column.key)}
@@ -59,18 +59,18 @@ function Table<T extends Record<string, unknown>>({ data, columns, loading = fal
             ))}
           </tr>
         </thead>
-        <tbody className="bg-white divide-y divide-gray-200">
+        <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
           {data.length === 0 ? (
             <tr>
-              <td colSpan={columns.length} className="px-6 py-12 text-center text-gray-500">
+              <td colSpan={columns.length} className="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
                 {emptyMessage}
               </td>
             </tr>
           ) : (
             data.map((item, index) => (
-              <tr key={String(item.id) || index} className="hover:bg-gray-50">
+              <tr key={String(item.id) || index} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                 {columns.map(column => (
-                  <td key={column.key} className={clsx("px-6 py-4 whitespace-nowrap text-sm", column.align === "center" && "text-center", column.align === "right" && "text-right")}>
+                  <td key={column.key} className={clsx("px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100", column.align === "center" && "text-center", column.align === "right" && "text-right")}>
                     {column.render ? column.render(item, index) : item[column.key]?.toString() || "-"}
                   </td>
                 ))}

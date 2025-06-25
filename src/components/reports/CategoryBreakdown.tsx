@@ -12,23 +12,23 @@ const CategoryBreakdown = ({ data }: CategoryBreakdownProps) => {
 
   if (entries.length === 0 || total === 0) {
     return (
-      <div className="bg-white p-6 rounded-lg border">
+      <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border">
         <div className="flex items-center space-x-2 mb-4">
-          <PieChart className="w-5 h-5 text-gray-600" />
-          <h3 className="text-lg font-medium text-gray-900">Category Breakdown</h3>
+          <PieChart className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+          <h3 className="text-lg font-medium text-gray-900 dark:text-white">Category Breakdown</h3>
         </div>
         <div className="text-center py-8">
-          <p className="text-gray-500">No data available</p>
+          <p className="text-gray-500 dark:text-gray-400">No data available</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-white p-6 rounded-lg border">
+    <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border">
       <div className="flex items-center space-x-2 mb-4">
-        <PieChart className="w-5 h-5 text-gray-600" />
-        <h3 className="text-lg font-medium text-gray-900">Category Breakdown</h3>
+        <PieChart className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+        <h3 className="text-lg font-medium text-gray-900 dark:text-white">Category Breakdown</h3>
       </div>
 
       <div className="space-y-3">
@@ -40,10 +40,10 @@ const CategoryBreakdown = ({ data }: CategoryBreakdownProps) => {
             <div key={category} className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 <div className={`w-3 h-3 rounded-full ${colorClass}`} />
-                <span className="text-sm font-medium text-gray-700 capitalize">{category.replace("_", " ")}</span>
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300 capitalize">{category.replace("_", " ")}</span>
               </div>
               <div className="text-right">
-                <div className="text-sm font-medium text-gray-900">{percentage}%</div>
+                <div className="text-sm font-medium text-gray-900 dark:text-white">{percentage}%</div>
                 <div className="text-xs text-gray-500">${value.toFixed(2)}</div>
               </div>
             </div>
@@ -51,10 +51,10 @@ const CategoryBreakdown = ({ data }: CategoryBreakdownProps) => {
         })}
       </div>
 
-      <div className="mt-4 pt-4 border-t border-gray-200">
+      <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
         <div className="flex justify-between items-center">
-          <span className="text-sm font-medium text-gray-700">Total Value</span>
-          <span className="text-lg font-bold text-gray-900">${total.toFixed(2)}</span>
+          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Total Value</span>
+          <span className="text-lg font-bold text-gray-900 dark:text-white">${total.toFixed(2)}</span>
         </div>
       </div>
     </div>

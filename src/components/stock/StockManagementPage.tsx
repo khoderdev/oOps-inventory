@@ -37,8 +37,8 @@ const StockManagementPage = () => {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Stock Management</h1>
-          <p className="text-gray-600">Track inventory levels, entries, and movements</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Stock Management</h1>
+          <p className="text-gray-600 dark:text-gray-400">Track inventory levels, entries, and movements</p>
         </div>
         <Button onClick={() => setShowAddStockModal(true)} leftIcon={<Plus className="w-4 h-4" />}>
           Add Stock Entry
@@ -46,13 +46,13 @@ const StockManagementPage = () => {
       </div>
 
       {/* Tabs */}
-      <div className="bg-white rounded-lg shadow-sm">
-        <div className="border-b border-gray-200">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm">
+        <div className="border-b border-gray-200 dark:border-gray-700">
           <nav className="flex space-x-8 px-6">
             {tabs.map(tab => {
               const IconComponent = tab.icon;
               return (
-                <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 ${activeTab === tab.id ? "border-blue-500 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"}`}>
+                <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 ${activeTab === tab.id ? "border-blue-500 text-blue-600" : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 hover:border-gray-300"}`}>
                   <IconComponent className="w-4 h-4" />
                   <span>{tab.label}</span>
                 </button>

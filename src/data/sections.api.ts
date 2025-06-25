@@ -1,8 +1,43 @@
 import { db } from "../lib/database";
+import { MeasurementUnit, MovementType, type ApiResponse, type CreateSectionAssignmentInput, type CreateSectionInput, type RawMaterial, type Section, type SectionConsumption, type SectionInventory, type UpdateSectionInput } from "../types";
 import { StockAPI } from "./stock.api";
-import type { Section, SectionInventory, SectionConsumption, CreateSectionInput, UpdateSectionInput, CreateSectionAssignmentInput, MovementType, ApiResponse } from "../types";
 
 export class SectionsAPI {
+  // Helper function to get pack information from raw material
+  private static getPackInfo(rawMaterial: RawMaterial) {
+    const isPackOrBox = rawMaterial.unit === MeasurementUnit.PACKS || rawMaterial.unit === MeasurementUnit.BOXES;
+    if (!isPackOrBox) return null;
+
+    const material = rawMaterial as unknown as {
+      unitsPerPack?: number;
+      baseUnit?: MeasurementUnit;
+    };
+
+    return {
+      unitsPerPack: material.unitsPerPack || 1,
+      baseUnit: material.baseUnit || MeasurementUnit.PIECES,
+      packUnit: rawMaterial.unit
+    };
+  }
+
+  // Helper function to convert pack quantity to base units
+  private static convertPackToBase(quantity: number, rawMaterial: RawMaterial): number {
+    const packInfo = this.getPackInfo(rawMaterial);
+    if (!packInfo) return quantity;
+
+    // If it's a pack/box, multiply by units per pack to get base units
+    return quantity * packInfo.unitsPerPack;
+  }
+
+  // Helper function to convert base units to pack quantity
+  private static convertBaseToPack(baseQuantity: number, rawMaterial: RawMaterial): number {
+    const packInfo = this.getPackInfo(rawMaterial);
+    if (!packInfo) return baseQuantity;
+
+    // If it's a pack/box, divide by units per pack to get pack quantity
+    return baseQuantity / packInfo.unitsPerPack;
+  }
+
   // Create a new section
   static async create(data: CreateSectionInput): Promise<ApiResponse<Section>> {
     try {
@@ -124,49 +159,65 @@ export class SectionsAPI {
     }
   }
 
-  // Assign stock to section
+  // Assign stock to section - Enhanced for pack/box handling
   static async assignStock(data: CreateSectionAssignmentInput): Promise<ApiResponse<boolean>> {
     try {
       const { sectionId, rawMaterialId, quantity, assignedBy, notes } = data;
 
-      // Check if we have enough stock available
+      // Get raw material info for pack conversion
+      const rawMaterial = await db.rawMaterials.get(rawMaterialId);
+      if (!rawMaterial) {
+        throw new Error("Raw material not found");
+      }
+
+      // Convert pack quantity to base units if needed
+      const baseQuantityToAssign = this.convertPackToBase(quantity, rawMaterial);
+
+      // Check if we have enough stock available (stock is always stored in base units)
       const stockLevel = await StockAPI.getStockLevel(rawMaterialId);
       if (!stockLevel.success || !stockLevel.data) {
         throw new Error("Unable to check stock availability");
       }
 
-      if (stockLevel.data.availableQuantity < quantity) {
-        throw new Error("Insufficient stock available");
+      if (stockLevel.data.availableQuantity < baseQuantityToAssign) {
+        const packInfo = this.getPackInfo(rawMaterial);
+        const availablePacks = packInfo ? this.convertBaseToPack(stockLevel.data.availableQuantity, rawMaterial) : stockLevel.data.availableQuantity;
+        const requestedPacks = packInfo ? quantity : baseQuantityToAssign; // Use original quantity for pack display
+
+        throw new Error(packInfo ? `Insufficient stock available. Requested: ${requestedPacks.toFixed(1)} ${rawMaterial.unit}, Available: ${availablePacks.toFixed(1)} ${rawMaterial.unit}` : `Insufficient stock available. Requested: ${baseQuantityToAssign}, Available: ${stockLevel.data.availableQuantity}`);
       }
 
       // Check if section inventory entry exists
-      let sectionInventory = await db.sectionInventory.where({ sectionId, rawMaterialId }).first();
+      const sectionInventory = await db.sectionInventory.where({ sectionId, rawMaterialId }).first();
 
       if (sectionInventory) {
-        // Update existing inventory
+        // Update existing inventory (always store in base units)
         await db.sectionInventory.update(sectionInventory.id, {
-          quantity: sectionInventory.quantity + quantity,
+          quantity: sectionInventory.quantity + baseQuantityToAssign,
           lastUpdated: new Date()
         });
       } else {
-        // Create new inventory entry
+        // Create new inventory entry (store in base units)
         const newInventory: Omit<SectionInventory, "id" | "createdAt" | "updatedAt"> = {
           sectionId,
           rawMaterialId,
-          quantity,
+          quantity: baseQuantityToAssign,
           reservedQuantity: 0,
           lastUpdated: new Date()
         };
         await db.sectionInventory.add(newInventory as SectionInventory);
       }
 
-      // Create stock movement to track the assignment
+      // Create stock movement to track the assignment (store in base units)
+      const packInfo = this.getPackInfo(rawMaterial);
+      const movementNotes = packInfo ? `${notes || "Stock assigned to section"} (${quantity.toFixed(1)} ${rawMaterial.unit} = ${baseQuantityToAssign} ${packInfo.baseUnit})` : notes || "Stock assigned to section";
+
       await StockAPI.createMovement({
         stockEntryId: "", // This would need to be determined from available stock entries
         type: MovementType.TRANSFER,
-        quantity,
+        quantity: baseQuantityToAssign, // Always store in base units
         toSectionId: sectionId,
-        reason: notes || "Stock assigned to section",
+        reason: movementNotes,
         performedBy: assignedBy
       });
 
@@ -184,16 +235,24 @@ export class SectionsAPI {
     }
   }
 
-  // Get section inventory
+  // Get section inventory - Enhanced to include pack information
   static async getSectionInventory(sectionId: string): Promise<ApiResponse<SectionInventory[]>> {
     try {
       const inventory = await db.sectionInventory.where("sectionId").equals(sectionId).toArray();
 
-      // Populate raw material data
+      // Populate raw material data and add pack conversion info
       for (const item of inventory) {
         const rawMaterial = await db.rawMaterials.get(item.rawMaterialId);
         if (rawMaterial) {
           item.rawMaterial = rawMaterial;
+
+          // Add pack information for display purposes
+          const packInfo = this.getPackInfo(rawMaterial);
+          if (packInfo) {
+            // Add computed properties for easier UI consumption
+            (item as unknown as { packQuantity: number; packInfo: { unitsPerPack: number; baseUnit: MeasurementUnit; packUnit: MeasurementUnit } }).packQuantity = this.convertBaseToPack(item.quantity, rawMaterial);
+            (item as unknown as { packQuantity: number; packInfo: { unitsPerPack: number; baseUnit: MeasurementUnit; packUnit: MeasurementUnit } }).packInfo = packInfo;
+          }
         }
       }
 
@@ -210,32 +269,57 @@ export class SectionsAPI {
     }
   }
 
-  // Record consumption in section
-  static async recordConsumption(sectionId: string, rawMaterialId: string, quantity: number, consumedBy: string, reason: string, orderId?: string, notes?: string): Promise<ApiResponse<boolean>> {
+  // Record consumption in section - Enhanced for pack/box handling
+  static async recordConsumption(
+    sectionId: string,
+    rawMaterialId: string,
+    quantity: number, // This could be in pack units, we need to convert
+    consumedBy: string,
+    reason: string,
+    orderId?: string,
+    notes?: string
+  ): Promise<ApiResponse<boolean>> {
     try {
-      // Check section inventory
-      const sectionInventory = await db.sectionInventory.where({ sectionId, rawMaterialId }).first();
-
-      if (!sectionInventory || sectionInventory.quantity < quantity) {
-        throw new Error("Insufficient inventory in section");
+      // Get raw material for pack conversion info
+      const rawMaterial = await db.rawMaterials.get(rawMaterialId);
+      if (!rawMaterial) {
+        throw new Error("Raw material not found");
       }
 
-      // Update section inventory
+      // Convert pack quantity to base units if needed
+      const baseQuantityToConsume = this.convertPackToBase(quantity, rawMaterial);
+
+      // Check section inventory (stored in base units)
+      const sectionInventory = await db.sectionInventory.where({ sectionId, rawMaterialId }).first();
+
+      if (!sectionInventory || sectionInventory.quantity < baseQuantityToConsume) {
+        const packInfo = this.getPackInfo(rawMaterial);
+        const availablePacks = packInfo ? this.convertBaseToPack(sectionInventory?.quantity || 0, rawMaterial) : sectionInventory?.quantity || 0;
+        const requestedPacks = packInfo ? quantity : baseQuantityToConsume; // Use original quantity for pack display
+
+        throw new Error(packInfo ? `Insufficient inventory in section. Requested: ${requestedPacks.toFixed(1)} ${rawMaterial.unit}, Available: ${availablePacks.toFixed(1)} ${rawMaterial.unit}` : `Insufficient inventory in section. Requested: ${baseQuantityToConsume}, Available: ${sectionInventory?.quantity || 0}`);
+      }
+
+      // Update section inventory (subtract base units)
       await db.sectionInventory.update(sectionInventory.id, {
-        quantity: sectionInventory.quantity - quantity,
+        quantity: sectionInventory.quantity - baseQuantityToConsume,
         lastUpdated: new Date()
       });
 
-      // Record consumption
+      // Enhance notes with pack conversion info
+      const packInfo = this.getPackInfo(rawMaterial);
+      const enhancedNotes = packInfo ? `${notes || ""} (${quantity.toFixed(1)} ${rawMaterial.unit} = ${baseQuantityToConsume} ${packInfo.baseUnit})`.trim() : notes;
+
+      // Record consumption (store in base units)
       const consumption: Omit<SectionConsumption, "id" | "createdAt" | "updatedAt"> = {
         sectionId,
         rawMaterialId,
-        quantity,
+        quantity: baseQuantityToConsume, // Always store in base units
         consumedDate: new Date(),
         consumedBy,
         reason,
         orderId,
-        notes
+        notes: enhancedNotes
       };
 
       await db.sectionConsumption.add(consumption as SectionConsumption);
@@ -254,7 +338,7 @@ export class SectionsAPI {
     }
   }
 
-  // Get section consumption history
+  // Get section consumption history - Enhanced to include pack information
   static async getSectionConsumption(
     sectionId: string,
     filters?: {
@@ -264,7 +348,7 @@ export class SectionsAPI {
     }
   ): Promise<ApiResponse<SectionConsumption[]>> {
     try {
-      let query = db.sectionConsumption.where("sectionId").equals(sectionId).reverse().sortBy("consumedDate");
+      const query = db.sectionConsumption.where("sectionId").equals(sectionId).reverse().sortBy("consumedDate");
 
       let consumption = await query;
 
@@ -281,11 +365,19 @@ export class SectionsAPI {
         });
       }
 
-      // Populate raw material data
+      // Populate raw material data and add pack conversion info
       for (const item of consumption) {
         const rawMaterial = await db.rawMaterials.get(item.rawMaterialId);
         if (rawMaterial) {
           item.rawMaterial = rawMaterial;
+
+          // Add pack information for display purposes
+          const packInfo = this.getPackInfo(rawMaterial);
+          if (packInfo) {
+            // Add computed properties for easier UI consumption
+            (item as unknown as { packQuantity: number; packInfo: { unitsPerPack: number; baseUnit: MeasurementUnit; packUnit: MeasurementUnit } }).packQuantity = this.convertBaseToPack(item.quantity, rawMaterial);
+            (item as unknown as { packQuantity: number; packInfo: { unitsPerPack: number; baseUnit: MeasurementUnit; packUnit: MeasurementUnit } }).packInfo = packInfo;
+          }
         }
       }
 

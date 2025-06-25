@@ -46,14 +46,14 @@ const SectionCard = ({ section, onView, onEdit }: SectionCardProps) => {
   const totalQuantity = inventory.reduce((sum, item) => sum + item.quantity, 0);
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow">
       <div className="p-6">
         {/* Header */}
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center space-x-3">
             <div className="text-2xl">{getSectionIcon(section.type)}</div>
             <div>
-              <h3 className="text-lg font-semibold text-gray-900">{section.name}</h3>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{section.name}</h3>
               <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getSectionColor(section.type)}`}>{section.type.charAt(0).toUpperCase() + section.type.slice(1)}</span>
             </div>
           </div>
@@ -61,32 +61,32 @@ const SectionCard = ({ section, onView, onEdit }: SectionCardProps) => {
         </div>
 
         {/* Description */}
-        {section.description && <p className="text-sm text-gray-600 mb-4">{section.description}</p>}
+        {section.description && <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">{section.description}</p>}
 
         {/* Stats */}
         <div className="grid grid-cols-2 gap-4 mb-6">
           <div className="text-center">
             <div className="flex items-center justify-center space-x-1">
-              <Package className="w-4 h-4 text-gray-500" />
-              <span className="text-sm text-gray-500">Items</span>
+              <Package className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+              <span className="text-sm text-gray-500 dark:text-gray-400">Items</span>
             </div>
-            <p className="text-xl font-bold text-gray-900">{totalItems}</p>
+            <p className="text-xl font-bold text-gray-900 dark:text-white">{totalItems}</p>
           </div>
           <div className="text-center">
             <div className="flex items-center justify-center space-x-1">
-              <Package className="w-4 h-4 text-gray-500" />
-              <span className="text-sm text-gray-500">Total Qty</span>
+              <Package className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+              <span className="text-sm text-gray-500 dark:text-gray-400">Total Qty</span>
             </div>
-            <p className="text-xl font-bold text-gray-900">{totalQuantity.toFixed(0)}</p>
+            <p className="text-xl font-bold text-gray-900 dark:text-white">{totalQuantity.toFixed(0)}</p>
           </div>
         </div>
 
         {/* Manager Info */}
-        <div className="flex items-center space-x-2 mb-6 p-3 bg-gray-50 rounded-lg">
-          <Users className="w-4 h-4 text-gray-500" />
+        <div className="flex items-center space-x-2 mb-6 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+          <Users className="w-4 h-4 text-gray-500 dark:text-gray-400" />
           <div>
-            <p className="text-xs text-gray-500">Manager</p>
-            <p className="text-sm font-medium text-gray-900">{section.managerId}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">Manager</p>
+            <p className="text-sm font-medium text-gray-900 dark:text-white">{section.managerId}</p>
           </div>
         </div>
 

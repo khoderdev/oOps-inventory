@@ -1,23 +1,81 @@
 import { db } from "../lib/database";
-import { MovementType, type ApiResponse, type CreateStockEntryInput, type CreateStockMovementInput, type StockEntry, type StockLevel, type StockMovement } from "../types";
+import { MeasurementUnit, MovementType, type ApiResponse, type CreateStockEntryInput, type CreateStockMovementInput, type RawMaterial, type StockEntry, type StockLevel, type StockMovement } from "../types";
 
 export class StockAPI {
-  // Create a new stock entry
+  // Helper function to get pack information from raw material
+  private static getPackInfo(rawMaterial: RawMaterial) {
+    const isPackOrBox = rawMaterial.unit === MeasurementUnit.PACKS || rawMaterial.unit === MeasurementUnit.BOXES;
+    if (!isPackOrBox) return null;
+
+    const material = rawMaterial as unknown as {
+      unitsPerPack?: number;
+      baseUnit?: MeasurementUnit;
+    };
+
+    return {
+      unitsPerPack: material.unitsPerPack || 1,
+      baseUnit: material.baseUnit || MeasurementUnit.PIECES,
+      packUnit: rawMaterial.unit
+    };
+  }
+
+  // Helper function to convert pack quantity to base units
+  private static convertPackToBase(quantity: number, rawMaterial: RawMaterial): number {
+    const packInfo = this.getPackInfo(rawMaterial);
+    if (!packInfo) return quantity;
+
+    return quantity * packInfo.unitsPerPack;
+  }
+
+  // Helper function to convert base units to pack quantity
+  private static convertBaseToPack(baseQuantity: number, rawMaterial: RawMaterial): number {
+    const packInfo = this.getPackInfo(rawMaterial);
+    if (!packInfo) return baseQuantity;
+
+    return baseQuantity / packInfo.unitsPerPack;
+  }
+
+  // Create a new stock entry - Enhanced for pack/box handling
   static async createEntry(data: CreateStockEntryInput): Promise<ApiResponse<StockEntry>> {
     try {
-      const id = await db.stockEntries.add(data as StockEntry);
+      // Get raw material to understand pack structure
+      const rawMaterial = await db.rawMaterials.get(data.rawMaterialId);
+      if (!rawMaterial) {
+        throw new Error("Raw material not found");
+      }
+
+      // Convert pack quantity to base units if needed
+      const baseQuantity = this.convertPackToBase(data.quantity, rawMaterial);
+
+      // Prepare enhanced notes with pack info
+      const packInfo = this.getPackInfo(rawMaterial);
+      let enhancedNotes = data.notes || "";
+
+      if (packInfo) {
+        enhancedNotes = `${enhancedNotes} (${data.quantity.toFixed(1)} ${rawMaterial.unit} = ${baseQuantity} ${packInfo.baseUnit})`.trim();
+      }
+
+      const stockEntryData = {
+        ...data,
+        quantity: baseQuantity, // Store in base units
+        notes: enhancedNotes
+      };
+
+      const id = await db.stockEntries.add(stockEntryData as StockEntry);
       const created = await db.stockEntries.get(id);
 
       if (!created) {
         throw new Error("Failed to create stock entry");
       }
 
-      // Create initial stock movement
+      // Create initial stock movement with pack info
+      const movementReason = packInfo ? `Stock received (${data.quantity.toFixed(1)} ${rawMaterial.unit} = ${baseQuantity} ${packInfo.baseUnit})` : "Stock received";
+
       await this.createMovement({
         stockEntryId: created.id,
         type: MovementType.IN,
-        quantity: data.quantity,
-        reason: "Stock received",
+        quantity: baseQuantity, // Always store in base units
+        reason: movementReason,
         performedBy: data.receivedBy
       });
 

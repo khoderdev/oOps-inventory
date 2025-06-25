@@ -45,14 +45,14 @@ const Modal = ({ isOpen, onClose, title, children, size = "md", showCloseButton 
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75">
-      <div className={clsx("bg-white rounded-lg shadow-xl w-full", sizes[size], "transform transition-all duration-200 ease-out", "scale-100 opacity-100", className)} onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 dark:bg-black/80">
+      <div className={clsx("bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full", sizes[size], "transform transition-all duration-200 ease-out", "scale-100 opacity-100", className)} onClick={e => e.stopPropagation()}>
         {/* Header */}
         {(title || showCloseButton) && (
-          <div className="flex items-center justify-between p-6 border-b border-gray-200">
-            {title && <h3 className="text-lg font-semibold text-gray-900">{title}</h3>}
+          <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+            {title && <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{title}</h3>}
             {showCloseButton && (
-              <Button variant="ghost" size="sm" onClick={onClose} className="p-1 rounded-full hover:bg-gray-100" aria-label="Close modal">
+              <Button variant="ghost" size="sm" onClick={onClose} className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700" aria-label="Close modal">
                 <X className="w-5 h-5" />
               </Button>
             )}

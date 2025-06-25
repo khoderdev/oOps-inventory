@@ -173,9 +173,9 @@ const StockEntryForm = ({ onSuccess, onCancel }: StockEntryFormProps) => {
 
         {/* Enhanced Supplier Input */}
         <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-700">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
             Supplier
-            {selectedMaterial?.supplier && <span className="text-xs text-gray-500 ml-1">(Default: {selectedMaterial.supplier})</span>}
+            {selectedMaterial?.supplier && <span className="text-xs text-gray-500 dark:text-gray-400 ml-1">(Default: {selectedMaterial.supplier})</span>}
           </label>
 
           {!showNewSupplierInput ? (
@@ -233,10 +233,10 @@ const StockEntryForm = ({ onSuccess, onCancel }: StockEntryFormProps) => {
 
       {/* Total Cost Display */}
       {formData.quantity > 0 && formData.unitCost > 0 && (
-        <div className="bg-gray-50 p-4 rounded-lg">
+        <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
           <div className="flex justify-between items-center">
-            <span className="text-sm font-medium text-gray-700">Total Cost:</span>
-            <span className="text-lg font-bold text-gray-900">${(formData.quantity * formData.unitCost).toFixed(2)}</span>
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Total Cost:</span>
+            <span className="text-lg font-bold text-gray-900 dark:text-white">${(formData.quantity * formData.unitCost).toFixed(2)}</span>
           </div>
         </div>
       )}

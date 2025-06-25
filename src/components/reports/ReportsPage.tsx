@@ -54,16 +54,12 @@ const ReportsPage = () => {
 
   // Filtered data based on date range
   const filteredStockEntries = useMemo(() => {
-    const days = parseInt(dateRange);
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - days);
+    const cutoffDate = getDateFilter();
     return stockEntries.filter(entry => new Date(entry.receivedDate) >= cutoffDate);
   }, [stockEntries, dateRange]);
 
   const filteredStockMovements = useMemo(() => {
-    const days = parseInt(dateRange);
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - days);
+    const cutoffDate = getDateFilter();
     return stockMovements.filter(movement => new Date(movement.createdAt) >= cutoffDate);
   }, [stockMovements, dateRange]);
 
@@ -173,42 +169,42 @@ const ReportsPage = () => {
           <div className="space-y-6">
             {/* Enhanced Key Metrics */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-              <div className="bg-blue-50 p-6 rounded-lg">
+              <div className="bg-blue-50 dark:bg-blue-900/10 p-6 rounded-lg">
                 <div className="flex items-center">
-                  <Package className="w-8 h-8 text-blue-600" />
+                  <Package className="w-8 h-8 text-blue-600 dark:text-blue-400" />
                   <div className="ml-4">
                     <p className="text-sm font-medium text-blue-600">Total Inventory Value</p>
-                    <p className="text-2xl font-bold text-blue-900">${metrics.totalInventoryValue.toFixed(2)}</p>
+                    <p className="text-2xl font-bold text-blue-900 dark:text-blue-300">${metrics.totalInventoryValue.toFixed(2)}</p>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-green-50 p-6 rounded-lg">
+              <div className="bg-green-50 dark:bg-green-900/10 p-6 rounded-lg">
                 <div className="flex items-center">
-                  <TrendingUp className="w-8 h-8 text-green-600" />
+                  <TrendingUp className="w-8 h-8 text-green-600 dark:text-green-400" />
                   <div className="ml-4">
                     <p className="text-sm font-medium text-green-600">Purchase Value ({dateRange} days)</p>
-                    <p className="text-2xl font-bold text-green-900">${metrics.totalPurchaseValue.toFixed(2)}</p>
+                    <p className="text-2xl font-bold text-green-900 dark:text-green-300">${metrics.totalPurchaseValue.toFixed(2)}</p>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-red-50 p-6 rounded-lg">
+              <div className="bg-red-50 dark:bg-red-900/10 p-6 rounded-lg">
                 <div className="flex items-center">
-                  <Calendar className="w-8 h-8 text-red-600" />
+                  <Calendar className="w-8 h-8 text-red-600 dark:text-red-400" />
                   <div className="ml-4">
                     <p className="text-sm font-medium text-red-600">Low Stock Alerts</p>
-                    <p className="text-2xl font-bold text-red-900">{metrics.lowStockCount}</p>
+                    <p className="text-2xl font-bold text-red-900 dark:text-red-300">{metrics.lowStockCount}</p>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-purple-50 p-6 rounded-lg">
+              <div className="bg-purple-50 dark:bg-purple-900/10 p-6 rounded-lg">
                 <div className="flex items-center">
-                  <DollarSign className="w-8 h-8 text-purple-600" />
+                  <DollarSign className="w-8 h-8 text-purple-600 dark:text-purple-400" />
                   <div className="ml-4">
                     <p className="text-sm font-medium text-purple-600">Consumption Value</p>
-                    <p className="text-2xl font-bold text-purple-900">${metrics.totalConsumptionValue.toFixed(2)}</p>
+                    <p className="text-2xl font-bold text-purple-900 dark:text-purple-300">${metrics.totalConsumptionValue.toFixed(2)}</p>
                   </div>
                 </div>
               </div>
@@ -216,21 +212,21 @@ const ReportsPage = () => {
 
             {/* Additional Metrics Row */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <p className="text-sm font-medium text-gray-600">Active Materials</p>
-                <p className="text-xl font-bold text-gray-900">{rawMaterials.length}</p>
+              <div className="bg-gray-50 dark:bg-gray-900/20 p-4 rounded-lg">
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Active Materials</p>
+                <p className="text-xl font-bold text-gray-900 dark:text-gray-300">{rawMaterials.length}</p>
               </div>
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <p className="text-sm font-medium text-gray-600">Active Sections</p>
-                <p className="text-xl font-bold text-gray-900">{sections.length}</p>
+              <div className="bg-gray-50 dark:bg-gray-900/20 p-4 rounded-lg">
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Active Sections</p>
+                <p className="text-xl font-bold text-gray-900 dark:text-gray-300">{sections.length}</p>
               </div>
-              <div className="bg-yellow-50 p-4 rounded-lg">
-                <p className="text-sm font-medium text-yellow-600">Waste Value</p>
-                <p className="text-xl font-bold text-yellow-900">${metrics.wasteValue.toFixed(2)}</p>
+              <div className="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-lg">
+                <p className="text-sm font-medium text-yellow-600 dark:text-yellow-400">Waste Value</p>
+                <p className="text-xl font-bold text-yellow-900 dark:text-yellow-300">${metrics.wasteValue.toFixed(2)}</p>
               </div>
-              <div className="bg-indigo-50 p-4 rounded-lg">
-                <p className="text-sm font-medium text-indigo-600">Stock Entries</p>
-                <p className="text-xl font-bold text-indigo-900">{metrics.totalEntries}</p>
+              <div className="bg-indigo-50 dark:bg-indigo-900/20 p-4 rounded-lg">
+                <p className="text-sm font-medium text-indigo-600 dark:text-indigo-400">Stock Entries</p>
+                <p className="text-xl font-bold text-indigo-900 dark:text-indigo-300">{metrics.totalEntries}</p>
               </div>
             </div>
 
@@ -260,8 +256,8 @@ const ReportsPage = () => {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Reports & Analytics</h1>
-          <p className="text-gray-600">Comprehensive insights into your inventory performance</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Reports & Analytics</h1>
+          <p className="text-gray-600 dark:text-gray-400">Comprehensive insights into your inventory performance</p>
         </div>
         <Button leftIcon={<Download className="w-4 h-4" />} variant="outline">
           Export Reports
@@ -269,13 +265,13 @@ const ReportsPage = () => {
       </div>
 
       {/* Report Tabs */}
-      <div className="bg-white rounded-lg shadow-sm">
-        <div className="border-b border-gray-200">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm">
+        <div className="border-b border-gray-200 dark:border-gray-700">
           <nav className="flex space-x-8 px-6">
             {reports.map(report => {
               const IconComponent = report.icon;
               return (
-                <button key={report.id} onClick={() => setActiveReport(report.id)} className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 ${activeReport === report.id ? "border-blue-500 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"}`}>
+                <button key={report.id} onClick={() => setActiveReport(report.id)} className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 ${activeReport === report.id ? "border-blue-500 text-blue-600 dark:text-blue-400" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:border-gray-600"}`}>
                   <IconComponent className="w-4 h-4" />
                   <span>{report.label}</span>
                 </button>
@@ -285,7 +281,7 @@ const ReportsPage = () => {
         </div>
 
         {/* Filters */}
-        <div className="p-6 border-b border-gray-200">
+        <div className="p-6 border-b border-gray-200 dark:border-gray-700">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <Select placeholder="Date range" options={dateRangeOptions} value={dateRange} onChange={e => setDateRange(e.target.value)} />
 

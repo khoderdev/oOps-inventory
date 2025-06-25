@@ -10,6 +10,8 @@ export interface RawMaterial extends BaseEntity {
   minStockLevel: number;
   maxStockLevel: number;
   isActive: boolean;
+  unitsPerPack?: number;
+  baseUnit?: MeasurementUnit; // The unit of the individual items (e.g., "pieces", "bottles")
 }
 
 export enum MaterialCategory {
@@ -44,6 +46,8 @@ export interface CreateRawMaterialInput {
   supplier?: string;
   minStockLevel: number;
   maxStockLevel: number;
+  unitsPerPack?: number;
+  baseUnit?: MeasurementUnit;
 }
 
 export interface UpdateRawMaterialInput extends Partial<CreateRawMaterialInput> {

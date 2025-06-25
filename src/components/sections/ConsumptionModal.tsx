@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useApp } from "../../hooks/useApp";
 import { useRecordConsumption } from "../../hooks/useSections";
 import type { Section, SectionInventory } from "../../types";
+import { MeasurementUnit } from "../../types";
 import Button from "../ui/Button";
 import Input from "../ui/Input";
 import Modal from "../ui/Modal";
@@ -20,6 +21,7 @@ const ConsumptionModal = ({ section, inventoryItem, isOpen, onClose, onSuccess }
   const [reason, setReason] = useState("");
   const [orderId, setOrderId] = useState("");
   const [notes, setNotes] = useState("");
+  const [usageUnit, setUsageUnit] = useState<"pack" | "individual">("pack");
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const { state } = useApp();
@@ -32,6 +34,7 @@ const ConsumptionModal = ({ section, inventoryItem, isOpen, onClose, onSuccess }
       setReason("production");
       setOrderId("");
       setNotes("");
+      setUsageUnit(isPackOrBox() ? "pack" : "individual");
       setErrors({});
     }
   }, [isOpen, inventoryItem]);
@@ -45,6 +48,68 @@ const ConsumptionModal = ({ section, inventoryItem, isOpen, onClose, onSuccess }
     { value: "other", label: "Other" }
   ];
 
+  const isPackOrBox = () => {
+    return inventoryItem?.rawMaterial?.unit === MeasurementUnit.PACKS || inventoryItem?.rawMaterial?.unit === MeasurementUnit.BOXES;
+  };
+
+  const getPackInfo = () => {
+    if (!inventoryItem?.rawMaterial || !isPackOrBox()) return null;
+
+    const material = inventoryItem.rawMaterial as unknown as {
+      unitsPerPack?: number;
+      baseUnit?: MeasurementUnit;
+    };
+
+    return {
+      unitsPerPack: material.unitsPerPack || 1,
+      baseUnit: material.baseUnit || MeasurementUnit.PIECES,
+      packUnit: inventoryItem.rawMaterial.unit
+    };
+  };
+
+  const convertToBaseQuantity = (inputQuantity: number) => {
+    if (!isPackOrBox() || usageUnit === "individual") {
+      return inputQuantity;
+    }
+
+    const packInfo = getPackInfo();
+    return inputQuantity * (packInfo?.unitsPerPack || 1);
+  };
+
+  const convertFromBaseQuantity = (baseQuantity: number) => {
+    if (!isPackOrBox() || usageUnit === "individual") {
+      return baseQuantity;
+    }
+
+    const packInfo = getPackInfo();
+    return baseQuantity / (packInfo?.unitsPerPack || 1);
+  };
+
+  const getMaxQuantity = () => {
+    if (!inventoryItem) return 0;
+
+    if (isPackOrBox() && usageUnit === "pack") {
+      return Math.floor(convertFromBaseQuantity(inventoryItem.quantity));
+    }
+
+    return inventoryItem.quantity;
+  };
+
+  const getDisplayUnit = () => {
+    if (!inventoryItem?.rawMaterial) return "";
+
+    if (isPackOrBox()) {
+      const packInfo = getPackInfo();
+      if (usageUnit === "pack") {
+        return inventoryItem.rawMaterial.unit.toLowerCase();
+      } else {
+        return packInfo?.baseUnit?.toLowerCase() || "pieces";
+      }
+    }
+
+    return inventoryItem.rawMaterial.unit.toLowerCase();
+  };
+
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
@@ -52,8 +117,9 @@ const ConsumptionModal = ({ section, inventoryItem, isOpen, onClose, onSuccess }
       newErrors.quantity = "Quantity must be greater than 0";
     }
 
-    if (inventoryItem && quantity > inventoryItem.quantity) {
-      newErrors.quantity = `Quantity cannot exceed available stock (${inventoryItem.quantity})`;
+    const maxQty = getMaxQuantity();
+    if (quantity > maxQty) {
+      newErrors.quantity = `Quantity cannot exceed available stock (${maxQty} ${getDisplayUnit()})`;
     }
 
     if (!reason) {
@@ -72,10 +138,13 @@ const ConsumptionModal = ({ section, inventoryItem, isOpen, onClose, onSuccess }
     }
 
     try {
+      // Always submit in base units (individual pieces for packs/boxes)
+      const baseQuantity = convertToBaseQuantity(quantity);
+
       await recordMutation.mutateAsync({
         sectionId: section.id,
         rawMaterialId: inventoryItem.rawMaterialId,
-        quantity,
+        quantity: baseQuantity,
         consumedBy: state.user?.name || "Unknown",
         reason,
         orderId: orderId || undefined,
@@ -103,6 +172,10 @@ const ConsumptionModal = ({ section, inventoryItem, isOpen, onClose, onSuccess }
       case "notes":
         setNotes(value as string);
         break;
+      case "usageUnit":
+        setUsageUnit(value as "pack" | "individual");
+        setQuantity(0); // Reset quantity when unit changes
+        break;
     }
 
     // Clear error when user makes changes
@@ -114,6 +187,10 @@ const ConsumptionModal = ({ section, inventoryItem, isOpen, onClose, onSuccess }
   if (!inventoryItem) return null;
 
   const isLoading = recordMutation.isPending;
+  const packInfo = getPackInfo();
+  const maxQuantity = getMaxQuantity();
+  const baseQuantityUsed = convertToBaseQuantity(quantity);
+  const remainingAfterUsage = inventoryItem.quantity - baseQuantityUsed;
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={`Record Usage - ${inventoryItem.rawMaterial?.name}`} size="md">
@@ -123,19 +200,65 @@ const ConsumptionModal = ({ section, inventoryItem, isOpen, onClose, onSuccess }
           <div className="bg-gray-50 p-4 rounded-lg">
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
-                <p className="font-medium text-gray-900">Available Quantity:</p>
-                <p className="text-gray-700">
-                  {inventoryItem.quantity} {inventoryItem.rawMaterial?.unit}
-                </p>
+                <p className="font-medium text-gray-900">Available Stock:</p>
+                {isPackOrBox() && packInfo ? (
+                  <div className="space-y-1">
+                    <p className="text-gray-700">
+                      {convertFromBaseQuantity(inventoryItem.quantity).toFixed(0)} {inventoryItem.rawMaterial?.unit}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      ({inventoryItem.quantity} {packInfo.baseUnit} total)
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-gray-700">
+                    {inventoryItem.quantity} {inventoryItem.rawMaterial?.unit}
+                  </p>
+                )}
               </div>
               <div>
                 <p className="font-medium text-gray-900">Section:</p>
                 <p className="text-gray-700">{section.name}</p>
               </div>
             </div>
+
+            {/* Pack/Box Info */}
+            {isPackOrBox() && packInfo && (
+              <div className="mt-3 pt-3 border-t border-gray-200">
+                <p className="text-xs text-gray-600">
+                  Each {inventoryItem.rawMaterial?.unit.slice(0, -1)} contains {packInfo.unitsPerPack} {packInfo.baseUnit}
+                </p>
+              </div>
+            )}
           </div>
 
-          <Input label="Quantity Used" type="number" min="0" max={inventoryItem.quantity} step="0.01" value={quantity} onChange={e => handleInputChange("quantity", parseFloat(e.target.value) || 0)} error={errors.quantity} required helperText={`Max: ${inventoryItem.quantity} ${inventoryItem.rawMaterial?.unit}`} />
+          {/* Usage Unit Selection for Packs/Boxes */}
+          {isPackOrBox() && packInfo && (
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">Usage Unit</label>
+              <div className="flex space-x-4">
+                <label className="flex items-center">
+                  <input type="radio" name="usageUnit" value="pack" checked={usageUnit === "pack"} onChange={e => handleInputChange("usageUnit", e.target.value)} className="mr-2" />
+                  <span className="text-sm">By {inventoryItem.rawMaterial?.unit.slice(0, -1)}</span>
+                </label>
+                <label className="flex items-center">
+                  <input type="radio" name="usageUnit" value="individual" checked={usageUnit === "individual"} onChange={e => handleInputChange("usageUnit", e.target.value)} className="mr-2" />
+                  <span className="text-sm">By {packInfo.baseUnit}</span>
+                </label>
+              </div>
+            </div>
+          )}
+
+          <Input label={`Quantity Used (${getDisplayUnit()})`} type="number" min="0" max={maxQuantity} step={usageUnit === "pack" ? "1" : "0.01"} value={quantity} onChange={e => handleInputChange("quantity", parseFloat(e.target.value) || 0)} error={errors.quantity} required helperText={`Max: ${maxQuantity} ${getDisplayUnit()}`} />
+
+          {/* Conversion Display */}
+          {isPackOrBox() && packInfo && quantity > 0 && (
+            <div className="bg-blue-50 p-3 rounded-lg">
+              <p className="text-sm text-blue-700">
+                <strong>Conversion:</strong> {quantity} {getDisplayUnit()} = {baseQuantityUsed} {packInfo.baseUnit}
+              </p>
+            </div>
+          )}
 
           <Select label="Reason for Usage" options={[{ value: "", label: "Select a reason..." }, ...reasonOptions]} value={reason} onChange={e => handleInputChange("reason", e.target.value)} error={errors.reason} required />
 
@@ -143,17 +266,32 @@ const ConsumptionModal = ({ section, inventoryItem, isOpen, onClose, onSuccess }
 
           <Input label="Notes (Optional)" value={notes} onChange={e => handleInputChange("notes", e.target.value)} placeholder="Additional notes about this usage" />
 
+          {/* Usage Summary */}
           {quantity > 0 && inventoryItem.rawMaterial && (
-            <div className="bg-blue-50 p-4 rounded-lg">
+            <div className="bg-blue-50 p-4 rounded-lg space-y-2">
               <div className="flex justify-between items-center">
                 <span className="text-sm font-medium text-blue-700">Estimated Value:</span>
-                <span className="text-lg font-bold text-blue-900">${(quantity * inventoryItem.rawMaterial.unitCost).toFixed(2)}</span>
+                <span className="text-lg font-bold text-blue-900">${(baseQuantityUsed * inventoryItem.rawMaterial.unitCost).toFixed(2)}</span>
               </div>
-              <div className="flex justify-between items-center mt-1">
+
+              <div className="flex justify-between items-center">
                 <span className="text-xs text-blue-600">Remaining after usage:</span>
-                <span className="text-sm font-medium text-blue-800">
-                  {(inventoryItem.quantity - quantity).toFixed(2)} {inventoryItem.rawMaterial.unit}
-                </span>
+                <div className="text-right">
+                  {isPackOrBox() && packInfo ? (
+                    <div>
+                      <span className="text-sm font-medium text-blue-800">
+                        {Math.floor(convertFromBaseQuantity(remainingAfterUsage))} {inventoryItem.rawMaterial.unit}
+                      </span>
+                      <div className="text-xs text-blue-600">
+                        ({remainingAfterUsage.toFixed(2)} {packInfo.baseUnit} total)
+                      </div>
+                    </div>
+                  ) : (
+                    <span className="text-sm font-medium text-blue-800">
+                      {remainingAfterUsage.toFixed(2)} {inventoryItem.rawMaterial.unit}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
           )}
