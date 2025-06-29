@@ -1,5 +1,5 @@
-import { verifyToken, extractToken } from "../utils/auth.js";
 import { getUserById } from "../services/userService.js";
+import { extractToken, verifyToken } from "../utils/auth.js";
 import logger from "../utils/logger.js";
 
 export const authenticate = async (req, res, next) => {
@@ -9,7 +9,7 @@ export const authenticate = async (req, res, next) => {
     if (!token) {
       return res.status(401).json({
         success: false,
-        error: "Access denied. No token provided.",
+        error: "Access denied. No token provided."
       });
     }
 
@@ -20,14 +20,14 @@ export const authenticate = async (req, res, next) => {
     if (!user) {
       return res.status(401).json({
         success: false,
-        error: "Access denied. User not found.",
+        error: "Access denied. User not found."
       });
     }
 
     if (!user.is_active) {
       return res.status(401).json({
         success: false,
-        error: "Access denied. User account is inactive.",
+        error: "Access denied. User account is inactive."
       });
     }
 
@@ -40,7 +40,7 @@ export const authenticate = async (req, res, next) => {
       role: user.role,
       isActive: user.is_active,
       createdAt: user.created_at,
-      updatedAt: user.updated_at,
+      updatedAt: user.updated_at
     };
 
     next();
@@ -50,20 +50,20 @@ export const authenticate = async (req, res, next) => {
     if (error.message === "Token has expired") {
       return res.status(401).json({
         success: false,
-        error: "Access denied. Token has expired.",
+        error: "Access denied. Token has expired."
       });
     }
 
     if (error.message === "Invalid token") {
       return res.status(401).json({
         success: false,
-        error: "Access denied. Invalid token.",
+        error: "Access denied. Invalid token."
       });
     }
 
     return res.status(500).json({
       success: false,
-      error: "Authentication failed. Please try again.",
+      error: "Authentication failed. Please try again."
     });
   }
 };
@@ -94,7 +94,7 @@ export const optionalAuth = async (req, res, next) => {
         role: user.role,
         isActive: user.is_active,
         createdAt: user.created_at,
-        updatedAt: user.updated_at,
+        updatedAt: user.updated_at
       };
     }
     next();
