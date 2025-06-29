@@ -1,20 +1,26 @@
-import { Calendar, Package, Search, Truck } from "lucide-react";
+import { Calendar, Edit, Package, Search, Trash2, Truck } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useRawMaterials } from "../../hooks/useRawMaterials";
-import { useStockEntries } from "../../hooks/useStock";
+import { useStockEntries, useDeleteStockEntry } from "../../hooks/useStock";
 import type { SortConfig, StockEntry } from "../../types";
+import { MeasurementUnit } from "../../types";
+import Button from "../ui/Button";
 import Input from "../ui/Input";
+import Modal from "../ui/Modal";
 import Select from "../ui/Select";
 import Table from "../ui/Table";
+import StockEntryForm from "./StockEntryForm";
 
 const StockEntriesTab = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [supplierFilter, setSupplierFilter] = useState("");
   const [materialFilter, setMaterialFilter] = useState("");
   const [sortConfig, setSortConfig] = useState<SortConfig>({ field: "receivedDate", order: "desc" });
+  const [editingEntry, setEditingEntry] = useState<StockEntry | null>(null);
 
   const { data: stockEntries = [], isLoading } = useStockEntries();
   const { data: rawMaterials = [] } = useRawMaterials({ isActive: true });
+  const deleteMutation = useDeleteStockEntry();
 
   // Get unique suppliers
   const suppliers = [...new Set(stockEntries.map(entry => entry.supplier).filter(Boolean))];
@@ -71,6 +77,16 @@ const StockEntriesTab = () => {
     }));
   };
 
+  const handleDelete = async (entry: StockEntry) => {
+    if (window.confirm(`Are you sure you want to delete this stock entry? This action cannot be undone.`)) {
+      try {
+        await deleteMutation.mutateAsync(entry.id);
+      } catch (error) {
+        console.error("Error deleting stock entry:", error);
+      }
+    }
+  };
+
   const columns = [
     {
       key: "rawMaterialId",
@@ -91,20 +107,86 @@ const StockEntriesTab = () => {
       sortable: true,
       render: (item: StockEntry) => {
         const material = rawMaterials.find(m => m.id === item.rawMaterialId);
-        return `${item.quantity} ${material?.unit || ""}`;
+        if (!material) return `${item.quantity}`;
+
+        // Check if this is a pack/box material
+        const isPackOrBox = material.unit === MeasurementUnit.PACKS || material.unit === MeasurementUnit.BOXES;
+        if (isPackOrBox) {
+          // Convert base quantity back to pack quantity for display
+          const packInfo = material as unknown as { unitsPerPack?: number };
+          const unitsPerPack = packInfo.unitsPerPack || 1;
+          const packQuantity = item.quantity / unitsPerPack;
+          return `${packQuantity} ${material.unit} (${item.quantity} ${material.unit === MeasurementUnit.PACKS ? "bottles" : "pieces"})`;
+        }
+
+        return `${item.quantity} ${material.unit || ""}`;
       }
     },
     {
       key: "unitCost",
       title: "Unit Cost",
       sortable: true,
-      render: (item: StockEntry) => `$${item.unitCost.toFixed(2)}`
+      render: (item: StockEntry) => {
+        const material = rawMaterials.find(m => m.id === item.rawMaterialId);
+        if (!material) return `$${item.unitCost.toFixed(2)}`;
+
+        // Check if this is a pack/box material
+        const isPackOrBox = material.unit === MeasurementUnit.PACKS || material.unit === MeasurementUnit.BOXES;
+        if (isPackOrBox) {
+          // For pack/box materials, unitCost is cost per pack/box
+          const packInfo = material as unknown as { unitsPerPack?: number; baseUnit?: string };
+          const unitsPerPack = packInfo.unitsPerPack || 1;
+          const baseUnit = packInfo.baseUnit || "pieces";
+          const individualCost = item.unitCost / unitsPerPack;
+          return (
+            <div>
+              <div className="font-medium">
+                ${item.unitCost.toFixed(2)} per {material.unit.toLowerCase()}
+              </div>
+              <div className="text-xs text-gray-500">
+                ${individualCost.toFixed(4)} per {baseUnit.toLowerCase()}
+              </div>
+            </div>
+          );
+        }
+
+        return `$${item.unitCost.toFixed(2)}`;
+      }
     },
     {
       key: "totalCost",
       title: "Total Cost",
       sortable: true,
-      render: (item: StockEntry) => `$${item.totalCost.toFixed(2)}`
+      render: (item: StockEntry) => {
+        const material = rawMaterials.find(m => m.id === item.rawMaterialId);
+        if (!material) return `$${item.totalCost.toFixed(2)}`;
+
+        // Check if this is a pack/box material
+        const isPackOrBox = material.unit === MeasurementUnit.PACKS || material.unit === MeasurementUnit.BOXES;
+        if (isPackOrBox) {
+          // For pack/box materials, show both pack cost and individual cost
+          const packInfo = material as unknown as { unitsPerPack?: number; baseUnit?: string };
+          const unitsPerPack = packInfo.unitsPerPack || 1;
+          const baseUnit = packInfo.baseUnit || "pieces";
+          const individualCost = item.unitCost / unitsPerPack;
+          const totalIndividualCost = item.quantity * individualCost;
+          const packQuantity = item.quantity / unitsPerPack;
+
+          return (
+            <div>
+              <div className="font-medium">${item.totalCost.toFixed(2)}</div>
+              <div className="text-xs text-gray-500">
+                {packQuantity.toFixed(1)} {material.unit.toLowerCase()} × ${item.unitCost.toFixed(2)} = ${item.totalCost.toFixed(2)}
+              </div>
+              <div className="text-xs text-gray-500">
+                {item.quantity} {baseUnit.toLowerCase()} × ${individualCost.toFixed(4)} = ${totalIndividualCost.toFixed(2)}
+              </div>
+            </div>
+          );
+        }
+
+        return `$${item.totalCost.toFixed(2)}`;
+      }
     },
     {
       key: "supplier",
@@ -143,6 +225,20 @@ const StockEntriesTab = () => {
       key: "receivedBy",
       title: "Received By",
       render: (item: StockEntry) => item.receivedBy
+    },
+    {
+      key: "actions",
+      title: "Actions",
+      render: (item: StockEntry) => (
+        <div className="flex space-x-2">
+          <Button size="sm" variant="ghost" onClick={() => setEditingEntry(item)} leftIcon={<Edit className="w-3 h-3" />}>
+            Edit
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => handleDelete(item)} leftIcon={<Trash2 className="w-3 h-3" />} className="text-red-600 hover:text-red-700">
+            Delete
+          </Button>
+        </div>
+      )
     }
   ];
 
@@ -220,7 +316,20 @@ const StockEntriesTab = () => {
       </div>
 
       {/* Table */}
-      <Table data={filteredData as unknown as Record<string, unknown>[]} columns={columns as unknown as any} loading={isLoading} emptyMessage="No stock entries found." sortConfig={sortConfig} onSort={handleSort} />
+      <Table data={filteredData as unknown as Record<string, unknown>[]} columns={columns as unknown as Array<{ key: string; title: string; sortable?: boolean; render: (item: Record<string, unknown>, index: number) => React.ReactNode }>} loading={isLoading} emptyMessage="No stock entries found." sortConfig={sortConfig} onSort={handleSort} />
+
+      {/* Edit Modal */}
+      <Modal isOpen={!!editingEntry} onClose={() => setEditingEntry(null)} title="Edit Stock Entry" size="lg">
+        {editingEntry && (
+          <StockEntryForm
+            initialData={editingEntry}
+            onSuccess={() => {
+              setEditingEntry(null);
+            }}
+            onCancel={() => setEditingEntry(null)}
+          />
+        )}
+      </Modal>
     </div>
   );
 };

@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { useApp } from "../../hooks/useApp";
 import { useAssignStockToSection } from "../../hooks/useSections";
 import { useStockLevels } from "../../hooks/useStock";
-import type { Section } from "../../types";
+import type { RawMaterial, Section } from "../../types";
+import { MeasurementUnit } from "../../types";
 import Button from "../ui/Button";
 import Input from "../ui/Input";
 import Modal from "../ui/Modal";
@@ -36,10 +37,42 @@ const StockAssignmentModal = ({ section, isOpen, onClose, onSuccess }: StockAssi
   // Filter stock levels to only show items with available quantity
   const availableStock = stockLevels.filter(level => level.availableQuantity > 0);
 
-  const materialOptions = availableStock.map(level => ({
-    value: level.rawMaterialId,
-    label: `${level.rawMaterial?.name} (${level.availableQuantity} ${level.rawMaterial?.unit} available)`
-  }));
+  // Helper function to format quantity display for pack/box materials
+  const formatQuantityDisplay = (quantity: number, material: RawMaterial) => {
+    if (!material) return `${quantity}`;
+
+    const isPackOrBox = material.unit === MeasurementUnit.PACKS || material.unit === MeasurementUnit.BOXES;
+    if (isPackOrBox) {
+      const packInfo = material as unknown as { unitsPerPack?: number; baseUnit?: string };
+      const unitsPerPack = packInfo.unitsPerPack || 1;
+      const baseUnit = packInfo.baseUnit || "pieces";
+      const packQuantity = quantity / unitsPerPack;
+      return `${packQuantity} ${material.unit} (${quantity} ${baseUnit})`;
+    }
+
+    return `${quantity} ${material.unit}`;
+  };
+
+  const materialOptions = availableStock.map(level => {
+    const material = level.rawMaterial;
+    if (!material) return { value: level.rawMaterialId, label: `Unknown Material (${level.availableQuantity} available)` };
+
+    const isPackOrBox = material.unit === MeasurementUnit.PACKS || material.unit === MeasurementUnit.BOXES;
+    if (isPackOrBox) {
+      const packInfo = material as unknown as { unitsPerPack?: number };
+      const unitsPerPack = packInfo.unitsPerPack || 1;
+      const packQuantity = level.availableQuantity / unitsPerPack;
+      return {
+        value: level.rawMaterialId,
+        label: `${material.name} (${packQuantity} ${material.unit} available)`
+      };
+    }
+
+    return {
+      value: level.rawMaterialId,
+      label: `${material.name} (${level.availableQuantity} ${material.unit} available)`
+    };
+  });
 
   const selectedStockLevel = availableStock.find(level => level.rawMaterialId === selectedMaterialId);
 
@@ -54,8 +87,27 @@ const StockAssignmentModal = ({ section, isOpen, onClose, onSuccess }: StockAssi
       newErrors.quantity = "Quantity must be greater than 0";
     }
 
-    if (selectedStockLevel && quantity > selectedStockLevel.availableQuantity) {
-      newErrors.quantity = `Quantity cannot exceed available stock (${selectedStockLevel.availableQuantity})`;
+    if (selectedStockLevel) {
+      const material = selectedStockLevel.rawMaterial;
+      if (material) {
+        const isPackOrBox = material.unit === MeasurementUnit.PACKS || material.unit === MeasurementUnit.BOXES;
+        if (isPackOrBox) {
+          // For pack/box materials, quantity input is in packs, but we need to validate against base quantity
+          const packInfo = material as unknown as { unitsPerPack?: number };
+          const unitsPerPack = packInfo.unitsPerPack || 1;
+          const baseQuantityNeeded = quantity * unitsPerPack;
+
+          if (baseQuantityNeeded > selectedStockLevel.availableQuantity) {
+            const maxPacks = selectedStockLevel.availableQuantity / unitsPerPack;
+            newErrors.quantity = `Quantity cannot exceed available stock (${maxPacks} ${material.unit})`;
+          }
+        } else {
+          // For regular materials, validate directly
+          if (quantity > selectedStockLevel.availableQuantity) {
+            newErrors.quantity = `Quantity cannot exceed available stock (${selectedStockLevel.availableQuantity} ${material.unit})`;
+          }
+        }
+      }
     }
 
     setErrors(newErrors);
@@ -70,13 +122,19 @@ const StockAssignmentModal = ({ section, isOpen, onClose, onSuccess }: StockAssi
     }
 
     try {
-      await assignMutation.mutateAsync({
+      // Send the quantity as entered by user (pack quantity for pack/box materials)
+      // The backend will handle the conversion to base units
+      const quantityToSend = quantity;
+
+      const assignmentData = {
         sectionId: section.id,
         rawMaterialId: selectedMaterialId,
-        quantity,
+        quantity: quantityToSend,
         assignedBy: state.user?.name || "Unknown",
         notes: `Assigned to ${section.name}`
-      });
+      };
+
+      await assignMutation.mutateAsync(assignmentData);
 
       onSuccess();
       onClose();
@@ -88,12 +146,11 @@ const StockAssignmentModal = ({ section, isOpen, onClose, onSuccess }: StockAssi
   const handleInputChange = (field: string, value: string | number) => {
     if (field === "selectedMaterialId") {
       setSelectedMaterialId(value as string);
-      setQuantity(0); // Reset quantity when material changes
+      setQuantity(0);
     } else if (field === "quantity") {
-      setQuantity(value as number);
+      const numValue = typeof value === 'string' ? parseFloat(value) : value;
+      setQuantity(Math.floor(numValue) || 0);
     }
-
-    // Clear error when user makes changes
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: "" }));
     }
@@ -110,17 +167,15 @@ const StockAssignmentModal = ({ section, isOpen, onClose, onSuccess }: StockAssi
           <Select label="Select Material" options={[{ value: "", label: "Choose a material..." }, ...materialOptions]} value={selectedMaterialId} onChange={e => handleInputChange("selectedMaterialId", e.target.value)} error={errors.selectedMaterialId} required />
 
           {selectedStockLevel && (
-            <div className="bg-blue-50 p-4 rounded-lg">
+            <div className="bg-blue-50 p-4 rounded-lg dark:bg-blue-900/10">
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <p className="font-medium text-blue-900">Available Stock:</p>
-                  <p className="text-blue-700">
-                    {selectedStockLevel.availableQuantity} {selectedStockLevel.rawMaterial?.unit}
-                  </p>
+                  <p className="font-medium text-blue-900 dark:text-blue-300">Available Stock:</p>
+                  <p className="text-blue-700 dark:text-blue-100 font-bold">{formatQuantityDisplay(selectedStockLevel.availableQuantity, selectedStockLevel.rawMaterial as RawMaterial)}</p>
                 </div>
                 <div>
-                  <p className="font-medium text-blue-900">Unit Cost:</p>
-                  <p className="text-blue-700">${selectedStockLevel.rawMaterial?.unitCost.toFixed(2)}</p>
+                  <p className="font-medium text-blue-900 dark:text-blue-300">Unit Cost:</p>
+                  <p className="text-blue-700 dark:text-blue-100 font-bold">${selectedStockLevel.rawMaterial?.unitCost.toFixed(2)}</p>
                 </div>
               </div>
             </div>
@@ -128,21 +183,68 @@ const StockAssignmentModal = ({ section, isOpen, onClose, onSuccess }: StockAssi
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <label className="block text-sm font-medium text-gray-700">Quantity to Assign</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Quantity to Assign</label>
               {selectedStockLevel && (
-                <Button type="button" variant="outline" size="sm" onClick={() => handleInputChange("quantity", selectedStockLevel.availableQuantity)} disabled={!selectedMaterialId}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const material = selectedStockLevel.rawMaterial;
+                    if (material) {
+                      const isPackOrBox = material.unit === MeasurementUnit.PACKS || material.unit === MeasurementUnit.BOXES;
+                      if (isPackOrBox) {
+                        const packInfo = material as unknown as { unitsPerPack?: number };
+                        const unitsPerPack = packInfo.unitsPerPack || 1;
+                        const maxPacks = selectedStockLevel.availableQuantity / unitsPerPack;
+                        handleInputChange("quantity", maxPacks);
+                      } else {
+                        handleInputChange("quantity", selectedStockLevel.availableQuantity);
+                      }
+                    }
+                  }}
+                  disabled={!selectedMaterialId}
+                >
                   Assign All
                 </Button>
               )}
             </div>
-            <Input type="number" min="0" max={selectedStockLevel?.availableQuantity || undefined} step="0.01" value={quantity} onChange={e => handleInputChange("quantity", parseFloat(e.target.value) || 0)} error={errors.quantity} required helperText={selectedStockLevel ? `Max: ${selectedStockLevel.availableQuantity} ${selectedStockLevel.rawMaterial?.unit}` : undefined} disabled={!selectedMaterialId} />
+            <Input
+              type="number"
+              min="0"
+              step="1"
+              value={quantity}
+              onChange={e => handleInputChange("quantity", parseFloat(e.target.value) || 0)}
+              error={errors.quantity}
+              required
+              helperText={
+                selectedStockLevel
+                  ? (() => {
+                      const material = selectedStockLevel.rawMaterial;
+                      if (material) {
+                        const isPackOrBox = material.unit === MeasurementUnit.PACKS || material.unit === MeasurementUnit.BOXES;
+                        if (isPackOrBox) {
+                          const packInfo = material as unknown as { unitsPerPack?: number };
+                          const unitsPerPack = packInfo.unitsPerPack || 1;
+                          const maxPacks = selectedStockLevel.availableQuantity / unitsPerPack;
+                          return `Max: ${maxPacks} ${material.unit}`;
+                        } else {
+                          return `Max: ${selectedStockLevel.availableQuantity} ${material.unit}`;
+                        }
+                      }
+                      return undefined;
+                    })()
+                  : undefined
+              }
+              disabled={!selectedMaterialId}
+            />
           </div>
 
           {quantity > 0 && selectedStockLevel && (
-            <div className="bg-gray-50 p-4 rounded-lg">
+            <div className="bg-gray-50 p-4 rounded-lg dark:bg-gray-900/10">
               <div className="flex justify-between items-center">
-                <span className="text-sm font-medium text-gray-700">Total Value:</span>
-                <span className="text-lg font-bold text-gray-900">${(quantity * (selectedStockLevel.rawMaterial?.unitCost || 0)).toFixed(2)}</span>
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Total Value:</span>
+                <span className="text-lg font-bold text-gray-900 dark:text-gray-300">${(quantity * (selectedStockLevel.rawMaterial?.unitCost || 0)).toFixed(2)}</span>
               </div>
             </div>
           )}

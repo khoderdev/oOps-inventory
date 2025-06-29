@@ -1,5 +1,5 @@
 import { db } from "../lib/database";
-import type { RawMaterial, CreateRawMaterialInput, UpdateRawMaterialInput, ApiResponse, PaginatedResponse } from "../types";
+import type { RawMaterial, CreateRawMaterialInput, UpdateRawMaterialInput, ApiResponse } from "../types";
 
 export class RawMaterialsAPI {
   // Create a new raw material

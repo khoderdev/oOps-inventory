@@ -1,20 +1,13 @@
 import { useEffect, useState } from "react";
 import { useApp } from "../../hooks/useApp";
 import { useRecordConsumption } from "../../hooks/useSections";
-import type { Section, SectionInventory } from "../../types";
+import type { ConsumptionModalProps } from "../../types";
 import { MeasurementUnit } from "../../types";
+import { getStepValue } from "../../utils/units";
 import Button from "../ui/Button";
 import Input from "../ui/Input";
 import Modal from "../ui/Modal";
 import Select from "../ui/Select";
-
-interface ConsumptionModalProps {
-  section: Section;
-  inventoryItem: SectionInventory | null;
-  isOpen: boolean;
-  onClose: () => void;
-  onSuccess: () => void;
-}
 
 const ConsumptionModal = ({ section, inventoryItem, isOpen, onClose, onSuccess }: ConsumptionModalProps) => {
   const [quantity, setQuantity] = useState(0);
@@ -34,7 +27,7 @@ const ConsumptionModal = ({ section, inventoryItem, isOpen, onClose, onSuccess }
       setReason("production");
       setOrderId("");
       setNotes("");
-      setUsageUnit(isPackOrBox() ? "pack" : "individual");
+      setUsageUnit(inventoryItem?.rawMaterial?.unit === MeasurementUnit.PACKS || inventoryItem?.rawMaterial?.unit === MeasurementUnit.BOXES ? "pack" : "individual");
       setErrors({});
     }
   }, [isOpen, inventoryItem]);
@@ -68,28 +61,29 @@ const ConsumptionModal = ({ section, inventoryItem, isOpen, onClose, onSuccess }
   };
 
   const convertToBaseQuantity = (inputQuantity: number) => {
-    if (!isPackOrBox() || usageUnit === "individual") {
+    if (!isPackOrBox()) {
       return inputQuantity;
     }
 
     const packInfo = getPackInfo();
-    return inputQuantity * (packInfo?.unitsPerPack || 1);
-  };
-
-  const convertFromBaseQuantity = (baseQuantity: number) => {
-    if (!isPackOrBox() || usageUnit === "individual") {
-      return baseQuantity;
+    if (usageUnit === "pack") {
+      return inputQuantity * (packInfo?.unitsPerPack || 1);
+    } else {
+      // For individual units, the input is already in base units
+      return inputQuantity;
     }
-
-    const packInfo = getPackInfo();
-    return baseQuantity / (packInfo?.unitsPerPack || 1);
   };
 
   const getMaxQuantity = () => {
     if (!inventoryItem) return 0;
 
-    if (isPackOrBox() && usageUnit === "pack") {
-      return Math.floor(convertFromBaseQuantity(inventoryItem.quantity));
+    if (isPackOrBox()) {
+      if (usageUnit === "pack") {
+        return Math.floor(inventoryItem.quantity / (getPackInfo()?.unitsPerPack || 1));
+      } else {
+        // For individual units, return total available in base units
+        return inventoryItem.quantity;
+      }
     }
 
     return inventoryItem.quantity;
@@ -97,7 +91,6 @@ const ConsumptionModal = ({ section, inventoryItem, isOpen, onClose, onSuccess }
 
   const getDisplayUnit = () => {
     if (!inventoryItem?.rawMaterial) return "";
-
     if (isPackOrBox()) {
       const packInfo = getPackInfo();
       if (usageUnit === "pack") {
@@ -106,8 +99,27 @@ const ConsumptionModal = ({ section, inventoryItem, isOpen, onClose, onSuccess }
         return packInfo?.baseUnit?.toLowerCase() || "pieces";
       }
     }
-
     return inventoryItem.rawMaterial.unit.toLowerCase();
+  };
+
+  const getStepValueForDisplay = () => {
+    if (!inventoryItem?.rawMaterial) return "1";
+
+    if (isPackOrBox()) {
+      const packInfo = getPackInfo();
+      if (usageUnit === "pack") {
+        return getStepValue(inventoryItem.rawMaterial.unit as MeasurementUnit);
+      } else {
+        // For individual units, use the base unit's step value
+        return getStepValue(packInfo?.baseUnit as MeasurementUnit);
+      }
+    }
+
+    return getStepValue(inventoryItem.rawMaterial.unit as MeasurementUnit);
+  };
+
+  const getFormattedQuantity = (qty: number, unit: string) => {
+    return `${qty} ${unit}`;
   };
 
   const validateForm = () => {
@@ -197,35 +209,48 @@ const ConsumptionModal = ({ section, inventoryItem, isOpen, onClose, onSuccess }
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="space-y-4">
           {/* Item Info */}
-          <div className="bg-gray-50 p-4 rounded-lg">
+          <div className="bg-gray-50 p-4 rounded-lg dark:bg-gray-900/10">
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
-                <p className="font-medium text-gray-900">Available Stock:</p>
+                <p className="font-medium text-gray-900 dark:text-gray-300">Available Stock:</p>
                 {isPackOrBox() && packInfo ? (
                   <div className="space-y-1">
-                    <p className="text-gray-700">
-                      {convertFromBaseQuantity(inventoryItem.quantity).toFixed(0)} {inventoryItem.rawMaterial?.unit}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      ({inventoryItem.quantity} {packInfo.baseUnit} total)
-                    </p>
+                    {usageUnit === "pack" ? (
+                      <>
+                        <p className="text-gray-700 dark:text-gray-300">
+                          {Math.floor(inventoryItem.quantity / packInfo.unitsPerPack)} {inventoryItem.rawMaterial?.unit}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          ({inventoryItem.quantity} {packInfo.baseUnit} total)
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-gray-700 dark:text-gray-300">
+                          {inventoryItem.quantity} {packInfo.baseUnit}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          ({Math.floor(inventoryItem.quantity / packInfo.unitsPerPack)} {inventoryItem.rawMaterial?.unit} total)
+                        </p>
+                      </>
+                    )}
                   </div>
                 ) : (
-                  <p className="text-gray-700">
+                  <p className="text-gray-700 dark:text-gray-300">
                     {inventoryItem.quantity} {inventoryItem.rawMaterial?.unit}
                   </p>
                 )}
               </div>
               <div>
-                <p className="font-medium text-gray-900">Section:</p>
-                <p className="text-gray-700">{section.name}</p>
+                <p className="font-medium text-gray-900 dark:text-gray-300">Section:</p>
+                <p className="text-gray-700 dark:text-gray-300">{section.name}</p>
               </div>
             </div>
 
             {/* Pack/Box Info */}
             {isPackOrBox() && packInfo && (
               <div className="mt-3 pt-3 border-t border-gray-200">
-                <p className="text-xs text-gray-600">
+                <p className="text-xs text-gray-600 dark:text-gray-400">
                   Each {inventoryItem.rawMaterial?.unit.slice(0, -1)} contains {packInfo.unitsPerPack} {packInfo.baseUnit}
                 </p>
               </div>
@@ -235,7 +260,7 @@ const ConsumptionModal = ({ section, inventoryItem, isOpen, onClose, onSuccess }
           {/* Usage Unit Selection for Packs/Boxes */}
           {isPackOrBox() && packInfo && (
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">Usage Unit</label>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Usage Unit</label>
               <div className="flex space-x-4">
                 <label className="flex items-center">
                   <input type="radio" name="usageUnit" value="pack" checked={usageUnit === "pack"} onChange={e => handleInputChange("usageUnit", e.target.value)} className="mr-2" />
@@ -249,16 +274,7 @@ const ConsumptionModal = ({ section, inventoryItem, isOpen, onClose, onSuccess }
             </div>
           )}
 
-          <Input label={`Quantity Used (${getDisplayUnit()})`} type="number" min="0" max={maxQuantity} step={usageUnit === "pack" ? "1" : "0.01"} value={quantity} onChange={e => handleInputChange("quantity", parseFloat(e.target.value) || 0)} error={errors.quantity} required helperText={`Max: ${maxQuantity} ${getDisplayUnit()}`} />
-
-          {/* Conversion Display */}
-          {isPackOrBox() && packInfo && quantity > 0 && (
-            <div className="bg-blue-50 p-3 rounded-lg">
-              <p className="text-sm text-blue-700">
-                <strong>Conversion:</strong> {quantity} {getDisplayUnit()} = {baseQuantityUsed} {packInfo.baseUnit}
-              </p>
-            </div>
-          )}
+          <Input label={`Quantity Used (${getDisplayUnit()})`} type="number" min="0" max={maxQuantity} step={getStepValueForDisplay()} value={quantity} onChange={e => handleInputChange("quantity", parseFloat(e.target.value) || 0)} error={errors.quantity} required helperText={`Max: ${getFormattedQuantity(maxQuantity, getDisplayUnit())}`} />
 
           <Select label="Reason for Usage" options={[{ value: "", label: "Select a reason..." }, ...reasonOptions]} value={reason} onChange={e => handleInputChange("reason", e.target.value)} error={errors.reason} required />
 
@@ -268,26 +284,40 @@ const ConsumptionModal = ({ section, inventoryItem, isOpen, onClose, onSuccess }
 
           {/* Usage Summary */}
           {quantity > 0 && inventoryItem.rawMaterial && (
-            <div className="bg-blue-50 p-4 rounded-lg space-y-2">
+            <div className="bg-blue-50 p-4 rounded-lg space-y-2 dark:bg-blue-900/10">
               <div className="flex justify-between items-center">
-                <span className="text-sm font-medium text-blue-700">Estimated Value:</span>
-                <span className="text-lg font-bold text-blue-900">${(baseQuantityUsed * inventoryItem.rawMaterial.unitCost).toFixed(2)}</span>
+                <span className="text-sm font-medium text-blue-700 dark:text-blue-300">Estimated Value:</span>
+                <span className="text-lg font-bold text-blue-900 dark:text-blue-300">
+                  $
+                  {(() => {
+                    // Calculate value based on the unit being used
+                    if (isPackOrBox() && usageUnit === "pack") {
+                      // For packs, use the pack unit cost
+                      return (quantity * inventoryItem.rawMaterial.unitCost).toFixed(2);
+                    } else {
+                      // For individual units, calculate individual cost
+                      const packInfo = getPackInfo();
+                      if (packInfo && isPackOrBox()) {
+                        const individualCost = inventoryItem.rawMaterial.unitCost / packInfo.unitsPerPack;
+                        return (quantity * individualCost).toFixed(2);
+                      } else {
+                        return (quantity * inventoryItem.rawMaterial.unitCost).toFixed(2);
+                      }
+                    }
+                  })()}
+                </span>
               </div>
 
               <div className="flex justify-between items-center">
-                <span className="text-xs text-blue-600">Remaining after usage:</span>
+                <span className="text-xs text-blue-600 dark:text-blue-400">Remaining after usage:</span>
                 <div className="text-right">
                   {isPackOrBox() && packInfo ? (
                     <div>
-                      <span className="text-sm font-medium text-blue-800">
-                        {Math.floor(convertFromBaseQuantity(remainingAfterUsage))} {inventoryItem.rawMaterial.unit}
-                      </span>
-                      <div className="text-xs text-blue-600">
-                        ({remainingAfterUsage.toFixed(2)} {packInfo.baseUnit} total)
-                      </div>
+                      <span className="text-sm font-medium text-blue-800 dark:text-blue-300">{usageUnit === "pack" ? `${Math.floor(remainingAfterUsage / packInfo.unitsPerPack)} ${inventoryItem.rawMaterial.unit}` : `${remainingAfterUsage} ${packInfo.baseUnit}`}</span>
+                      <div className="text-xs text-blue-600 dark:text-blue-400">{usageUnit === "pack" ? `(${remainingAfterUsage} ${packInfo.baseUnit} total)` : `(${(remainingAfterUsage / packInfo.unitsPerPack).toFixed(2)} ${inventoryItem.rawMaterial.unit} total)`}</div>
                     </div>
                   ) : (
-                    <span className="text-sm font-medium text-blue-800">
+                    <span className="text-sm font-medium text-blue-800 dark:text-blue-300">
                       {remainingAfterUsage.toFixed(2)} {inventoryItem.rawMaterial.unit}
                     </span>
                   )}

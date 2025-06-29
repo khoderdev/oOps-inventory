@@ -60,6 +60,10 @@ export interface CreateStockEntryInput {
   notes?: string;
 }
 
+export interface UpdateStockEntryInput extends Partial<CreateStockEntryInput> {
+  id: string;
+}
+
 export interface CreateStockMovementInput {
   stockEntryId: string;
   type: MovementType;

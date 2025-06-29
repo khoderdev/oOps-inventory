@@ -180,6 +180,9 @@ const RawMaterialForm = ({ initialData, onSuccess, onCancel }: RawMaterialFormPr
             Each {getPackLabel()} contains <strong>{formData.unitsPerPack}</strong> {formData.baseUnit.toLowerCase()}
           </p>
           <p className="text-sm text-blue-700">
+            Cost per {getPackLabel()}: <strong>${formData.unitCost.toFixed(2)}</strong>
+          </p>
+          <p className="text-sm text-blue-700">
             Cost per individual {formData.baseUnit.toLowerCase()}: <strong>${(formData.unitCost / formData.unitsPerPack).toFixed(4)}</strong>
           </p>
         </div>

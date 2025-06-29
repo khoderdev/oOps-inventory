@@ -145,3 +145,45 @@ export const useRecordConsumption = () => {
     }
   });
 };
+
+// Update section inventory mutation
+export const useUpdateSectionInventory = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ inventoryId, quantity, updatedBy, notes }: { inventoryId: string; quantity: number; updatedBy: string; notes?: string }) => SectionsAPI.updateSectionInventory(inventoryId, quantity, updatedBy, notes),
+    onSuccess: (response) => {
+      if (response.success) {
+        // Invalidate section inventory queries
+        queryClient.invalidateQueries({
+          queryKey: [QUERY_KEYS.sectionInventory]
+        });
+        // Invalidate stock levels
+        queryClient.invalidateQueries({ queryKey: ["stockLevels"] });
+        // Invalidate stock movements
+        queryClient.invalidateQueries({ queryKey: ["stockMovements"] });
+      }
+    }
+  });
+};
+
+// Remove section inventory mutation
+export const useRemoveSectionInventory = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ inventoryId, removedBy, notes }: { inventoryId: string; removedBy: string; notes?: string }) => SectionsAPI.removeSectionInventory(inventoryId, removedBy, notes),
+    onSuccess: (response) => {
+      if (response.success) {
+        // Invalidate section inventory queries
+        queryClient.invalidateQueries({
+          queryKey: [QUERY_KEYS.sectionInventory]
+        });
+        // Invalidate stock levels
+        queryClient.invalidateQueries({ queryKey: ["stockLevels"] });
+        // Invalidate stock movements
+        queryClient.invalidateQueries({ queryKey: ["stockMovements"] });
+      }
+    }
+  });
+};

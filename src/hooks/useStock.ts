@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { StockAPI } from "../data/stock.api";
-import type { CreateStockEntryInput, CreateStockMovementInput, MovementType } from "../types";
+import type { CreateStockEntryInput, CreateStockMovementInput, MovementType, UpdateStockEntryInput } from "../types";
 
 const QUERY_KEYS = {
   stockEntries: "stockEntries",
@@ -58,17 +58,52 @@ export const useCreateStockEntry = () => {
     mutationFn: (data: CreateStockEntryInput) => StockAPI.createEntry(data),
     onSuccess: response => {
       if (response.success) {
-        // Invalidate relevant queries
         queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.stockEntries] });
         queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.stockLevels] });
         queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.stockMovements] });
-
-        // Invalidate specific stock level
         if (response.data.rawMaterialId) {
           queryClient.invalidateQueries({
             queryKey: QUERY_KEYS.stockLevel(response.data.rawMaterialId)
           });
         }
+      }
+    }
+  });
+};
+
+// Update stock entry mutation
+export const useUpdateStockEntry = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: UpdateStockEntryInput) => StockAPI.updateEntry(data),
+    onSuccess: response => {
+      if (response.success) {
+        queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.stockEntries] });
+        queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.stockLevels] });
+        queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.stockMovements] });
+        if (response.data.rawMaterialId) {
+          queryClient.invalidateQueries({
+            queryKey: QUERY_KEYS.stockLevel(response.data.rawMaterialId)
+          });
+        }
+      }
+    }
+  });
+};
+
+// Delete stock entry mutation
+export const useDeleteStockEntry = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => StockAPI.deleteEntry(id),
+    onSuccess: response => {
+      if (response.success) {
+        // Invalidate relevant queries
+        queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.stockEntries] });
+        queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.stockLevels] });
+        queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.stockMovements] });
       }
     }
   });

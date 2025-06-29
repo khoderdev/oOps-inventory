@@ -2,13 +2,18 @@ import { Check, Plus, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useApp } from "../../hooks/useApp";
 import { useRawMaterials } from "../../hooks/useRawMaterials";
-import { useCreateStockEntry, useStockEntries } from "../../hooks/useStock";
-import type { StockEntryFormProps } from "../../types/stock.types";
+import { useCreateStockEntry, useUpdateStockEntry, useStockEntries } from "../../hooks/useStock";
+import type { StockEntry, StockEntryFormProps } from "../../types/stock.types";
+import { MeasurementUnit } from "../../types";
 import Button from "../ui/Button";
 import Input from "../ui/Input";
 import Select from "../ui/Select";
 
-const StockEntryForm = ({ onSuccess, onCancel }: StockEntryFormProps) => {
+interface ExtendedStockEntryFormProps extends StockEntryFormProps {
+  initialData?: StockEntry;
+}
+
+const StockEntryForm = ({ onSuccess, onCancel, initialData }: ExtendedStockEntryFormProps) => {
   const [formData, setFormData] = useState({
     rawMaterialId: "",
     quantity: 0,
@@ -29,6 +34,25 @@ const StockEntryForm = ({ onSuccess, onCancel }: StockEntryFormProps) => {
   const { data: stockEntries = [] } = useStockEntries();
   const { state } = useApp();
   const createMutation = useCreateStockEntry();
+  const updateMutation = useUpdateStockEntry();
+
+  // Initialize form data when editing
+  useEffect(() => {
+    if (initialData) {
+      const receivedDateString = initialData.receivedDate ? new Date(initialData.receivedDate).toISOString().split("T")[0] || new Date().toISOString().split("T")[0] || "" : new Date().toISOString().split("T")[0] || "";
+
+      setFormData({
+        rawMaterialId: initialData.rawMaterialId,
+        quantity: initialData.quantity,
+        unitCost: initialData.unitCost,
+        supplier: initialData.supplier || "",
+        batchNumber: initialData.batchNumber || "",
+        expiryDate: initialData.expiryDate ? new Date(initialData.expiryDate).toISOString().split("T")[0] || "" : "",
+        receivedDate: receivedDateString,
+        notes: initialData.notes || ""
+      });
+    }
+  }, [initialData]);
 
   const materialOptions = rawMaterials.map(material => ({
     value: material.id,
@@ -96,17 +120,32 @@ const StockEntryForm = ({ onSuccess, onCancel }: StockEntryFormProps) => {
     }
 
     try {
-      await createMutation.mutateAsync({
-        rawMaterialId: formData.rawMaterialId,
-        quantity: formData.quantity,
-        unitCost: formData.unitCost,
-        supplier: formData.supplier || undefined,
-        batchNumber: formData.batchNumber || undefined,
-        expiryDate: formData.expiryDate ? new Date(formData.expiryDate) : undefined,
-        receivedDate: new Date(formData.receivedDate!),
-        receivedBy: state.user?.name || "Unknown",
-        notes: formData.notes || undefined
-      });
+      if (initialData) {
+        await updateMutation.mutateAsync({
+          id: initialData.id,
+          rawMaterialId: formData.rawMaterialId,
+          quantity: formData.quantity,
+          unitCost: formData.unitCost,
+          supplier: formData.supplier || undefined,
+          batchNumber: formData.batchNumber || undefined,
+          expiryDate: formData.expiryDate ? new Date(formData.expiryDate) : undefined,
+          receivedDate: new Date(formData.receivedDate!),
+          receivedBy: state.user?.name || "Unknown",
+          notes: formData.notes || undefined
+        });
+      } else {
+        await createMutation.mutateAsync({
+          rawMaterialId: formData.rawMaterialId,
+          quantity: formData.quantity,
+          unitCost: formData.unitCost,
+          supplier: formData.supplier || undefined,
+          batchNumber: formData.batchNumber || undefined,
+          expiryDate: formData.expiryDate ? new Date(formData.expiryDate) : undefined,
+          receivedDate: new Date(formData.receivedDate!),
+          receivedBy: state.user?.name || "Unknown",
+          notes: formData.notes || undefined
+        });
+      }
       onSuccess();
     } catch (error) {
       console.error("Error creating stock entry:", error);
@@ -160,7 +199,7 @@ const StockEntryForm = ({ onSuccess, onCancel }: StockEntryFormProps) => {
   };
 
   const selectedMaterial = rawMaterials.find(m => m.id === formData.rawMaterialId);
-  const isLoading = createMutation.isPending;
+  const isLoading = createMutation.isPending || updateMutation.isPending;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -169,7 +208,7 @@ const StockEntryForm = ({ onSuccess, onCancel }: StockEntryFormProps) => {
 
         <Input label="Quantity" type="number" min="0" step="0.01" value={formData.quantity} onChange={e => handleInputChange("quantity", parseFloat(e.target.value) || 0)} error={errors.quantity} required helperText={selectedMaterial ? `Unit: ${selectedMaterial.unit}` : undefined} />
 
-        <Input label="Unit Cost" type="number" step="0.01" min="0" value={formData.unitCost} onChange={e => handleInputChange("unitCost", parseFloat(e.target.value) || 0)} error={errors.unitCost} required placeholder="0.00" />
+        <Input label="Unit Cost" type="number" step="0.01" min="0" value={formData.unitCost} onChange={e => handleInputChange("unitCost", parseFloat(e.target.value) || 0)} error={errors.unitCost} required placeholder="0.00" helperText={selectedMaterial && (selectedMaterial.unit === MeasurementUnit.PACKS || selectedMaterial.unit === MeasurementUnit.BOXES) ? `Cost per ${selectedMaterial.unit.toLowerCase()}` : undefined} />
 
         {/* Enhanced Supplier Input */}
         <div className="space-y-2">
@@ -231,6 +270,38 @@ const StockEntryForm = ({ onSuccess, onCancel }: StockEntryFormProps) => {
 
       <Input label="Notes" value={formData.notes} onChange={e => handleInputChange("notes", e.target.value)} placeholder="Optional notes about this stock entry" />
 
+      {/* Pack/Box Cost Summary */}
+      {selectedMaterial && (selectedMaterial.unit === MeasurementUnit.PACKS || selectedMaterial.unit === MeasurementUnit.BOXES) && formData.quantity > 0 && formData.unitCost > 0 && (
+        <div className="bg-blue-50 dark:bg-blue-900/10 p-4 rounded-lg">
+          <h4 className="font-medium text-blue-900 dark:text-blue-300 mb-2">Cost Breakdown</h4>
+          <div className="space-y-1 text-sm text-blue-700 dark:text-blue-300">
+            <p>
+              Cost per {selectedMaterial.unit.toLowerCase()}: <strong>${formData.unitCost.toFixed(2)}</strong>
+            </p>
+            <p>
+              Total {selectedMaterial.unit.toLowerCase()} cost: <strong>${(formData.quantity * formData.unitCost).toFixed(2)}</strong>
+            </p>
+            {(() => {
+              const packInfo = selectedMaterial as unknown as { unitsPerPack?: number; baseUnit?: string };
+              const unitsPerPack = packInfo.unitsPerPack || 1;
+              const baseUnit = packInfo.baseUnit || "pieces";
+              const individualCost = formData.unitCost / unitsPerPack;
+              const totalIndividualCost = formData.quantity * unitsPerPack * individualCost;
+              return (
+                <>
+                  <p>
+                    Cost per {baseUnit.toLowerCase()}: <strong>${individualCost.toFixed(4)}</strong>
+                  </p>
+                  <p>
+                    Total {baseUnit.toLowerCase()} cost: <strong>${totalIndividualCost.toFixed(2)}</strong>
+                  </p>
+                </>
+              );
+            })()}
+          </div>
+        </div>
+      )}
+
       {/* Total Cost Display */}
       {formData.quantity > 0 && formData.unitCost > 0 && (
         <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
@@ -246,7 +317,7 @@ const StockEntryForm = ({ onSuccess, onCancel }: StockEntryFormProps) => {
           Cancel
         </Button>
         <Button type="submit" loading={isLoading}>
-          Add Stock Entry
+          {initialData ? "Update Stock Entry" : "Add Stock Entry"}
         </Button>
       </div>
     </form>

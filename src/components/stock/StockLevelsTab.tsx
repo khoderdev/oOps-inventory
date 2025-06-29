@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { useRawMaterials } from "../../hooks/useRawMaterials";
 import { useStockLevels } from "../../hooks/useStock";
 import type { SortConfig, StockLevel } from "../../types";
+import { MeasurementUnit } from "../../types";
 import Button from "../ui/Button";
 import Input from "../ui/Input";
 import Select from "../ui/Select";
@@ -54,11 +55,13 @@ const StockLevelsTab = () => {
 
       if (sortConfig.field.includes(".")) {
         const [parent, child] = sortConfig.field.split(".");
-        aValue = (a as Record<string, unknown>)[parent]?.[child];
-        bValue = (b as Record<string, unknown>)[parent]?.[child];
+        const aParent = (a as unknown as Record<string, unknown>)[parent];
+        const bParent = (b as unknown as Record<string, unknown>)[parent];
+        aValue = aParent && typeof aParent === 'object' ? (aParent as Record<string, unknown>)[child] : undefined;
+        bValue = bParent && typeof bParent === 'object' ? (bParent as Record<string, unknown>)[child] : undefined;
       } else {
-        aValue = (a as Record<string, unknown>)[sortConfig.field];
-        bValue = (b as Record<string, unknown>)[sortConfig.field];
+        aValue = (a as unknown as Record<string, unknown>)[sortConfig.field];
+        bValue = (b as unknown as Record<string, unknown>)[sortConfig.field];
       }
 
       if (aValue < bValue) return sortConfig.order === "asc" ? -1 : 1;
@@ -74,6 +77,42 @@ const StockLevelsTab = () => {
       field,
       order: prev.field === field && prev.order === "asc" ? "desc" : "asc"
     }));
+  };
+
+  // Helper function to format quantity display for pack/box materials
+  const formatQuantityDisplay = (quantity: number, material: any) => {
+    if (!material) return `${quantity}`;
+    
+    const isPackOrBox = material.unit === MeasurementUnit.PACKS || material.unit === MeasurementUnit.BOXES;
+    if (isPackOrBox) {
+      const packInfo = material as unknown as { unitsPerPack?: number; baseUnit?: string };
+      const unitsPerPack = packInfo.unitsPerPack || 1;
+      const baseUnit = packInfo.baseUnit || "pieces";
+      const packQuantity = quantity / unitsPerPack;
+      return `${packQuantity} ${material.unit} (${quantity} ${baseUnit})`;
+    }
+    
+    return `${quantity} ${material.unit}`;
+  };
+
+  // Helper function to calculate total value considering pack/box pricing
+  const calculateTotalValue = () => {
+    return stockLevels.reduce((sum, level) => {
+      const material = level.rawMaterial;
+      if (!material) return sum;
+      
+      const isPackOrBox = material.unit === MeasurementUnit.PACKS || material.unit === MeasurementUnit.BOXES;
+      if (isPackOrBox) {
+        // For pack/box materials, unitCost is cost per pack/box
+        // We need to calculate value based on pack quantity
+        const packInfo = material as unknown as { unitsPerPack?: number };
+        const unitsPerPack = packInfo.unitsPerPack || 1;
+        const packQuantity = level.availableQuantity / unitsPerPack;
+        return sum + (packQuantity * material.unitCost);
+      }
+      
+      return sum + (level.availableQuantity * material.unitCost);
+    }, 0);
   };
 
   const columns = [
@@ -95,7 +134,7 @@ const StockLevelsTab = () => {
       render: (item: StockLevel) => (
         <div className="flex items-center space-x-2">
           <span className={`font-medium ${item.isLowStock ? "text-red-600 dark:text-red-400" : "text-green-600 dark:text-green-400"}`}>
-            {item.availableQuantity} {item.rawMaterial?.unit}
+            {formatQuantityDisplay(item.availableQuantity, item.rawMaterial)}
           </span>
           {item.isLowStock && <AlertTriangle className="w-4 h-4 text-red-500 dark:text-red-400" />}
         </div>
@@ -105,19 +144,19 @@ const StockLevelsTab = () => {
       key: "totalQuantity",
       title: "Total Received",
       sortable: true,
-      render: (item: StockLevel) => `${item.totalQuantity} ${item.rawMaterial?.unit}`
+      render: (item: StockLevel) => formatQuantityDisplay(item.totalQuantity, item.rawMaterial)
     },
     {
       key: "minLevel",
       title: "Min Level",
       sortable: true,
-      render: (item: StockLevel) => `${item.minLevel} ${item.rawMaterial?.unit}`
+      render: (item: StockLevel) => formatQuantityDisplay(item.minLevel, item.rawMaterial)
     },
     {
       key: "maxLevel",
       title: "Max Level",
       sortable: true,
-      render: (item: StockLevel) => `${item.maxLevel} ${item.rawMaterial?.unit}`
+      render: (item: StockLevel) => formatQuantityDisplay(item.maxLevel, item.rawMaterial)
     },
     {
       key: "status",
@@ -172,7 +211,7 @@ const StockLevelsTab = () => {
             <Package className="w-8 h-8 text-purple-600 dark:text-purple-400" />
             <div className="ml-3">
               <p className="text-sm font-medium text-purple-600 dark:text-purple-400">Total Value</p>
-              <p className="text-2xl font-bold text-purple-900 dark:text-purple-300">${stockLevels.reduce((sum, level) => sum + level.availableQuantity * (level.rawMaterial?.unitCost || 0), 0).toFixed(2)}</p>
+              <p className="text-2xl font-bold text-purple-900 dark:text-purple-300">${calculateTotalValue().toFixed(2)}</p>
             </div>
           </div>
         </div>

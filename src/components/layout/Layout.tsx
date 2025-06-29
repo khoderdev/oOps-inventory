@@ -60,7 +60,7 @@ const Layout = () => {
       {/* Main Content Area */}
       <div className="flex flex-col flex-1 overflow-hidden">
         {/* Top Bar */}
-        <header className="sticky top-0 z-30 flex items-center justify-between bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-3 shadow-sm lg:py-4">
+        <header className="sticky top-0 z-30 flex items-center justify-between bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 h-16 shadow-sm">
           <Button variant="ghost" size="sm" onClick={toggleSidebar} className="lg:hidden" aria-label="Open sidebar">
             <Menu className="w-5 h-5" />
           </Button>
@@ -76,7 +76,7 @@ const Layout = () => {
 
         {/* Page Content */}
         <main className="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-900">
-          <div className="mx-auto max-w-screen-xl px-4 py-8">
+          <div className="mx-auto max-w-screen p-8">
             <Outlet />
           </div>
         </main>

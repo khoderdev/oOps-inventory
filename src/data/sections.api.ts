@@ -187,6 +187,26 @@ export class SectionsAPI {
         throw new Error(packInfo ? `Insufficient stock available. Requested: ${requestedPacks.toFixed(1)} ${rawMaterial.unit}, Available: ${availablePacks.toFixed(1)} ${rawMaterial.unit}` : `Insufficient stock available. Requested: ${baseQuantityToAssign}, Available: ${stockLevel.data.availableQuantity}`);
       }
 
+      // Find an available stock entry to reference for the movement
+      const stockEntries = await db.stockEntries.where({ rawMaterialId }).toArray();
+      let stockEntryId = "";
+
+      // Find a stock entry that has available quantity
+      for (const entry of stockEntries) {
+        const entryMovements = await db.stockMovements.where({ stockEntryId: entry.id, type: MovementType.OUT }).toArray();
+        const usedQuantity = entryMovements.reduce((sum, movement) => sum + movement.quantity, 0);
+        const availableQuantity = entry.quantity - usedQuantity;
+
+        if (availableQuantity > 0) {
+          stockEntryId = entry.id;
+          break;
+        }
+      }
+
+      if (!stockEntryId) {
+        throw new Error("No available stock entries found for this material");
+      }
+
       // Check if section inventory entry exists
       const sectionInventory = await db.sectionInventory.where({ sectionId, rawMaterialId }).first();
 
@@ -213,7 +233,7 @@ export class SectionsAPI {
       const movementNotes = packInfo ? `${notes || "Stock assigned to section"} (${quantity.toFixed(1)} ${rawMaterial.unit} = ${baseQuantityToAssign} ${packInfo.baseUnit})` : notes || "Stock assigned to section";
 
       await StockAPI.createMovement({
-        stockEntryId: "", // This would need to be determined from available stock entries
+        stockEntryId,
         type: MovementType.TRANSFER,
         quantity: baseQuantityToAssign, // Always store in base units
         toSectionId: sectionId,
@@ -308,18 +328,17 @@ export class SectionsAPI {
 
       // Enhance notes with pack conversion info
       const packInfo = this.getPackInfo(rawMaterial);
-      const enhancedNotes = packInfo ? `${notes || ""} (${quantity.toFixed(1)} ${rawMaterial.unit} = ${baseQuantityToConsume} ${packInfo.baseUnit})`.trim() : notes;
+      const consumptionNotes = packInfo ? `${notes || reason} (${quantity.toFixed(1)} ${rawMaterial.unit} = ${baseQuantityToConsume} ${packInfo.baseUnit})` : notes || reason;
 
-      // Record consumption (store in base units)
+      // Create consumption record
       const consumption: Omit<SectionConsumption, "id" | "createdAt" | "updatedAt"> = {
         sectionId,
         rawMaterialId,
-        quantity: baseQuantityToConsume, // Always store in base units
-        consumedDate: new Date(),
+        quantity: baseQuantityToConsume, // Store in base units
         consumedBy,
-        reason,
-        orderId,
-        notes: enhancedNotes
+        consumedDate: new Date(),
+        reason: consumptionNotes,
+        orderId
       };
 
       await db.sectionConsumption.add(consumption as SectionConsumption);
@@ -390,6 +409,165 @@ export class SectionsAPI {
         data: [],
         success: false,
         message: error instanceof Error ? error.message : "Failed to fetch section consumption"
+      };
+    }
+  }
+
+  // Update section inventory assignment
+  static async updateSectionInventory(
+    inventoryId: string,
+    quantity: number, // This could be in pack units, we need to convert
+    updatedBy: string,
+    notes?: string
+  ): Promise<ApiResponse<boolean>> {
+    try {
+      // Get the current inventory item
+      const currentInventory = await db.sectionInventory.get(inventoryId);
+      if (!currentInventory) {
+        throw new Error("Section inventory not found");
+      }
+
+      // Get raw material for pack conversion info
+      const rawMaterial = await db.rawMaterials.get(currentInventory.rawMaterialId);
+      if (!rawMaterial) {
+        throw new Error("Raw material not found");
+      }
+
+      // Convert pack quantity to base units if needed
+      const baseQuantityToAssign = this.convertPackToBase(quantity, rawMaterial);
+
+      // Check if we have enough stock available (considering current assignment)
+      const stockLevel = await StockAPI.getStockLevel(currentInventory.rawMaterialId);
+      if (!stockLevel.success || !stockLevel.data) {
+        throw new Error("Unable to check stock availability");
+      }
+
+      // Calculate how much additional stock we need
+      const additionalNeeded = baseQuantityToAssign - currentInventory.quantity;
+      
+      if (additionalNeeded > 0) {
+        // We need more stock, check if available
+        if (stockLevel.data.availableQuantity < additionalNeeded) {
+          const packInfo = this.getPackInfo(rawMaterial);
+          const availablePacks = packInfo ? this.convertBaseToPack(stockLevel.data.availableQuantity, rawMaterial) : stockLevel.data.availableQuantity;
+          const requestedPacks = packInfo ? quantity : baseQuantityToAssign;
+
+          throw new Error(packInfo ? `Insufficient stock available. Requested: ${requestedPacks.toFixed(1)} ${rawMaterial.unit}, Available: ${availablePacks.toFixed(1)} ${rawMaterial.unit}` : `Insufficient stock available. Requested: ${baseQuantityToAssign}, Available: ${stockLevel.data.availableQuantity}`);
+        }
+      }
+
+      // Update the inventory
+      await db.sectionInventory.update(inventoryId, {
+        quantity: baseQuantityToAssign,
+        lastUpdated: new Date()
+      });
+
+      // Create stock movement to track the change
+      const packInfo = this.getPackInfo(rawMaterial);
+      const movementNotes = packInfo ? `${notes || "Section inventory updated"} (${quantity.toFixed(1)} ${rawMaterial.unit} = ${baseQuantityToAssign} ${packInfo.baseUnit})` : notes || "Section inventory updated";
+
+      // Find an available stock entry to reference for the movement
+      const stockEntries = await db.stockEntries.where({ rawMaterialId: currentInventory.rawMaterialId }).toArray();
+      let stockEntryId = "";
+      
+      for (const entry of stockEntries) {
+        const entryMovements = await db.stockMovements.where({ stockEntryId: entry.id, type: MovementType.OUT }).toArray();
+        const usedQuantity = entryMovements.reduce((sum, movement) => sum + movement.quantity, 0);
+        const availableQuantity = entry.quantity - usedQuantity;
+        
+        if (availableQuantity > 0) {
+          stockEntryId = entry.id;
+          break;
+        }
+      }
+
+      if (stockEntryId) {
+        await StockAPI.createMovement({
+          stockEntryId,
+          type: MovementType.TRANSFER,
+          quantity: Math.abs(additionalNeeded), // Always positive for movement
+          toSectionId: currentInventory.sectionId,
+          reason: movementNotes,
+          performedBy: updatedBy
+        });
+      }
+
+      return {
+        data: true,
+        success: true,
+        message: "Section inventory updated successfully"
+      };
+    } catch (error) {
+      return {
+        data: false,
+        success: false,
+        message: error instanceof Error ? error.message : "Failed to update section inventory"
+      };
+    }
+  }
+
+  // Remove section inventory assignment
+  static async removeSectionInventory(
+    inventoryId: string,
+    removedBy: string,
+    notes?: string
+  ): Promise<ApiResponse<boolean>> {
+    try {
+      // Get the current inventory item
+      const currentInventory = await db.sectionInventory.get(inventoryId);
+      if (!currentInventory) {
+        throw new Error("Section inventory not found");
+      }
+
+      // Get raw material for display info
+      const rawMaterial = await db.rawMaterials.get(currentInventory.rawMaterialId);
+      if (!rawMaterial) {
+        throw new Error("Raw material not found");
+      }
+
+      // Delete the inventory item
+      await db.sectionInventory.delete(inventoryId);
+
+      // Create stock movement to track the removal
+      const packInfo = this.getPackInfo(rawMaterial);
+      const movementNotes = packInfo ? `${notes || "Stock removed from section"} (${this.convertBaseToPack(currentInventory.quantity, rawMaterial).toFixed(1)} ${rawMaterial.unit} = ${currentInventory.quantity} ${packInfo.baseUnit})` : notes || "Stock removed from section";
+
+      // Find an available stock entry to reference for the movement
+      const stockEntries = await db.stockEntries.where({ rawMaterialId: currentInventory.rawMaterialId }).toArray();
+      let stockEntryId = "";
+      
+      for (const entry of stockEntries) {
+        const entryMovements = await db.stockMovements.where({ stockEntryId: entry.id, type: MovementType.OUT }).toArray();
+        const usedQuantity = entryMovements.reduce((sum, movement) => sum + movement.quantity, 0);
+        const availableQuantity = entry.quantity - usedQuantity;
+        
+        if (availableQuantity > 0) {
+          stockEntryId = entry.id;
+          break;
+        }
+      }
+
+      if (stockEntryId) {
+        await StockAPI.createMovement({
+          stockEntryId,
+          type: MovementType.TRANSFER,
+          quantity: currentInventory.quantity,
+          fromSectionId: currentInventory.sectionId, // Moving out of section
+          reason: movementNotes,
+          performedBy: removedBy
+        });
+      }
+
+      return {
+        data: true,
+        success: true,
+        message: "Section inventory removed successfully"
+      };
+    } catch (error) {
+      return {
+        data: false,
+        success: false,
+        message: error instanceof Error ? error.message : "Failed to remove section inventory"
       };
     }
   }

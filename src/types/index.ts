@@ -5,3 +5,4 @@ export * from "./common.types";
 export * from "./rawMaterials.types";
 export * from "./stock.types";
 export * from "./sections.types";
+export * from "./consumptions.types";
