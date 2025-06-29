@@ -1,9 +1,9 @@
-import { MeasurementUnit } from "../types";
+import { MeasurementUnit, type RawMaterial } from "../types";
 
 // Unit categories for better organization
 export enum UnitCategory {
   WEIGHT = "weight",
-  VOLUME = "volume", 
+  VOLUME = "volume",
   COUNT = "count",
   LENGTH = "length",
   AREA = "area"
@@ -113,10 +113,10 @@ export const getUnitCategory = (unit: MeasurementUnit): UnitCategory => {
 
 // Format quantity with proper precision and symbol
 export const formatQuantity = (
-  quantity: number, 
-  unit: MeasurementUnit, 
-  options?: { 
-    showSymbol?: boolean; 
+  quantity: number,
+  unit: MeasurementUnit,
+  options?: {
+    showSymbol?: boolean;
     precision?: number;
     compact?: boolean;
   }
@@ -124,53 +124,67 @@ export const formatQuantity = (
   const metadata = getUnitMetadata(unit);
   const precision = options?.precision ?? metadata.precision;
   const symbol = options?.showSymbol !== false ? metadata.symbol : metadata.name;
-  
+
   let formattedQuantity = quantity.toFixed(precision);
-  
+
   // Remove trailing zeros for whole numbers
   if (precision > 0) {
     formattedQuantity = parseFloat(formattedQuantity).toString();
   }
-  
+
   if (options?.compact) {
     return `${formattedQuantity}${symbol}`;
   }
-  
+
   return `${formattedQuantity} ${symbol}`;
 };
 
 // Convert between units of the same category
-export const convertUnit = (
-  value: number,
-  fromUnit: MeasurementUnit,
-  toUnit: MeasurementUnit,
-  packInfo?: { unitsPerPack: number; baseUnit: MeasurementUnit }
-): number => {
+export const convertUnit = (value: number, fromUnit: MeasurementUnit, toUnit: MeasurementUnit, packInfo?: { unitsPerPack: number; baseUnit: MeasurementUnit }): number => {
   const fromMetadata = getUnitMetadata(fromUnit);
   const toMetadata = getUnitMetadata(toUnit);
-  
+
   // Handle pack/box conversions
   if (packInfo && (fromUnit === MeasurementUnit.PACKS || fromUnit === MeasurementUnit.BOXES)) {
     if (toUnit === packInfo.baseUnit) {
       return value * packInfo.unitsPerPack;
     }
   }
-  
+
   if (packInfo && (toUnit === MeasurementUnit.PACKS || toUnit === MeasurementUnit.BOXES)) {
     if (fromUnit === packInfo.baseUnit) {
       return value / packInfo.unitsPerPack;
     }
   }
-  
+
   // Same category conversions
   if (fromMetadata.category === toMetadata.category) {
     const fromFactor = fromMetadata.conversionFactor ?? 1;
     const toFactor = toMetadata.conversionFactor ?? 1;
     return (value * fromFactor) / toFactor;
   }
-  
+
   // Cannot convert between different categories
   throw new Error(`Cannot convert from ${fromUnit} to ${toUnit} - different categories`);
+};
+
+// Helper function to get consumed unit label
+export const getConsumedUnitLabel = (item: { quantity: number; rawMaterial?: RawMaterial }) => {
+  if (!item.rawMaterial) return "Used";
+
+  const material = item.rawMaterial;
+  const isPackOrBox = material.unit === MeasurementUnit.PACKS || material.unit === MeasurementUnit.BOXES;
+
+  if (isPackOrBox) {
+    const packInfo = material as unknown as { unitsPerPack?: number; baseUnit?: string };
+    const unitsPerPack = packInfo.unitsPerPack || 1;
+
+    // For pack/box materials, always show the pack quantity
+    const packQuantity = item.quantity / unitsPerPack;
+    return `Used ${packQuantity} ${material.unit}`;
+  }
+
+  return `Used ${item.quantity} ${material.unit}`;
 };
 
 // Validate unit compatibility

@@ -6,7 +6,7 @@ export interface Section extends BaseEntity {
   description?: string;
   type: SectionType;
   managerId: string;
-  isActive: boolean;
+  isActive: boolean; 
 }
 
 export enum SectionType {
@@ -69,4 +69,10 @@ export interface CreateSectionAssignmentInput {
   quantity: number;
   assignedBy: string;
   notes?: string;
+}
+
+export interface SectionDetailsModalProps {
+  section: Section | null;
+  isOpen: boolean;
+  onClose: () => void;
 }

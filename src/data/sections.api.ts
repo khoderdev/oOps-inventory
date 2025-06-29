@@ -7,7 +7,6 @@ export class SectionsAPI {
   private static getPackInfo(rawMaterial: RawMaterial) {
     const isPackOrBox = rawMaterial.unit === MeasurementUnit.PACKS || rawMaterial.unit === MeasurementUnit.BOXES;
     if (!isPackOrBox) return null;
-
     const material = rawMaterial as unknown as {
       unitsPerPack?: number;
       baseUnit?: MeasurementUnit;
@@ -293,7 +292,7 @@ export class SectionsAPI {
   static async recordConsumption(
     sectionId: string,
     rawMaterialId: string,
-    quantity: number, // This could be in pack units, we need to convert
+    quantity: number, // Quantity is already in base units from the frontend
     consumedBy: string,
     reason: string,
     orderId?: string,
@@ -306,8 +305,8 @@ export class SectionsAPI {
         throw new Error("Raw material not found");
       }
 
-      // Convert pack quantity to base units if needed
-      const baseQuantityToConsume = this.convertPackToBase(quantity, rawMaterial);
+      // Quantity is already in base units, no need to convert
+      const baseQuantityToConsume = quantity;
 
       // Check section inventory (stored in base units)
       const sectionInventory = await db.sectionInventory.where({ sectionId, rawMaterialId }).first();
@@ -315,7 +314,7 @@ export class SectionsAPI {
       if (!sectionInventory || sectionInventory.quantity < baseQuantityToConsume) {
         const packInfo = this.getPackInfo(rawMaterial);
         const availablePacks = packInfo ? this.convertBaseToPack(sectionInventory?.quantity || 0, rawMaterial) : sectionInventory?.quantity || 0;
-        const requestedPacks = packInfo ? quantity : baseQuantityToConsume; // Use original quantity for pack display
+        const requestedPacks = packInfo ? this.convertBaseToPack(quantity, rawMaterial) : quantity;
 
         throw new Error(packInfo ? `Insufficient inventory in section. Requested: ${requestedPacks.toFixed(1)} ${rawMaterial.unit}, Available: ${availablePacks.toFixed(1)} ${rawMaterial.unit}` : `Insufficient inventory in section. Requested: ${baseQuantityToConsume}, Available: ${sectionInventory?.quantity || 0}`);
       }
@@ -328,7 +327,7 @@ export class SectionsAPI {
 
       // Enhance notes with pack conversion info
       const packInfo = this.getPackInfo(rawMaterial);
-      const consumptionNotes = packInfo ? `${notes || reason} (${quantity.toFixed(1)} ${rawMaterial.unit} = ${baseQuantityToConsume} ${packInfo.baseUnit})` : notes || reason;
+      const consumptionNotes = packInfo ? `${notes || reason} (${this.convertBaseToPack(quantity, rawMaterial).toFixed(1)} ${rawMaterial.unit} = ${baseQuantityToConsume} ${packInfo.baseUnit})` : notes || reason;
 
       // Create consumption record
       const consumption: Omit<SectionConsumption, "id" | "createdAt" | "updatedAt"> = {
@@ -444,7 +443,7 @@ export class SectionsAPI {
 
       // Calculate how much additional stock we need
       const additionalNeeded = baseQuantityToAssign - currentInventory.quantity;
-      
+
       if (additionalNeeded > 0) {
         // We need more stock, check if available
         if (stockLevel.data.availableQuantity < additionalNeeded) {
@@ -469,12 +468,12 @@ export class SectionsAPI {
       // Find an available stock entry to reference for the movement
       const stockEntries = await db.stockEntries.where({ rawMaterialId: currentInventory.rawMaterialId }).toArray();
       let stockEntryId = "";
-      
+
       for (const entry of stockEntries) {
         const entryMovements = await db.stockMovements.where({ stockEntryId: entry.id, type: MovementType.OUT }).toArray();
         const usedQuantity = entryMovements.reduce((sum, movement) => sum + movement.quantity, 0);
         const availableQuantity = entry.quantity - usedQuantity;
-        
+
         if (availableQuantity > 0) {
           stockEntryId = entry.id;
           break;
@@ -507,11 +506,7 @@ export class SectionsAPI {
   }
 
   // Remove section inventory assignment
-  static async removeSectionInventory(
-    inventoryId: string,
-    removedBy: string,
-    notes?: string
-  ): Promise<ApiResponse<boolean>> {
+  static async removeSectionInventory(inventoryId: string, removedBy: string, notes?: string): Promise<ApiResponse<boolean>> {
     try {
       // Get the current inventory item
       const currentInventory = await db.sectionInventory.get(inventoryId);
@@ -535,12 +530,12 @@ export class SectionsAPI {
       // Find an available stock entry to reference for the movement
       const stockEntries = await db.stockEntries.where({ rawMaterialId: currentInventory.rawMaterialId }).toArray();
       let stockEntryId = "";
-      
+
       for (const entry of stockEntries) {
         const entryMovements = await db.stockMovements.where({ stockEntryId: entry.id, type: MovementType.OUT }).toArray();
         const usedQuantity = entryMovements.reduce((sum, movement) => sum + movement.quantity, 0);
         const availableQuantity = entry.quantity - usedQuantity;
-        
+
         if (availableQuantity > 0) {
           stockEntryId = entry.id;
           break;

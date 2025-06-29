@@ -1,19 +1,14 @@
 import { Minus, Package, Plus } from "lucide-react";
 import { useState } from "react";
-import { useSectionInventory } from "../../hooks/useSections";
-import type { RawMaterial, Section, SectionInventory } from "../../types";
+import { useSectionInventory, useSectionConsumption } from "../../hooks/useSections";
+import type { RawMaterial, SectionDetailsModalProps, SectionInventory } from "../../types";
 import { MeasurementUnit } from "../../types";
 import Button from "../ui/Button";
 import Modal from "../ui/Modal";
 import ConsumptionModal from "./ConsumptionModal";
 import SectionInventoryEditModal from "./SectionInventoryEditModal";
 import StockAssignmentModal from "./StockAssignmentModal";
-
-interface SectionDetailsModalProps {
-  section: Section | null;
-  isOpen: boolean;
-  onClose: () => void;
-}
+import { getConsumedUnitLabel } from "../../utils/units";
 
 const SectionDetailsModal = ({ section, isOpen, onClose }: SectionDetailsModalProps) => {
   const [activeTab, setActiveTab] = useState<"inventory" | "consumption">("inventory");
@@ -22,6 +17,7 @@ const SectionDetailsModal = ({ section, isOpen, onClose }: SectionDetailsModalPr
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedInventoryItem, setSelectedInventoryItem] = useState<SectionInventory | null>(null);
   const { data: inventory = [], refetch } = useSectionInventory(section?.id || "");
+  const { data: consumption = [], refetch: refetchConsumption } = useSectionConsumption(section?.id || "");
 
   if (!section) return null;
 
@@ -31,18 +27,19 @@ const SectionDetailsModal = ({ section, isOpen, onClose }: SectionDetailsModalPr
   ];
 
   const handleAssignSuccess = () => {
-    refetch(); // Refresh the inventory data
+    refetch();
     setShowAssignModal(false);
   };
 
   const handleUseClick = (item: SectionInventory, e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent event from bubbling up to parent div
+    e.stopPropagation();
     setSelectedInventoryItem(item);
     setShowConsumptionModal(true);
   };
 
   const handleConsumptionSuccess = () => {
-    refetch(); // Refresh the inventory data
+    refetch();
+    refetchConsumption();
     setShowConsumptionModal(false);
     setSelectedInventoryItem(null);
   };
@@ -53,7 +50,7 @@ const SectionDetailsModal = ({ section, isOpen, onClose }: SectionDetailsModalPr
   };
 
   const handleEditSuccess = () => {
-    refetch(); // Refresh the inventory data
+    refetch();
     setShowEditModal(false);
     setSelectedInventoryItem(null);
   };
@@ -140,7 +137,7 @@ const SectionDetailsModal = ({ section, isOpen, onClose }: SectionDetailsModalPr
                           {item.reservedQuantity > 0 && <p className="text-xs text-yellow-600">{item.reservedQuantity} reserved</p>}
                         </div>
                         <div className="flex space-x-1">
-                          <Button size="sm" variant="outline" leftIcon={<Minus className="w-3 h-3" />} disabled={item.quantity <= 0} onClick={(e) => handleUseClick(item, e)} title="Record consumption">
+                          <Button size="sm" variant="outline" leftIcon={<Minus className="w-3 h-3" />} disabled={item.quantity <= 0} onClick={e => handleUseClick(item, e)} title="Record consumption">
                             Use
                           </Button>
                         </div>
@@ -155,11 +152,34 @@ const SectionDetailsModal = ({ section, isOpen, onClose }: SectionDetailsModalPr
           {activeTab === "consumption" && (
             <div className="space-y-4">
               <h3 className="text-lg font-medium text-gray-900 dark:text-gray-300">Consumption History</h3>
-              <div className="text-center py-8">
-                <Package className="w-12 h-12 text-gray-400 mx-auto mb-4 dark:text-gray-400" />
-                <p className="text-gray-600 dark:text-gray-400">No consumption data available</p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Usage will appear here as items are consumed</p>
-              </div>
+              {consumption.length === 0 ? (
+                <div className="text-center py-8">
+                  <Package className="w-12 h-12 text-gray-400 mx-auto mb-4 dark:text-gray-400" />
+                  <p className="text-gray-600 dark:text-gray-400">No consumption data available</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Usage will appear here as items are consumed</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {consumption.map(item => (
+                    <div key={item.id} className="flex items-center justify-between p-4 border rounded-lg dark:bg-gray-900/10 dark:border-gray-800">
+                      <div>
+                        <p className="font-medium text-gray-900 dark:text-gray-300">{item.rawMaterial?.name}</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          {new Date(item.consumedDate).toLocaleDateString()} at {new Date(item.consumedDate).toLocaleTimeString()}
+                        </p>
+                        <p className="text-xs text-gray-400">{item.reason}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-medium text-gray-900 dark:text-gray-300">{formatQuantityDisplay(item.quantity, item.rawMaterial as RawMaterial)}</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          {getConsumedUnitLabel({ quantity: item.quantity, rawMaterial: item.rawMaterial })} by {item.consumedBy}
+                        </p>
+                        {item.orderId && <p className="text-xs text-blue-600 dark:text-blue-400">Order: {item.orderId}</p>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>

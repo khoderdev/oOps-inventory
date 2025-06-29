@@ -10,7 +10,7 @@ import Modal from "../ui/Modal";
 import Select from "../ui/Select";
 
 const ConsumptionModal = ({ section, inventoryItem, isOpen, onClose, onSuccess }: ConsumptionModalProps) => {
-  const [quantity, setQuantity] = useState(0);
+  const [quantity, setQuantity] = useState("");
   const [reason, setReason] = useState("");
   const [orderId, setOrderId] = useState("");
   const [notes, setNotes] = useState("");
@@ -23,8 +23,8 @@ const ConsumptionModal = ({ section, inventoryItem, isOpen, onClose, onSuccess }
   // Reset form when modal opens/closes
   useEffect(() => {
     if (isOpen && inventoryItem) {
-      setQuantity(0);
-      setReason("production");
+      setQuantity("");
+      setReason("selling");
       setOrderId("");
       setNotes("");
       setUsageUnit(inventoryItem?.rawMaterial?.unit === MeasurementUnit.PACKS || inventoryItem?.rawMaterial?.unit === MeasurementUnit.BOXES ? "pack" : "individual");
@@ -33,6 +33,7 @@ const ConsumptionModal = ({ section, inventoryItem, isOpen, onClose, onSuccess }
   }, [isOpen, inventoryItem]);
 
   const reasonOptions = [
+    { value: "selling", label: "Selling" },
     { value: "production", label: "Production/Cooking" },
     { value: "waste", label: "Waste/Spoilage" },
     { value: "sampling", label: "Sampling/Testing" },
@@ -118,19 +119,25 @@ const ConsumptionModal = ({ section, inventoryItem, isOpen, onClose, onSuccess }
     return getStepValue(inventoryItem.rawMaterial.unit as MeasurementUnit);
   };
 
+  // Helper function to get numeric quantity
+  const getNumericQuantity = () => {
+    return parseFloat(quantity) || 0;
+  };
+
   const getFormattedQuantity = (qty: number, unit: string) => {
     return `${qty} ${unit}`;
   };
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
+    const numericQuantity = getNumericQuantity();
 
-    if (quantity <= 0) {
+    if (numericQuantity <= 0) {
       newErrors.quantity = "Quantity must be greater than 0";
     }
 
     const maxQty = getMaxQuantity();
-    if (quantity > maxQty) {
+    if (numericQuantity > maxQty) {
       newErrors.quantity = `Quantity cannot exceed available stock (${maxQty} ${getDisplayUnit()})`;
     }
 
@@ -151,7 +158,7 @@ const ConsumptionModal = ({ section, inventoryItem, isOpen, onClose, onSuccess }
 
     try {
       // Always submit in base units (individual pieces for packs/boxes)
-      const baseQuantity = convertToBaseQuantity(quantity);
+      const baseQuantity = convertToBaseQuantity(getNumericQuantity());
 
       await recordMutation.mutateAsync({
         sectionId: section.id,
@@ -173,7 +180,7 @@ const ConsumptionModal = ({ section, inventoryItem, isOpen, onClose, onSuccess }
   const handleInputChange = (field: string, value: string | number) => {
     switch (field) {
       case "quantity":
-        setQuantity(value as number);
+        setQuantity(value as string);
         break;
       case "reason":
         setReason(value as string);
@@ -186,7 +193,7 @@ const ConsumptionModal = ({ section, inventoryItem, isOpen, onClose, onSuccess }
         break;
       case "usageUnit":
         setUsageUnit(value as "pack" | "individual");
-        setQuantity(0); // Reset quantity when unit changes
+        setQuantity(""); // Reset quantity when unit changes
         break;
     }
 
@@ -201,7 +208,7 @@ const ConsumptionModal = ({ section, inventoryItem, isOpen, onClose, onSuccess }
   const isLoading = recordMutation.isPending;
   const packInfo = getPackInfo();
   const maxQuantity = getMaxQuantity();
-  const baseQuantityUsed = convertToBaseQuantity(quantity);
+  const baseQuantityUsed = convertToBaseQuantity(getNumericQuantity());
   const remainingAfterUsage = inventoryItem.quantity - baseQuantityUsed;
 
   return (
@@ -274,7 +281,7 @@ const ConsumptionModal = ({ section, inventoryItem, isOpen, onClose, onSuccess }
             </div>
           )}
 
-          <Input label={`Quantity Used (${getDisplayUnit()})`} type="number" min="0" max={maxQuantity} step={getStepValueForDisplay()} value={quantity} onChange={e => handleInputChange("quantity", parseFloat(e.target.value) || 0)} error={errors.quantity} required helperText={`Max: ${getFormattedQuantity(maxQuantity, getDisplayUnit())}`} />
+          <Input autoFocus label={`Quantity Used (${getDisplayUnit()})`} type="number" min="0" max={maxQuantity} step={getStepValueForDisplay()} value={quantity} onChange={e => handleInputChange("quantity", e.target.value)} error={errors.quantity} required helperText={`Max: ${getFormattedQuantity(maxQuantity, getDisplayUnit())}`} />
 
           <Select label="Reason for Usage" options={[{ value: "", label: "Select a reason..." }, ...reasonOptions]} value={reason} onChange={e => handleInputChange("reason", e.target.value)} error={errors.reason} required />
 
@@ -283,25 +290,26 @@ const ConsumptionModal = ({ section, inventoryItem, isOpen, onClose, onSuccess }
           <Input label="Notes (Optional)" value={notes} onChange={e => handleInputChange("notes", e.target.value)} placeholder="Additional notes about this usage" />
 
           {/* Usage Summary */}
-          {quantity > 0 && inventoryItem.rawMaterial && (
+          {getNumericQuantity() > 0 && inventoryItem.rawMaterial && (
             <div className="bg-blue-50 p-4 rounded-lg space-y-2 dark:bg-blue-900/10">
               <div className="flex justify-between items-center">
                 <span className="text-sm font-medium text-blue-700 dark:text-blue-300">Estimated Value:</span>
                 <span className="text-lg font-bold text-blue-900 dark:text-blue-300">
                   $
                   {(() => {
+                    const numericQuantity = getNumericQuantity();
                     // Calculate value based on the unit being used
                     if (isPackOrBox() && usageUnit === "pack") {
                       // For packs, use the pack unit cost
-                      return (quantity * inventoryItem.rawMaterial.unitCost).toFixed(2);
+                      return (numericQuantity * inventoryItem.rawMaterial.unitCost).toFixed(2);
                     } else {
                       // For individual units, calculate individual cost
                       const packInfo = getPackInfo();
                       if (packInfo && isPackOrBox()) {
                         const individualCost = inventoryItem.rawMaterial.unitCost / packInfo.unitsPerPack;
-                        return (quantity * individualCost).toFixed(2);
+                        return (numericQuantity * individualCost).toFixed(2);
                       } else {
-                        return (quantity * inventoryItem.rawMaterial.unitCost).toFixed(2);
+                        return (numericQuantity * inventoryItem.rawMaterial.unitCost).toFixed(2);
                       }
                     }
                   })()}
@@ -331,7 +339,7 @@ const ConsumptionModal = ({ section, inventoryItem, isOpen, onClose, onSuccess }
           <Button type="button" variant="outline" onClick={onClose} disabled={isLoading}>
             Cancel
           </Button>
-          <Button type="submit" loading={isLoading} disabled={quantity <= 0 || !reason}>
+          <Button type="submit" loading={isLoading} disabled={getNumericQuantity() <= 0 || !reason}>
             Record Usage
           </Button>
         </div>
