@@ -179,12 +179,23 @@ export const getConsumedUnitLabel = (item: { quantity: number; rawMaterial?: Raw
     const packInfo = material as unknown as { unitsPerPack?: number; baseUnit?: string };
     const unitsPerPack = packInfo.unitsPerPack || 1;
 
-    // For pack/box materials, always show the pack quantity
+    // For pack/box materials, always show the pack quantity with 1 decimal place
     const packQuantity = item.quantity / unitsPerPack;
-    return `Used ${packQuantity} ${material.unit}`;
+    return `Used ${packQuantity.toFixed(1)} ${material.unit}`;
   }
 
   return `Used ${item.quantity} ${material.unit}`;
+};
+
+// Helper function to split quantity and unit for styling
+export const splitQuantityAndUnit = (displayText: string) => {
+  const parts = displayText.split(' ');
+  if (parts.length >= 2) {
+    const quantity = parts[0];
+    const unit = parts.slice(1).join(' ');
+    return { quantity, unit };
+  }
+  return { quantity: displayText, unit: '' };
 };
 
 // Validate unit compatibility

@@ -16,7 +16,7 @@ interface SectionInventoryEditModalProps {
 }
 
 const SectionInventoryEditModal = ({ inventoryItem, isOpen, onClose, onSuccess }: SectionInventoryEditModalProps) => {
-  const [quantity, setQuantity] = useState(0);
+  const [quantity, setQuantity] = useState("");
   const [notes, setNotes] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const { state } = useApp();
@@ -35,22 +35,28 @@ const SectionInventoryEditModal = ({ inventoryItem, isOpen, onClose, onSuccess }
           const packInfo = material as unknown as { unitsPerPack?: number };
           const unitsPerPack = packInfo.unitsPerPack || 1;
           const packQuantity = inventoryItem.quantity / unitsPerPack;
-          setQuantity(packQuantity);
+          setQuantity(packQuantity.toFixed(1));
         } else {
-          setQuantity(inventoryItem.quantity);
+          setQuantity(inventoryItem.quantity.toString());
         }
       } else {
-        setQuantity(inventoryItem.quantity);
+        setQuantity(inventoryItem.quantity.toString());
       }
       setNotes("");
       setErrors({});
     }
   }, [isOpen, inventoryItem]);
 
+  // Helper function to get numeric quantity
+  const getNumericQuantity = () => {
+    return parseFloat(quantity) || 0;
+  };
+
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
+    const numericQuantity = getNumericQuantity();
 
-    if (quantity <= 0) {
+    if (numericQuantity <= 0) {
       newErrors.quantity = "Quantity must be greater than 0";
     }
 
@@ -66,14 +72,14 @@ const SectionInventoryEditModal = ({ inventoryItem, isOpen, onClose, onSuccess }
     }
 
     // Convert pack quantity back to base quantity if needed
-    let finalQuantity = quantity;
+    let finalQuantity = getNumericQuantity();
     const material = inventoryItem.rawMaterial;
     if (material) {
       const isPackOrBox = material.unit === MeasurementUnit.PACKS || material.unit === MeasurementUnit.BOXES;
       if (isPackOrBox) {
         const packInfo = material as unknown as { unitsPerPack?: number };
         const unitsPerPack = packInfo.unitsPerPack || 1;
-        finalQuantity = quantity * unitsPerPack;
+        finalQuantity = getNumericQuantity() * unitsPerPack;
       }
     }
 
@@ -113,7 +119,7 @@ const SectionInventoryEditModal = ({ inventoryItem, isOpen, onClose, onSuccess }
   const handleInputChange = (field: string, value: string | number) => {
     if (field === "quantity") {
       const numValue = typeof value === "string" ? parseFloat(value) : value;
-      setQuantity(Math.floor(numValue) || 0);
+      setQuantity(numValue.toFixed(1));
     } else if (field === "notes") {
       setNotes(value as string);
     }
@@ -147,7 +153,7 @@ const SectionInventoryEditModal = ({ inventoryItem, isOpen, onClose, onSuccess }
                         const unitsPerPack = packInfo.unitsPerPack || 1;
                         const baseUnit = packInfo.baseUnit || "pieces";
                         const packQuantity = inventoryItem.quantity / unitsPerPack;
-                        return `${packQuantity} ${material.unit} (${inventoryItem.quantity} ${baseUnit})`;
+                        return `${packQuantity.toFixed(1)} ${material.unit} (${inventoryItem.quantity} ${baseUnit})`;
                       }
 
                       return `${inventoryItem.quantity} ${material.unit}`;
@@ -171,11 +177,11 @@ const SectionInventoryEditModal = ({ inventoryItem, isOpen, onClose, onSuccess }
               <Input type="text" value={notes} onChange={e => handleInputChange("notes", e.target.value)} placeholder="Reason for update..." />
             </div>
 
-            {quantity > 0 && material && (
+            {getNumericQuantity() > 0 && material && (
               <div className="bg-gray-50 p-4 rounded-lg dark:bg-gray-900/10">
                 <div className="flex justify-between items-center">
                   <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Total Value:</span>
-                  <span className="text-lg font-bold text-gray-900 dark:text-gray-300">${(quantity * material.unitCost).toFixed(2)}</span>
+                  <span className="text-lg font-bold text-gray-900 dark:text-gray-300">${(getNumericQuantity() * material.unitCost).toFixed(2)}</span>
                 </div>
               </div>
             )}
@@ -189,7 +195,7 @@ const SectionInventoryEditModal = ({ inventoryItem, isOpen, onClose, onSuccess }
               <Button type="button" variant="outline" onClick={onClose} disabled={updateMutation.isPending || removeMutation.isPending}>
                 Cancel
               </Button>
-              <Button type="submit" loading={updateMutation.isPending} disabled={quantity <= 0 || removeMutation.isPending}>
+              <Button type="submit" loading={updateMutation.isPending} disabled={getNumericQuantity() <= 0 || removeMutation.isPending}>
                 Update Inventory
               </Button>
             </div>

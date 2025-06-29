@@ -8,7 +8,7 @@ import Modal from "../ui/Modal";
 import ConsumptionModal from "./ConsumptionModal";
 import SectionInventoryEditModal from "./SectionInventoryEditModal";
 import StockAssignmentModal from "./StockAssignmentModal";
-import { getConsumedUnitLabel } from "../../utils/units";
+import { splitQuantityAndUnit } from "../../utils/units";
 
 const SectionDetailsModal = ({ section, isOpen, onClose }: SectionDetailsModalProps) => {
   const [activeTab, setActiveTab] = useState<"inventory" | "consumption">("inventory");
@@ -62,10 +62,8 @@ const SectionDetailsModal = ({ section, isOpen, onClose }: SectionDetailsModalPr
     const isPackOrBox = material.unit === MeasurementUnit.PACKS || material.unit === MeasurementUnit.BOXES;
     if (isPackOrBox) {
       const packInfo = material as unknown as { unitsPerPack?: number; baseUnit?: string };
-      const unitsPerPack = packInfo.unitsPerPack || 1;
       const baseUnit = packInfo.baseUnit || "pieces";
-      const packQuantity = quantity / unitsPerPack;
-      return `${packQuantity} ${material.unit} (${quantity} ${baseUnit})`;
+      return `${quantity} ${baseUnit}`;
     }
 
     return `${quantity} ${material.unit}`;
@@ -170,10 +168,16 @@ const SectionDetailsModal = ({ section, isOpen, onClose }: SectionDetailsModalPr
                         <p className="text-xs text-gray-400">{item.reason}</p>
                       </div>
                       <div className="text-right">
-                        <p className="font-medium text-gray-900 dark:text-gray-300">{formatQuantityDisplay(item.quantity, item.rawMaterial as RawMaterial)}</p>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
-                          {getConsumedUnitLabel({ quantity: item.quantity, rawMaterial: item.rawMaterial })} by {item.consumedBy}
-                        </p>
+                        {(() => {
+                          const displayText = formatQuantityDisplay(item.quantity, item.rawMaterial as RawMaterial);
+                          const { quantity, unit } = splitQuantityAndUnit(displayText);
+                          return (
+                            <>
+                              <span className="text-2xl font-bold text-gray-900 dark:text-gray-300">{quantity}</span>
+                              {unit && <span className="text-sm text-gray-500 dark:text-gray-400"> {unit}</span>}
+                            </>
+                          );
+                        })()}
                         {item.orderId && <p className="text-xs text-blue-600 dark:text-blue-400">Order: {item.orderId}</p>}
                       </div>
                     </div>

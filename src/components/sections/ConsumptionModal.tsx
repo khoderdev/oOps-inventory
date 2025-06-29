@@ -14,7 +14,7 @@ const ConsumptionModal = ({ section, inventoryItem, isOpen, onClose, onSuccess }
   const [reason, setReason] = useState("");
   const [orderId, setOrderId] = useState("");
   const [notes, setNotes] = useState("");
-  const [usageUnit, setUsageUnit] = useState<"pack" | "individual">("pack");
+  const [usageUnit, setUsageUnit] = useState<"pack" | "individual">("individual");
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const { state } = useApp();
@@ -27,7 +27,7 @@ const ConsumptionModal = ({ section, inventoryItem, isOpen, onClose, onSuccess }
       setReason("selling");
       setOrderId("");
       setNotes("");
-      setUsageUnit(inventoryItem?.rawMaterial?.unit === MeasurementUnit.PACKS || inventoryItem?.rawMaterial?.unit === MeasurementUnit.BOXES ? "pack" : "individual");
+      setUsageUnit(inventoryItem?.rawMaterial?.unit === MeasurementUnit.PACKS || inventoryItem?.rawMaterial?.unit === MeasurementUnit.BOXES ? "individual" : "individual");
       setErrors({});
     }
   }, [isOpen, inventoryItem]);
