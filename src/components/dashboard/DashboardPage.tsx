@@ -1,7 +1,23 @@
 import { AlertTriangle, Building2, Package, TrendingUp, Users, Warehouse } from "lucide-react";
+import { MeasurementUnit } from "../../types";
 import { useRawMaterials } from "../../hooks/useRawMaterials";
 import { useSections } from "../../hooks/useSections";
 import { useStockLevels } from "../../hooks/useStock";
+
+// Helper function to format quantity display for pack/box materials
+const formatQuantityDisplay = (quantity: number, material: { unit: string; unitsPerPack?: number; baseUnit?: string } | undefined) => {
+  if (!material) return `${quantity}`;
+
+  const isPackOrBox = material.unit === MeasurementUnit.PACKS || material.unit === MeasurementUnit.BOXES;
+  if (isPackOrBox) {
+    const unitsPerPack = material.unitsPerPack || 1;
+    const baseUnit = material.baseUnit || "pieces";
+    const packQuantity = quantity / unitsPerPack;
+    return `${packQuantity.toFixed(1)} ${material.unit} (${quantity} ${baseUnit})`;
+  }
+
+  return `${quantity} ${material.unit}`;
+};
 
 const DashboardPage = () => {
   const { data: rawMaterials = [] } = useRawMaterials({ isActive: true });
@@ -91,13 +107,13 @@ const DashboardPage = () => {
                   <div>
                     <p className="font-medium text-gray-900 dark:text-white">{item.rawMaterial?.name}</p>
                     <p className="text-sm text-gray-600 dark:text-gray-400">
-                      Current: {item.availableQuantity} {item.rawMaterial?.unit}
+                      Current: {formatQuantityDisplay(item.availableQuantity, item.rawMaterial)}
                     </p>
                   </div>
                   <div className="text-right">
                     <p className="text-sm text-red-600 dark:text-red-400 font-medium">Low Stock</p>
                     <p className="text-xs text-gray-500 dark:text-gray-400">
-                      Min: {item.minLevel} {item.rawMaterial?.unit}
+                      Min: {formatQuantityDisplay(item.minLevel, item.rawMaterial)}
                     </p>
                   </div>
                 </div>
@@ -117,7 +133,7 @@ const DashboardPage = () => {
             <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
               <div>
                 <p className="font-medium text-gray-900 dark:text-white">System Initialized</p>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Welcome to Inventory Pro</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Welcome to oOps Inventory System</p>
               </div>
               <span className="text-xs text-gray-500 dark:text-gray-400">Just now</span>
             </div>

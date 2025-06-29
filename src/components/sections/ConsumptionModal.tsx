@@ -4,6 +4,7 @@ import { useRecordConsumption } from "../../hooks/useSections";
 import type { ConsumptionModalProps } from "../../types";
 import { MeasurementUnit } from "../../types";
 import { getStepValue } from "../../utils/units";
+import { generateNextOrderId } from "../../utils/orderId";
 import Button from "../ui/Button";
 import Input from "../ui/Input";
 import Modal from "../ui/Modal";
@@ -16,6 +17,7 @@ const ConsumptionModal = ({ section, inventoryItem, isOpen, onClose, onSuccess }
   const [notes, setNotes] = useState("");
   const [usageUnit, setUsageUnit] = useState<"pack" | "individual">("individual");
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [generatedOrderId, setGeneratedOrderId] = useState("");
 
   const { state } = useApp();
   const recordMutation = useRecordConsumption();
@@ -29,6 +31,16 @@ const ConsumptionModal = ({ section, inventoryItem, isOpen, onClose, onSuccess }
       setNotes("");
       setUsageUnit(inventoryItem?.rawMaterial?.unit === MeasurementUnit.PACKS || inventoryItem?.rawMaterial?.unit === MeasurementUnit.BOXES ? "individual" : "individual");
       setErrors({});
+      
+      // Generate order ID when modal opens
+      generateNextOrderId().then(id => {
+        setGeneratedOrderId(id);
+        setOrderId(id);
+      }).catch(error => {
+        console.error("Failed to generate order ID:", error);
+        setGeneratedOrderId("");
+        setOrderId("");
+      });
     }
   }, [isOpen, inventoryItem]);
 
@@ -157,6 +169,12 @@ const ConsumptionModal = ({ section, inventoryItem, isOpen, onClose, onSuccess }
     }
 
     try {
+      // Use the generated order ID
+      if (!orderId) {
+        console.error("No order ID available");
+        return;
+      }
+
       // Always submit in base units (individual pieces for packs/boxes)
       const baseQuantity = convertToBaseQuantity(getNumericQuantity());
 
@@ -166,7 +184,7 @@ const ConsumptionModal = ({ section, inventoryItem, isOpen, onClose, onSuccess }
         quantity: baseQuantity,
         consumedBy: state.user?.name || "Unknown",
         reason,
-        orderId: orderId || undefined,
+        orderId: orderId,
         notes: notes || undefined
       });
 
@@ -215,6 +233,16 @@ const ConsumptionModal = ({ section, inventoryItem, isOpen, onClose, onSuccess }
     <Modal isOpen={isOpen} onClose={onClose} title={`Record Usage - ${inventoryItem.rawMaterial?.name}`} size="md">
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="space-y-4">
+          {/* Order ID Display */}
+          {generatedOrderId && (
+            <div className="bg-blue-50 p-4 rounded-lg dark:bg-blue-900/10">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-blue-700 dark:text-blue-300">Order ID:</span>
+                <span className="text-lg font-bold text-blue-900 dark:text-blue-300">{generatedOrderId}</span>
+              </div>
+            </div>
+          )}
+
           {/* Item Info */}
           <div className="bg-gray-50 p-4 rounded-lg dark:bg-gray-900/10">
             <div className="grid grid-cols-2 gap-4 text-sm">
@@ -284,8 +312,6 @@ const ConsumptionModal = ({ section, inventoryItem, isOpen, onClose, onSuccess }
           <Input autoFocus label={`Quantity Used (${getDisplayUnit()})`} type="number" min="0" max={maxQuantity} step={getStepValueForDisplay()} value={quantity} onChange={e => handleInputChange("quantity", e.target.value)} error={errors.quantity} required helperText={`Max: ${getFormattedQuantity(maxQuantity, getDisplayUnit())}`} />
 
           <Select label="Reason for Usage" options={[{ value: "", label: "Select a reason..." }, ...reasonOptions]} value={reason} onChange={e => handleInputChange("reason", e.target.value)} error={errors.reason} required />
-
-          <Input label="Order ID (Optional)" value={orderId} onChange={e => handleInputChange("orderId", e.target.value)} placeholder="e.g., ORD-001" helperText="Link this usage to a specific order" />
 
           <Input label="Notes (Optional)" value={notes} onChange={e => handleInputChange("notes", e.target.value)} placeholder="Additional notes about this usage" />
 

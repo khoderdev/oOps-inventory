@@ -1,6 +1,6 @@
 import { clsx } from "clsx";
 import { BarChart3, Building2, Home, Menu, Package, Settings, Warehouse, X } from "lucide-react";
-import { NavLink, Outlet, useLocation } from "react-router-dom";
+import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import { useApp } from "../../hooks/useApp";
 import Button from "../ui/Button";
 
@@ -25,7 +25,9 @@ const Layout = () => {
         <div className="flex flex-col h-full">
           {/* Sidebar Header */}
           <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200 dark:border-gray-700">
-            <h1 className="text-lg font-semibold text-gray-900 dark:text-white tracking-tight">Inventory Pro</h1>
+            <Link to="/" className="text-lg font-semibold text-gray-900 dark:text-white tracking-tight">
+              oOps Inventory
+            </Link>
             <Button variant="ghost" size="sm" onClick={toggleSidebar} className="lg:hidden" aria-label="Close sidebar">
               <X className="w-5 h-5" />
             </Button>

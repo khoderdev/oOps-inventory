@@ -1,5 +1,6 @@
 import { db } from "../lib/database";
 import { MeasurementUnit, MovementType, type ApiResponse, type CreateStockEntryInput, type CreateStockMovementInput, type RawMaterial, type StockEntry, type StockLevel, type StockMovement } from "../types";
+import { generateNextOrderId } from "../utils/orderId";
 
 export class StockAPI {
   // Helper function to get pack information from raw material
@@ -108,7 +109,19 @@ export class StockAPI {
   // Create stock movement
   static async createMovement(data: CreateStockMovementInput): Promise<ApiResponse<StockMovement>> {
     try {
-      const id = await db.stockMovements.add(data as StockMovement);
+      // Auto-generate order ID if not provided
+      const movementData = { ...data } as CreateStockMovementInput & { referenceId?: string };
+      if (!movementData.referenceId) {
+        try {
+          const orderId = await generateNextOrderId();
+          movementData.referenceId = orderId;
+        } catch (error) {
+          console.error("Failed to generate order ID for movement:", error);
+          // Continue without order ID if generation fails
+        }
+      }
+
+      const id = await db.stockMovements.add(movementData as StockMovement);
       const created = await db.stockMovements.get(id);
 
       if (!created) {

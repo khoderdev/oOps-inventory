@@ -1,6 +1,7 @@
 import { db } from "../lib/database";
 import { MeasurementUnit, MovementType, type ApiResponse, type CreateSectionAssignmentInput, type CreateSectionInput, type RawMaterial, type Section, type SectionConsumption, type SectionInventory, type UpdateSectionInput } from "../types";
 import { StockAPI } from "./stock.api";
+import { generateNextOrderId } from "../utils/orderId";
 
 export class SectionsAPI {
   // Helper function to get pack information from raw material
@@ -299,33 +300,49 @@ export class SectionsAPI {
     notes?: string
   ): Promise<ApiResponse<boolean>> {
     try {
-      // Get raw material for pack conversion info
+      // Auto-generate order ID if not provided
+      let finalOrderId = orderId;
+      if (!finalOrderId) {
+        try {
+          finalOrderId = await generateNextOrderId();
+        } catch (error) {
+          console.error("Failed to generate order ID for consumption:", error);
+          // Continue without order ID if generation fails
+        }
+      }
+
+      // Get section and raw material
+      const section = await db.sections.get(sectionId);
       const rawMaterial = await db.rawMaterials.get(rawMaterialId);
+
+      if (!section) {
+        throw new Error("Section not found");
+      }
+
       if (!rawMaterial) {
         throw new Error("Raw material not found");
       }
 
-      // Quantity is already in base units, no need to convert
-      const baseQuantityToConsume = quantity;
+      // Get current inventory
+      const inventory = await db.sectionInventory.where({ sectionId, rawMaterialId }).first();
 
-      // Check section inventory (stored in base units)
-      const sectionInventory = await db.sectionInventory.where({ sectionId, rawMaterialId }).first();
-
-      if (!sectionInventory || sectionInventory.quantity < baseQuantityToConsume) {
-        const packInfo = this.getPackInfo(rawMaterial);
-        const availablePacks = packInfo ? this.convertBaseToPack(sectionInventory?.quantity || 0, rawMaterial) : sectionInventory?.quantity || 0;
-        const requestedPacks = packInfo ? this.convertBaseToPack(quantity, rawMaterial) : quantity;
-
-        throw new Error(packInfo ? `Insufficient inventory in section. Requested: ${requestedPacks.toFixed(1)} ${rawMaterial.unit}, Available: ${availablePacks.toFixed(1)} ${rawMaterial.unit}` : `Insufficient inventory in section. Requested: ${baseQuantityToConsume}, Available: ${sectionInventory?.quantity || 0}`);
+      if (!inventory) {
+        throw new Error("No inventory found for this material in the section");
       }
 
-      // Update section inventory (subtract base units)
-      await db.sectionInventory.update(sectionInventory.id, {
-        quantity: sectionInventory.quantity - baseQuantityToConsume,
+      // Check if we have enough stock
+      if (inventory.quantity < quantity) {
+        throw new Error(`Insufficient stock. Available: ${inventory.quantity}, Requested: ${quantity}`);
+      }
+
+      // Update inventory (always store in base units)
+      const baseQuantityToConsume = quantity;
+      await db.sectionInventory.update(inventory.id, {
+        quantity: inventory.quantity - baseQuantityToConsume,
         lastUpdated: new Date()
       });
 
-      // Enhance notes with pack conversion info
+      // Create consumption record with pack info if applicable
       const packInfo = this.getPackInfo(rawMaterial);
       const consumptionNotes = packInfo ? `${notes || reason} (${this.convertBaseToPack(quantity, rawMaterial).toFixed(1)} ${rawMaterial.unit} = ${baseQuantityToConsume} ${packInfo.baseUnit})` : notes || reason;
 
@@ -337,10 +354,44 @@ export class SectionsAPI {
         consumedBy,
         consumedDate: new Date(),
         reason: consumptionNotes,
-        orderId
+        orderId: finalOrderId
       };
 
       await db.sectionConsumption.add(consumption as SectionConsumption);
+
+      // Create stock movement to track consumption for reports
+      const stockEntries = await db.stockEntries.where({ rawMaterialId }).toArray();
+      let stockEntryId = "";
+
+      // Find a stock entry that has available quantity
+      for (const entry of stockEntries) {
+        const entryMovements = await db.stockMovements.where({ stockEntryId: entry.id, type: MovementType.OUT }).toArray();
+        const usedQuantity = entryMovements.reduce((sum, movement) => sum + movement.quantity, 0);
+        const availableQuantity = entry.quantity - usedQuantity;
+
+        if (availableQuantity > 0) {
+          stockEntryId = entry.id;
+          break;
+        }
+      }
+
+      if (stockEntryId) {
+        try {
+          await StockAPI.createMovement({
+            stockEntryId,
+            type: MovementType.OUT,
+            quantity: baseQuantityToConsume,
+            fromSectionId: sectionId,
+            reason: consumptionNotes,
+            performedBy: consumedBy
+          });
+          console.log("Stock movement created successfully for consumption");
+        } catch (error) {
+          console.error("Failed to create stock movement for consumption:", error);
+        }
+      } else {
+        console.warn("No available stock entry found for movement creation");
+      }
 
       return {
         data: true,

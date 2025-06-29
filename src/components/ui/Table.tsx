@@ -68,7 +68,7 @@ function Table<T extends Record<string, unknown>>({ data, columns, loading = fal
             </tr>
           ) : (
             data.map((item, index) => (
-              <tr key={String(item.id) || index} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+              <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                 {columns.map(column => (
                   <td key={column.key} className={clsx("px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100", column.align === "center" && "text-center", column.align === "right" && "text-right")}>
                     {column.render ? column.render(item, index) : item[column.key]?.toString() || "-"}

@@ -60,7 +60,8 @@ const ReportsPage = () => {
 
   const filteredStockMovements = useMemo(() => {
     const cutoffDate = getDateFilter();
-    return stockMovements.filter(movement => new Date(movement.createdAt) >= cutoffDate);
+    const filtered = stockMovements.filter(movement => new Date(movement.createdAt) >= cutoffDate);
+    return filtered;
   }, [stockMovements, dateRange]);
 
   // Calculate comprehensive metrics
@@ -241,7 +242,7 @@ const ReportsPage = () => {
         return <LowStockReport stockLevels={stockLevels} />;
 
       case "consumption":
-        return <ConsumptionReport movements={filteredStockMovements} stockEntries={stockEntries} rawMaterials={rawMaterials} sections={sections} selectedSection={selectedSection} dateRange={parseInt(dateRange)} consumptionByCategory={consumptionByCategory} />;
+        return <ConsumptionReport movements={filteredStockMovements} stockEntries={stockEntries} rawMaterials={rawMaterials} selectedSection={selectedSection} consumptionByCategory={consumptionByCategory} />;
 
       case "expenses":
         return <ExpenseReport stockEntries={filteredStockEntries} rawMaterials={rawMaterials} expenseBreakdown={expenseBreakdown} dateRange={parseInt(dateRange)} />;
