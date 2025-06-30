@@ -9,8 +9,18 @@ import { createUser, getUserByEmail, getUserById } from "./userService.js";
  */
 export const registerUser = async userData => {
   try {
+    // Handle name field - split into firstName and lastName if provided as single field
+    let processedUserData = { ...userData };
+
+    if (userData.name && !userData.firstName && !userData.lastName) {
+      const nameParts = userData.name.trim().split(" ");
+      processedUserData.firstName = nameParts[0] || "";
+      processedUserData.lastName = nameParts.slice(1).join(" ") || nameParts[0] || "User";
+      delete processedUserData.name; // Remove the original name field
+    }
+
     // Create user
-    const newUser = await createUser(userData);
+    const newUser = await createUser(processedUserData);
 
     // Generate JWT token
     const token = generateToken({

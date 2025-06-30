@@ -11,10 +11,11 @@ datasource db {
 }
 
 model User {
-  id            String   @id @default(cuid())
+  id            Int      @id @default(autoincrement())
   email         String?  @unique
   password_hash String   @map("password_hash")
-  name          String
+  first_name    String   @map("first_name")
+  last_name     String   @map("last_name")
   role          Role     @default(STAFF)
   is_active     Boolean  @default(true) @map("is_active")
   created_at    DateTime @default(now()) @map("created_at")
@@ -33,6 +34,7 @@ model User {
 }
 
 enum Role {
+  ADMIN
   MANAGER
   STAFF
 
@@ -42,7 +44,7 @@ enum Role {
 
 
 model RawMaterial {
-  id               String            @id @default(cuid())
+  id               Int               @id @default(autoincrement())
   name             String
   description      String?
   category         MaterialCategory
@@ -95,11 +97,11 @@ enum MeasurementUnit {
 }
 
 model Section {
-  id          String      @id @default(cuid())
+  id          Int         @id @default(autoincrement())
   name        String
   description String?
   type        SectionType
-  manager_id  String      @map("manager_id")
+  manager_id  Int         @map("manager_id")
   is_active   Boolean     @default(true) @map("is_active")
   created_at  DateTime    @default(now()) @map("created_at")
   updated_at  DateTime    @updatedAt @map("updated_at")
@@ -128,9 +130,9 @@ enum SectionType {
 }
 
 model SectionInventory {
-  id                  String      @id @default(cuid())
-  section_id          String      @map("section_id")
-  raw_material_id     String      @map("raw_material_id")
+  id                  Int         @id @default(autoincrement())
+  section_id          Int         @map("section_id")
+  raw_material_id     Int         @map("raw_material_id")
   quantity            Decimal     @db.Decimal(10, 2)
   reserved_quantity   Decimal     @db.Decimal(10, 2) @default(0) @map("reserved_quantity")
   min_level           Decimal?    @db.Decimal(10, 2) @map("min_level")
@@ -150,12 +152,12 @@ model SectionInventory {
 }
 
 model SectionConsumption {
-  id              String      @id @default(cuid())
-  section_id      String      @map("section_id")
-  raw_material_id String      @map("raw_material_id")
+  id              Int         @id @default(autoincrement())
+  section_id      Int         @map("section_id")
+  raw_material_id Int         @map("raw_material_id")
   quantity        Decimal     @db.Decimal(10, 2)
   consumed_date   DateTime    @map("consumed_date")
-  consumed_by     String      @map("consumed_by")
+  consumed_by     Int         @map("consumed_by")
   reason          String
   order_id        String?     @map("order_id")
   notes           String?
@@ -175,8 +177,8 @@ model SectionConsumption {
 }
 
 model StockEntry {
-  id              String      @id @default(cuid())
-  raw_material_id String      @map("raw_material_id")
+  id              Int         @id @default(autoincrement())
+  raw_material_id Int         @map("raw_material_id")
   quantity        Decimal     @db.Decimal(10, 2)
   unit_cost       Decimal     @db.Decimal(10, 2) @map("unit_cost")
   total_cost      Decimal     @db.Decimal(10, 2) @map("total_cost")
@@ -184,7 +186,7 @@ model StockEntry {
   batch_number    String?     @map("batch_number")
   expiry_date     DateTime?   @map("expiry_date")
   received_date   DateTime    @map("received_date")
-  received_by     String      @map("received_by")
+  received_by     Int         @map("received_by")
   notes           String?
   created_at      DateTime    @default(now()) @map("created_at")
   updated_at      DateTime    @updatedAt @map("updated_at")
@@ -202,14 +204,14 @@ model StockEntry {
 }
 
 model StockMovement {
-  id               String       @id @default(cuid())
-  stock_entry_id   String       @map("stock_entry_id")
+  id               Int          @id @default(autoincrement())
+  stock_entry_id   Int          @map("stock_entry_id")
   type             MovementType
   quantity         Decimal      @db.Decimal(10, 2)
-  from_section_id  String?      @map("from_section_id")
-  to_section_id    String?      @map("to_section_id")
+  from_section_id  Int?         @map("from_section_id")
+  to_section_id    Int?         @map("to_section_id")
   reason           String
-  performed_by     String       @map("performed_by")
+  performed_by     Int          @map("performed_by")
   reference_id     String?      @map("reference_id")
   created_at       DateTime     @default(now()) @map("created_at")
   updated_at       DateTime     @updatedAt @map("updated_at")
@@ -239,8 +241,8 @@ enum MovementType {
 }
 
 model OrderCounter {
-  id                String @id @default(cuid())
-  last_order_number Int    @default(0) @map("last_order_number")
+  id                Int      @id @default(autoincrement())
+  last_order_number Int      @default(0) @map("last_order_number")
   created_at        DateTime @default(now()) @map("created_at")
   updated_at        DateTime @updatedAt @map("updated_at")
 

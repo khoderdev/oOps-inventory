@@ -35,7 +35,7 @@ const StockAssignmentModal = ({ section, isOpen, onClose, onSuccess }: StockAssi
   }, [isOpen]);
 
   // Filter stock levels to only show items with available quantity
-  const availableStock = stockLevels.filter(level => level.availableQuantity > 0);
+  const availableStock = stockLevels.filter(level => level.availableUnitsQuantity > 0);
 
   // Helper function to format quantity display for pack/box materials
   const formatQuantityDisplay = (quantity: number, material: RawMaterial) => {
@@ -55,26 +55,24 @@ const StockAssignmentModal = ({ section, isOpen, onClose, onSuccess }: StockAssi
 
   const materialOptions = availableStock.map(level => {
     const material = level.rawMaterial;
-    if (!material) return { value: level.rawMaterialId, label: `Unknown Material (${level.availableQuantity} available)` };
+    if (!material) return { value: "", label: `Unknown Material (${level.availableUnitsQuantity} available)` };
 
     const isPackOrBox = material.unit === MeasurementUnit.PACKS || material.unit === MeasurementUnit.BOXES;
     if (isPackOrBox) {
-      const packInfo = material as unknown as { unitsPerPack?: number };
-      const unitsPerPack = packInfo.unitsPerPack || 1;
-      const packQuantity = level.availableQuantity / unitsPerPack;
+      const packQuantity = level.availableUnitsQuantity;
       return {
-        value: level.rawMaterialId,
+        value: material.id,
         label: `${material.name} (${packQuantity} ${material.unit} available)`
       };
     }
 
     return {
-      value: level.rawMaterialId,
-      label: `${material.name} (${level.availableQuantity} ${material.unit} available)`
+      value: material.id,
+      label: `${material.name} (${level.availableUnitsQuantity} ${material.unit} available)`
     };
   });
 
-  const selectedStockLevel = availableStock.find(level => level.rawMaterialId === selectedMaterialId);
+  const selectedStockLevel = availableStock.find(level => level.rawMaterial?.id === selectedMaterialId);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -97,14 +95,14 @@ const StockAssignmentModal = ({ section, isOpen, onClose, onSuccess }: StockAssi
           const unitsPerPack = packInfo.unitsPerPack || 1;
           const baseQuantityNeeded = quantity * unitsPerPack;
 
-          if (baseQuantityNeeded > selectedStockLevel.availableQuantity) {
-            const maxPacks = selectedStockLevel.availableQuantity / unitsPerPack;
+          if (baseQuantityNeeded > selectedStockLevel.availableSubUnitsQuantity) {
+            const maxPacks = selectedStockLevel.availableUnitsQuantity;
             newErrors.quantity = `Quantity cannot exceed available stock (${maxPacks} ${material.unit})`;
           }
         } else {
           // For regular materials, validate directly
-          if (quantity > selectedStockLevel.availableQuantity) {
-            newErrors.quantity = `Quantity cannot exceed available stock (${selectedStockLevel.availableQuantity} ${material.unit})`;
+          if (quantity > selectedStockLevel.availableUnitsQuantity) {
+            newErrors.quantity = `Quantity cannot exceed available stock (${selectedStockLevel.availableUnitsQuantity} ${material.unit})`;
           }
         }
       }
@@ -148,7 +146,7 @@ const StockAssignmentModal = ({ section, isOpen, onClose, onSuccess }: StockAssi
       setSelectedMaterialId(value as string);
       setQuantity(0);
     } else if (field === "quantity") {
-      const numValue = typeof value === 'string' ? parseFloat(value) : value;
+      const numValue = typeof value === "string" ? parseFloat(value) : value;
       setQuantity(Math.floor(numValue) || 0);
     }
     if (errors[field]) {
@@ -171,7 +169,7 @@ const StockAssignmentModal = ({ section, isOpen, onClose, onSuccess }: StockAssi
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <p className="font-medium text-blue-900 dark:text-blue-300">Available Stock:</p>
-                  <p className="text-blue-700 dark:text-blue-100 font-bold">{formatQuantityDisplay(selectedStockLevel.availableQuantity, selectedStockLevel.rawMaterial as RawMaterial)}</p>
+                  <p className="text-blue-700 dark:text-blue-100 font-bold">{formatQuantityDisplay(selectedStockLevel.availableUnitsQuantity, selectedStockLevel.rawMaterial as RawMaterial)}</p>
                 </div>
                 <div>
                   <p className="font-medium text-blue-900 dark:text-blue-300">Unit Cost:</p>
@@ -194,12 +192,10 @@ const StockAssignmentModal = ({ section, isOpen, onClose, onSuccess }: StockAssi
                     if (material) {
                       const isPackOrBox = material.unit === MeasurementUnit.PACKS || material.unit === MeasurementUnit.BOXES;
                       if (isPackOrBox) {
-                        const packInfo = material as unknown as { unitsPerPack?: number };
-                        const unitsPerPack = packInfo.unitsPerPack || 1;
-                        const maxPacks = selectedStockLevel.availableQuantity / unitsPerPack;
+                        const maxPacks = selectedStockLevel.availableUnitsQuantity;
                         handleInputChange("quantity", maxPacks);
                       } else {
-                        handleInputChange("quantity", selectedStockLevel.availableQuantity);
+                        handleInputChange("quantity", selectedStockLevel.availableUnitsQuantity);
                       }
                     }
                   }}
@@ -224,12 +220,10 @@ const StockAssignmentModal = ({ section, isOpen, onClose, onSuccess }: StockAssi
                       if (material) {
                         const isPackOrBox = material.unit === MeasurementUnit.PACKS || material.unit === MeasurementUnit.BOXES;
                         if (isPackOrBox) {
-                          const packInfo = material as unknown as { unitsPerPack?: number };
-                          const unitsPerPack = packInfo.unitsPerPack || 1;
-                          const maxPacks = selectedStockLevel.availableQuantity / unitsPerPack;
+                          const maxPacks = selectedStockLevel.availableUnitsQuantity;
                           return `Max: ${maxPacks} ${material.unit}`;
                         } else {
-                          return `Max: ${selectedStockLevel.availableQuantity} ${material.unit}`;
+                          return `Max: ${selectedStockLevel.availableUnitsQuantity} ${material.unit}`;
                         }
                       }
                       return undefined;

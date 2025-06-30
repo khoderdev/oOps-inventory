@@ -1,9 +1,9 @@
 import logger from "../utils/logger.js";
 
 const ROLES = {
-  admin: 3,
-  manager: 2,
-  employee: 1,
+  ADMIN: 3,
+  MANAGER: 2,
+  STAFF: 1
 };
 
 /**
@@ -28,21 +28,17 @@ export const requireRoles = (...roles) => {
     if (!req.user) {
       return res.status(401).json({
         success: false,
-        error: "Authentication required",
+        error: "Authentication required"
       });
     }
     const userRole = req.user.role;
-    const hasRequiredRole = roles.some((role) => hasRole(userRole, role));
+    const hasRequiredRole = roles.some(role => hasRole(userRole, role));
 
     if (!hasRequiredRole) {
-      logger.warn(
-        `Access denied for user ${
-          req.user.id
-        } with role ${userRole}. Required roles: ${roles.join(", ")}`
-      );
+      logger.warn(`Access denied for user ${req.user.id} with role ${userRole}. Required roles: ${roles.join(", ")}`);
       return res.status(403).json({
         success: false,
-        error: "Insufficient permissions. Required role: " + roles.join(" or "),
+        error: "Insufficient permissions. Required role: " + roles.join(" or ")
       });
     }
 
@@ -53,12 +49,12 @@ export const requireRoles = (...roles) => {
 /**
  * Middleware to check if user is admin
  */
-export const requireAdmin = requireRoles("admin");
+export const requireAdmin = requireRoles("ADMIN");
 
 /**
  * Middleware to check if user is manager or above
  */
-export const requireManager = requireRoles("manager", "admin");
+export const requireManager = requireRoles("MANAGER", "ADMIN");
 
 /**
  * Middleware to check if user can access own resource or is admin/manager
@@ -70,7 +66,7 @@ export const requireOwnershipOrRole = (userIdParam = "id") => {
     if (!req.user) {
       return res.status(401).json({
         success: false,
-        error: "Authentication required",
+        error: "Authentication required"
       });
     }
 
@@ -79,7 +75,7 @@ export const requireOwnershipOrRole = (userIdParam = "id") => {
     const currentUserId = req.user.id;
 
     // Admin and manager can access any user's resource
-    if (hasRole(userRole, "manager")) {
+    if (hasRole(userRole, "MANAGER")) {
       return next();
     }
 
@@ -88,12 +84,10 @@ export const requireOwnershipOrRole = (userIdParam = "id") => {
       return next();
     }
 
-    logger.warn(
-      `Access denied for user ${currentUserId} trying to access user ${requestedUserId}'s resource`
-    );
+    logger.warn(`Access denied for user ${currentUserId} trying to access user ${requestedUserId}'s resource`);
     return res.status(403).json({
       success: false,
-      error: "Access denied. You can only access your own resources.",
+      error: "Access denied. You can only access your own resources."
     });
   };
 };

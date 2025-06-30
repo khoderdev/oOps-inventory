@@ -1,6 +1,6 @@
 import { AlertTriangle, Package } from "lucide-react";
-import { MeasurementUnit } from "../../types";
 import type { StockLevel } from "../../types";
+import { MeasurementUnit } from "../../types";
 
 interface LowStockReportProps {
   stockLevels: StockLevel[];
@@ -23,8 +23,8 @@ const formatQuantityDisplay = (quantity: number, material: { unit: string; units
 
 const LowStockReport = ({ stockLevels }: LowStockReportProps) => {
   const lowStockItems = stockLevels.filter(level => level.isLowStock);
-  const criticalItems = lowStockItems.filter(level => level.availableQuantity <= 0);
-  const warningItems = lowStockItems.filter(level => level.availableQuantity > 0 && level.availableQuantity <= level.minLevel * 0.5);
+  const criticalItems = lowStockItems.filter(level => level.availableUnitsQuantity <= 0);
+  const warningItems = lowStockItems.filter(level => level.availableUnitsQuantity > 0 && level.availableUnitsQuantity <= level.minLevel * 0.5);
 
   return (
     <div className="space-y-6">
@@ -73,16 +73,14 @@ const LowStockReport = ({ stockLevels }: LowStockReportProps) => {
           <div className="p-6">
             <div className="space-y-4">
               {criticalItems.map(item => (
-                <div key={item.rawMaterialId} className="flex items-center justify-between p-4 bg-red-50 rounded-lg border border-red-200">
+                <div key={item.rawMaterial?.id} className="flex items-center justify-between p-4 bg-red-50 rounded-lg border border-red-200">
                   <div>
                     <p className="font-medium text-gray-900 dark:text-white">{item.rawMaterial?.name}</p>
                     <p className="text-sm text-gray-600 dark:text-gray-400">Category: {item.rawMaterial?.category}</p>
                   </div>
                   <div className="text-right">
                     <p className="text-sm text-red-600 font-medium dark:text-red-400">OUT OF STOCK</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      Min: {formatQuantityDisplay(item.minLevel, item.rawMaterial)}
-                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Min: {formatQuantityDisplay(item.minLevel, item.rawMaterial)}</p>
                   </div>
                 </div>
               ))}
@@ -103,18 +101,14 @@ const LowStockReport = ({ stockLevels }: LowStockReportProps) => {
           <div className="p-6">
             <div className="space-y-4">
               {warningItems.map(item => (
-                <div key={item.rawMaterialId} className="flex items-center justify-between p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                <div key={item.rawMaterial?.id} className="flex items-center justify-between p-4 bg-yellow-50 rounded-lg border border-yellow-200">
                   <div>
                     <p className="font-medium text-gray-900 dark:text-white">{item.rawMaterial?.name}</p>
                     <p className="text-sm text-gray-600 dark:text-gray-400">Category: {item.rawMaterial?.category}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm text-yellow-600 font-medium dark:text-yellow-400">
-                      {formatQuantityDisplay(item.availableQuantity, item.rawMaterial)}
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      Min: {formatQuantityDisplay(item.minLevel, item.rawMaterial)}
-                    </p>
+                    <p className="text-sm text-yellow-600 font-medium dark:text-yellow-400">{formatQuantityDisplay(item.availableUnitsQuantity, item.rawMaterial)}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Min: {formatQuantityDisplay(item.minLevel, item.rawMaterial)}</p>
                   </div>
                 </div>
               ))}

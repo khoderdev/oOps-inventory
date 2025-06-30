@@ -1,27 +1,21 @@
-import { db } from "../lib/database";
-import type { RawMaterial, CreateRawMaterialInput, UpdateRawMaterialInput, ApiResponse } from "../types";
+import { apiClient } from "../lib/api";
+import type { ApiResponse, CreateRawMaterialInput, RawMaterial, UpdateRawMaterialInput } from "../types";
+
+// Raw Materials API filters interface
+export interface RawMaterialFilters {
+  category?: string;
+  isActive?: boolean;
+  search?: string;
+}
 
 export class RawMaterialsAPI {
-  // Create a new raw material
+  /**
+   * Create a new raw material
+   * POST /api/raw-materials
+   */
   static async create(data: CreateRawMaterialInput): Promise<ApiResponse<RawMaterial>> {
     try {
-      const newMaterial: Omit<RawMaterial, "id" | "createdAt" | "updatedAt"> = {
-        ...data,
-        isActive: true
-      };
-
-      const id = await db.rawMaterials.add(newMaterial as RawMaterial);
-      const created = await db.rawMaterials.get(id);
-
-      if (!created) {
-        throw new Error("Failed to create raw material");
-      }
-
-      return {
-        data: created,
-        success: true,
-        message: "Raw material created successfully"
-      };
+      return await apiClient.post<RawMaterial>("/raw-materials", data);
     } catch (error) {
       return {
         data: {} as RawMaterial,
@@ -31,30 +25,32 @@ export class RawMaterialsAPI {
     }
   }
 
-  // Get all raw materials with optional filtering
-  static async getAll(filters?: { category?: string; isActive?: boolean; search?: string }): Promise<ApiResponse<RawMaterial[]>> {
+  /**
+   * Get all raw materials with optional filtering
+   * GET /api/raw-materials
+   */
+  static async getAll(filters?: RawMaterialFilters): Promise<ApiResponse<RawMaterial[]>> {
     try {
-      let query = db.rawMaterials.orderBy("name");
-
-      if (filters?.isActive !== undefined) {
-        query = query.filter(material => material.isActive === filters.isActive);
-      }
+      let endpoint = "/raw-materials";
+      const params = new URLSearchParams();
 
       if (filters?.category) {
-        query = query.filter(material => material.category === filters.category);
+        params.append("category", filters.category);
       }
 
-      let materials = await query.toArray();
+      if (filters?.isActive !== undefined) {
+        params.append("isActive", filters.isActive.toString());
+      }
 
       if (filters?.search) {
-        const searchTerm = filters.search.toLowerCase();
-        materials = materials.filter(material => material.name.toLowerCase().includes(searchTerm) || material.description?.toLowerCase().includes(searchTerm) || material.supplier?.toLowerCase().includes(searchTerm));
+        params.append("search", filters.search);
       }
 
-      return {
-        data: materials,
-        success: true
-      };
+      if (params.toString()) {
+        endpoint += `?${params.toString()}`;
+      }
+
+      return await apiClient.get<RawMaterial[]>(endpoint);
     } catch (error) {
       return {
         data: [],
@@ -64,13 +60,18 @@ export class RawMaterialsAPI {
     }
   }
 
-  // Get raw material by ID
+  /**
+   * Get raw material by ID
+   * GET /api/raw-materials/:id
+   */
   static async getById(id: string): Promise<ApiResponse<RawMaterial | null>> {
     try {
-      const material = await db.rawMaterials.get(id);
+      const response = await apiClient.get<RawMaterial>(`/raw-materials/${id}`);
+
       return {
-        data: material || null,
-        success: true
+        data: response.success ? response.data : null,
+        success: response.success,
+        message: response.message
       };
     } catch (error) {
       return {
@@ -81,22 +82,14 @@ export class RawMaterialsAPI {
     }
   }
 
-  // Update raw material
+  /**
+   * Update raw material
+   * PUT /api/raw-materials/:id
+   */
   static async update(data: UpdateRawMaterialInput): Promise<ApiResponse<RawMaterial>> {
     try {
       const { id, ...updateData } = data;
-      await db.rawMaterials.update(id, updateData);
-
-      const updated = await db.rawMaterials.get(id);
-      if (!updated) {
-        throw new Error("Raw material not found after update");
-      }
-
-      return {
-        data: updated,
-        success: true,
-        message: "Raw material updated successfully"
-      };
+      return await apiClient.put<RawMaterial>(`/raw-materials/${id}`, updateData);
     } catch (error) {
       return {
         data: {} as RawMaterial,
@@ -106,14 +99,18 @@ export class RawMaterialsAPI {
     }
   }
 
-  // Delete raw material (soft delete by setting isActive to false)
+  /**
+   * Delete raw material (soft delete by setting isActive to false)
+   * DELETE /api/raw-materials/:id
+   */
   static async delete(id: string): Promise<ApiResponse<boolean>> {
     try {
-      await db.rawMaterials.update(id, { isActive: false });
+      const response = await apiClient.delete<{ success: boolean; message: string }>(`/raw-materials/${id}`);
+
       return {
-        data: true,
-        success: true,
-        message: "Raw material deleted successfully"
+        data: response.success,
+        success: response.success,
+        message: response.message
       };
     } catch (error) {
       return {
@@ -124,17 +121,13 @@ export class RawMaterialsAPI {
     }
   }
 
-  // Get low stock materials
+  /**
+   * Get low stock materials
+   * GET /api/raw-materials/low-stock
+   */
   static async getLowStock(): Promise<ApiResponse<RawMaterial[]>> {
     try {
-      // This would require joining with current stock levels
-      // For now, return materials that might be low based on min levels
-      const materials = await db.rawMaterials.filter(material => material.isActive && material.minStockLevel > 0).toArray();
-
-      return {
-        data: materials,
-        success: true
-      };
+      return await apiClient.get<RawMaterial[]>("/raw-materials/low-stock");
     } catch (error) {
       return {
         data: [],
@@ -144,24 +137,50 @@ export class RawMaterialsAPI {
     }
   }
 
-  // Get materials by category
+  /**
+   * Get materials by category
+   * GET /api/raw-materials/category/:category
+   */
   static async getByCategory(category: string): Promise<ApiResponse<RawMaterial[]>> {
     try {
-      const materials = await db.rawMaterials
-        .where("category")
-        .equals(category)
-        .and(material => material.isActive)
-        .toArray();
+      return await apiClient.get<RawMaterial[]>(`/raw-materials/category/${encodeURIComponent(category)}`);
+    } catch (error) {
+      return {
+        data: [],
+        success: false,
+        message: error instanceof Error ? error.message : "Failed to fetch materials by category"
+      };
+    }
+  }
+
+  /**
+   * Get all categories
+   * Derived from all raw materials
+   */
+  static async getCategories(): Promise<ApiResponse<string[]>> {
+    try {
+      const response = await this.getAll({ isActive: true });
+
+      if (!response.success) {
+        return {
+          data: [],
+          success: false,
+          message: response.message
+        };
+      }
+
+      // Extract unique categories
+      const categories = [...new Set(response.data.map(material => material.category).filter(Boolean))];
 
       return {
-        data: materials,
+        data: categories,
         success: true
       };
     } catch (error) {
       return {
         data: [],
         success: false,
-        message: error instanceof Error ? error.message : "Failed to fetch materials by category"
+        message: error instanceof Error ? error.message : "Failed to fetch categories"
       };
     }
   }

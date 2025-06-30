@@ -6,9 +6,14 @@ export interface BaseEntity {
 
 export interface User {
   id: string;
-  name: string;
-  role: "manager" | "staff";
-  email?: string;
+  name?: string;
+  firstName?: string;
+  lastName?: string;
+  email: string;
+  role: "MANAGER" | "STAFF";
+  isActive: boolean;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 export interface ApiResponse<T> {

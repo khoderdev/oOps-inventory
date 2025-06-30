@@ -1,7 +1,7 @@
 import { Calendar, Edit, Package, Search, Trash2, Truck } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useRawMaterials } from "../../hooks/useRawMaterials";
-import { useStockEntries, useDeleteStockEntry } from "../../hooks/useStock";
+import { useDeleteStockEntry, useStockEntries } from "../../hooks/useStock";
 import type { SortConfig, StockEntry } from "../../types";
 import { MeasurementUnit } from "../../types";
 import Button from "../ui/Button";
@@ -62,8 +62,10 @@ const StockEntriesTab = () => {
       const aValue = (a as unknown as Record<string, unknown>)[sortConfig.field] as string | number | undefined;
       const bValue = (b as unknown as Record<string, unknown>)[sortConfig.field] as string | number | undefined;
 
-      if (aValue && bValue && aValue < bValue) return sortConfig.order === "asc" ? -1 : 1;
-      if (aValue && bValue && aValue > bValue) return sortConfig.order === "asc" ? 1 : -1;
+      if (aValue != null && bValue != null) {
+        if (aValue < bValue) return sortConfig.order === "asc" ? -1 : 1;
+        if (aValue > bValue) return sortConfig.order === "asc" ? 1 : -1;
+      }
       return 0;
     });
 
@@ -110,13 +112,21 @@ const StockEntriesTab = () => {
         if (!material) return `${item.quantity}`;
 
         // Check if this is a pack/box material
-        const isPackOrBox = material.unit === MeasurementUnit.PACKS || material.unit === MeasurementUnit.BOXES;
+        const isPackOrBox = material.unit.toUpperCase() === MeasurementUnit.PACKS.toUpperCase() || material.unit.toUpperCase() === MeasurementUnit.BOXES.toUpperCase();
         if (isPackOrBox) {
           // Convert base quantity back to pack quantity for display
-          const packInfo = material as unknown as { unitsPerPack?: number };
+          const packInfo = material as unknown as { unitsPerPack?: number; baseUnit?: string };
           const unitsPerPack = packInfo.unitsPerPack || 1;
-          const packQuantity = item.quantity / unitsPerPack;
-          return `${packQuantity} ${material.unit} (${item.quantity} ${material.unit === MeasurementUnit.PACKS ? "bottles" : "pieces"})`;
+          const baseUnit = packInfo.baseUnit || (material.unit === MeasurementUnit.PACKS ? "bottles" : "pieces");
+
+          // Only convert if we have valid pack info, otherwise show base quantity
+          if (packInfo.unitsPerPack && packInfo.unitsPerPack > 1) {
+            const packQuantity = item.quantity / unitsPerPack;
+            return `${packQuantity} ${material.unit} (${item.quantity} ${baseUnit})`;
+          } else {
+            // Fallback: show base quantity with unit
+            return `${item.quantity} ${baseUnit} (Pack info not set)`;
+          }
         }
 
         return `${item.quantity} ${material.unit || ""}`;
@@ -131,23 +141,35 @@ const StockEntriesTab = () => {
         if (!material) return `$${item.unitCost.toFixed(2)}`;
 
         // Check if this is a pack/box material
-        const isPackOrBox = material.unit === MeasurementUnit.PACKS || material.unit === MeasurementUnit.BOXES;
+        const isPackOrBox = material.unit.toUpperCase() === MeasurementUnit.PACKS.toUpperCase() || material.unit.toUpperCase() === MeasurementUnit.BOXES.toUpperCase();
         if (isPackOrBox) {
           // For pack/box materials, unitCost is cost per pack/box
           const packInfo = material as unknown as { unitsPerPack?: number; baseUnit?: string };
           const unitsPerPack = packInfo.unitsPerPack || 1;
           const baseUnit = packInfo.baseUnit || "pieces";
-          const individualCost = item.unitCost / unitsPerPack;
-          return (
-            <div>
-              <div className="font-medium">
-                ${item.unitCost.toFixed(2)} per {material.unit.toLowerCase()}
+
+          // Only show detailed breakdown if we have valid pack info
+          if (packInfo.unitsPerPack && packInfo.unitsPerPack > 1) {
+            const individualCost = item.unitCost / unitsPerPack;
+            return (
+              <div>
+                <div className="font-medium">
+                  ${item.unitCost.toFixed(2)} per {material.unit.toLowerCase()}
+                </div>
+                <div className="text-xs text-gray-500">
+                  ${individualCost.toFixed(4)} per {baseUnit.toLowerCase()}
+                </div>
               </div>
-              <div className="text-xs text-gray-500">
-                ${individualCost.toFixed(4)} per {baseUnit.toLowerCase()}
+            );
+          } else {
+            // Fallback: show basic cost with note
+            return (
+              <div>
+                <div className="font-medium">${item.unitCost.toFixed(2)}</div>
+                <div className="text-xs text-gray-500">Pack info not set</div>
               </div>
-            </div>
-          );
+            );
+          }
         }
 
         return `$${item.unitCost.toFixed(2)}`;
@@ -162,27 +184,39 @@ const StockEntriesTab = () => {
         if (!material) return `$${item.totalCost.toFixed(2)}`;
 
         // Check if this is a pack/box material
-        const isPackOrBox = material.unit === MeasurementUnit.PACKS || material.unit === MeasurementUnit.BOXES;
+        const isPackOrBox = material.unit.toUpperCase() === MeasurementUnit.PACKS.toUpperCase() || material.unit.toUpperCase() === MeasurementUnit.BOXES.toUpperCase();
         if (isPackOrBox) {
           // For pack/box materials, show both pack cost and individual cost
           const packInfo = material as unknown as { unitsPerPack?: number; baseUnit?: string };
           const unitsPerPack = packInfo.unitsPerPack || 1;
           const baseUnit = packInfo.baseUnit || "pieces";
-          const individualCost = item.unitCost / unitsPerPack;
-          const totalIndividualCost = item.quantity * individualCost;
-          const packQuantity = item.quantity / unitsPerPack;
 
-          return (
-            <div>
-              <div className="font-medium">${item.totalCost.toFixed(2)}</div>
-              <div className="text-xs text-gray-500">
-                {packQuantity.toFixed(1)} {material.unit.toLowerCase()} × ${item.unitCost.toFixed(2)} = ${item.totalCost.toFixed(2)}
+          // Only show detailed breakdown if we have valid pack info
+          if (packInfo.unitsPerPack && packInfo.unitsPerPack > 1) {
+            const individualCost = item.unitCost / unitsPerPack;
+            const totalIndividualCost = item.quantity * individualCost;
+            const packQuantity = item.quantity / unitsPerPack;
+
+            return (
+              <div>
+                <div className="font-medium">${item.totalCost.toFixed(2)}</div>
+                <div className="text-xs text-gray-500">
+                  {packQuantity.toFixed(1)} {material.unit.toLowerCase()} × ${item.unitCost.toFixed(2)} = ${item.totalCost.toFixed(2)}
+                </div>
+                <div className="text-xs text-gray-500">
+                  {item.quantity} {baseUnit.toLowerCase()} × ${individualCost.toFixed(4)} = ${totalIndividualCost.toFixed(2)}
+                </div>
               </div>
-              <div className="text-xs text-gray-500">
-                {item.quantity} {baseUnit.toLowerCase()} × ${individualCost.toFixed(4)} = ${totalIndividualCost.toFixed(2)}
+            );
+          } else {
+            // Fallback: show basic total with note
+            return (
+              <div>
+                <div className="font-medium">${item.totalCost.toFixed(2)}</div>
+                <div className="text-xs text-gray-500">Pack info not set</div>
               </div>
-            </div>
-          );
+            );
+          }
         }
 
         return `$${item.totalCost.toFixed(2)}`;
@@ -224,7 +258,12 @@ const StockEntriesTab = () => {
     {
       key: "receivedBy",
       title: "Received By",
-      render: (item: StockEntry) => item.receivedBy
+      render: (item: StockEntry) => {
+        if (item.user) {
+          return `${item.user.firstName} ${item.user.lastName}`;
+        }
+        return `User #${item.receivedBy}`;
+      }
     },
     {
       key: "actions",

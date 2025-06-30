@@ -1,6 +1,15 @@
 import type { BaseEntity } from "./common.types";
 import type { RawMaterial } from "./rawMaterials.types";
 
+export interface User {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email?: string;
+  role: string;
+  isActive: boolean;
+}
+
 export interface StockEntry extends BaseEntity {
   rawMaterialId: string;
   rawMaterial?: RawMaterial;
@@ -12,6 +21,7 @@ export interface StockEntry extends BaseEntity {
   expiryDate?: Date;
   receivedDate: Date;
   receivedBy: string;
+  user?: User;
   notes?: string;
 }
 
@@ -24,6 +34,7 @@ export interface StockMovement extends BaseEntity {
   toSectionId?: string;
   reason: string;
   performedBy: string;
+  user?: User;
   referenceId?: string; // For linking to orders, sections, etc.
 }
 
@@ -37,10 +48,11 @@ export enum MovementType {
 }
 
 export interface StockLevel {
-  rawMaterialId: string;
-  rawMaterial?: RawMaterial;
-  totalQuantity: number;
-  availableQuantity: number;
+  rawMaterial: RawMaterial;
+  totalUnitsQuantity: number;
+  availableUnitsQuantity: number;
+  totalSubUnitsQuantity: number;
+  availableSubUnitsQuantity: number;
   reservedQuantity: number;
   minLevel: number;
   maxLevel: number;

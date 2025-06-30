@@ -1,12 +1,12 @@
 import { Router } from "express";
 import { createRawMaterial, deleteRawMaterial, getLowStockMaterials, getMaterialsByCategory, getRawMaterial, getRawMaterials, updateRawMaterial } from "../controllers/rawMaterialController.js";
-import { authenticateToken } from "../middleware/auth.js";
-import { checkRole } from "../middleware/rbac.js";
+import { authenticate } from "../middleware/auth.js";
+import { requireManager } from "../middleware/rbac.js";
 
 const router = Router();
 
 // Apply authentication to all routes
-router.use(authenticateToken);
+router.use(authenticate);
 
 // GET /api/raw-materials - Get all raw materials with optional filtering
 router.get("/", getRawMaterials);
@@ -21,12 +21,12 @@ router.get("/category/:category", getMaterialsByCategory);
 router.get("/:id", getRawMaterial);
 
 // POST /api/raw-materials - Create new raw material (Admin/Manager only)
-router.post("/", checkRole(["MANAGER"]), createRawMaterial);
+router.post("/", requireManager, createRawMaterial);
 
 // PUT /api/raw-materials/:id - Update raw material (Admin/Manager only)
-router.put("/:id", checkRole(["MANAGER"]), updateRawMaterial);
+router.put("/:id", requireManager, updateRawMaterial);
 
 // DELETE /api/raw-materials/:id - Delete raw material (Admin/Manager only)
-router.delete("/:id", checkRole(["MANAGER"]), deleteRawMaterial);
+router.delete("/:id", requireManager, deleteRawMaterial);
 
 export default router;

@@ -18,7 +18,6 @@ const ReportsPage = () => {
   const [activeReport, setActiveReport] = useState<ReportType>("overview");
   const [dateRange, setDateRange] = useState("30");
   const [selectedSection, setSelectedSection] = useState("");
-
   const { data: stockLevels = [] } = useStockLevels();
   const { data: rawMaterials = [] } = useRawMaterials({ isActive: true });
   const { data: sections = [] } = useSections({ isActive: true });
@@ -66,7 +65,7 @@ const ReportsPage = () => {
 
   // Calculate comprehensive metrics
   const metrics = useMemo(() => {
-    const totalInventoryValue = stockLevels.reduce((sum, level) => sum + level.availableQuantity * (level.rawMaterial?.unitCost || 0), 0);
+    const totalInventoryValue = stockLevels.reduce((sum, level) => sum + level.availableUnitsQuantity * (level.rawMaterial?.unitCost || 0), 0);
 
     const lowStockItems = stockLevels.filter(level => level.isLowStock);
 
@@ -107,8 +106,8 @@ const ReportsPage = () => {
   const categoryBreakdown = useMemo(() => {
     return rawMaterials.reduce(
       (acc, material) => {
-        const level = stockLevels.find(l => l.rawMaterialId === material.id);
-        const value = level ? level.availableQuantity * material.unitCost : 0;
+        const level = stockLevels.find(l => l.rawMaterial?.id === material.id);
+        const value = level ? level.availableUnitsQuantity * material.unitCost : 0;
         acc[material.category] = (acc[material.category] || 0) + value;
         return acc;
       },

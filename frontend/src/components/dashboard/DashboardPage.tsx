@@ -1,8 +1,8 @@
 import { AlertTriangle, Building2, Package, TrendingUp, Users, Warehouse } from "lucide-react";
-import { MeasurementUnit } from "../../types";
 import { useRawMaterials } from "../../hooks/useRawMaterials";
 import { useSections } from "../../hooks/useSections";
 import { useStockLevels } from "../../hooks/useStock";
+import { MeasurementUnit } from "../../types";
 
 // Helper function to format quantity display for pack/box materials
 const formatQuantityDisplay = (quantity: number, material: { unit: string; unitsPerPack?: number; baseUnit?: string } | undefined) => {
@@ -25,7 +25,7 @@ const DashboardPage = () => {
   const { data: sections = [] } = useSections({ isActive: true });
 
   const lowStockItems = stockLevels.filter(level => level.isLowStock);
-  const totalValue = stockLevels.reduce((sum, level) => sum + level.availableQuantity * (level.rawMaterial?.unitCost || 0), 0);
+  const totalValue = stockLevels.reduce((sum, level) => sum + level.availableUnitsQuantity * (level.rawMaterial?.unitCost || 0), 0);
 
   const stats = [
     {
@@ -103,18 +103,14 @@ const DashboardPage = () => {
           ) : (
             <div className="space-y-3">
               {lowStockItems.slice(0, 5).map(item => (
-                <div key={item.rawMaterialId} className="flex items-center justify-between p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
+                <div key={item.rawMaterial?.id} className="flex items-center justify-between p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
                   <div>
                     <p className="font-medium text-gray-900 dark:text-white">{item.rawMaterial?.name}</p>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      Current: {formatQuantityDisplay(item.availableQuantity, item.rawMaterial)}
-                    </p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Current: {formatQuantityDisplay(item.availableUnitsQuantity, item.rawMaterial)}</p>
                   </div>
                   <div className="text-right">
                     <p className="text-sm text-red-600 dark:text-red-400 font-medium">Low Stock</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      Min: {formatQuantityDisplay(item.minLevel, item.rawMaterial)}
-                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Min: {formatQuantityDisplay(item.minLevel, item.rawMaterial)}</p>
                   </div>
                 </div>
               ))}

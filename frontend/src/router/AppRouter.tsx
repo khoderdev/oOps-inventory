@@ -1,4 +1,5 @@
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import { ProtectedRoute } from "../components/auth/ProtectedRoute";
 import ErrorPage from "../components/common/ErrorPage";
 import DashboardPage from "../components/dashboard/DashboardPage";
 import Layout from "../components/layout/Layout";
@@ -11,7 +12,11 @@ import StockManagementPage from "../components/stock/StockManagementPage";
 const router = createBrowserRouter([
   {
     path: "/",
-    element: <Layout />,
+    element: (
+      <ProtectedRoute>
+        <Layout />
+      </ProtectedRoute>
+    ),
     errorElement: <ErrorPage />,
     children: [
       {

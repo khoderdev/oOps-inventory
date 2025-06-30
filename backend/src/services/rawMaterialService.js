@@ -3,6 +3,30 @@ import prisma from "../config/prisma.js";
 import logger from "../utils/logger.js";
 
 /**
+ * Helper function to convert enum values to uppercase
+ */
+const convertEnumsToUppercase = data => {
+  const result = { ...data };
+
+  // Convert MaterialCategory to uppercase
+  if (result.category) {
+    result.category = result.category.toString().toUpperCase();
+  }
+
+  // Convert MeasurementUnit to uppercase
+  if (result.unit) {
+    result.unit = result.unit.toString().toUpperCase();
+  }
+
+  // Convert base unit to uppercase
+  if (result.baseUnit) {
+    result.baseUnit = result.baseUnit.toString().toUpperCase();
+  }
+
+  return result;
+};
+
+/**
  * Helper function to format material data for frontend
  */
 const formatMaterialForFrontend = material => ({
@@ -112,19 +136,22 @@ export const createRawMaterial = async materialData => {
 
     logger.info("Creating new raw material:", materialData.name);
 
+    // Convert enum values to uppercase
+    const convertedData = convertEnumsToUppercase(materialData);
+
     // Map frontend data to database format
     const dbData = {
-      name: materialData.name,
-      description: materialData.description,
-      category: materialData.category,
-      unit: materialData.unit,
-      unit_cost: new Decimal(materialData.unitCost || 0),
-      supplier: materialData.supplier,
-      min_stock_level: new Decimal(materialData.minStockLevel || 0),
-      max_stock_level: new Decimal(materialData.maxStockLevel || 0),
+      name: convertedData.name,
+      description: convertedData.description,
+      category: convertedData.category,
+      unit: convertedData.unit,
+      unit_cost: new Decimal(convertedData.unitCost || 0),
+      supplier: convertedData.supplier,
+      min_stock_level: new Decimal(convertedData.minStockLevel || 0),
+      max_stock_level: new Decimal(convertedData.maxStockLevel || 0),
       is_active: true,
-      units_per_pack: materialData.unitsPerPack,
-      base_unit: materialData.baseUnit
+      units_per_pack: convertedData.unitsPerPack,
+      base_unit: convertedData.baseUnit
     };
 
     const material = await prisma().rawMaterial.create({
@@ -172,19 +199,22 @@ export const updateRawMaterial = async updateData => {
 
     logger.info("Updating raw material:", id);
 
+    // Convert enum values to uppercase
+    const convertedData = convertEnumsToUppercase(data);
+
     // Map frontend data to database format
     const dbData = {};
-    if (data.name !== undefined) dbData.name = data.name;
-    if (data.description !== undefined) dbData.description = data.description;
-    if (data.category !== undefined) dbData.category = data.category;
-    if (data.unit !== undefined) dbData.unit = data.unit;
-    if (data.unitCost !== undefined) dbData.unit_cost = new Decimal(data.unitCost);
-    if (data.supplier !== undefined) dbData.supplier = data.supplier;
-    if (data.minStockLevel !== undefined) dbData.min_stock_level = new Decimal(data.minStockLevel);
-    if (data.maxStockLevel !== undefined) dbData.max_stock_level = new Decimal(data.maxStockLevel);
-    if (data.isActive !== undefined) dbData.is_active = data.isActive;
-    if (data.unitsPerPack !== undefined) dbData.units_per_pack = data.unitsPerPack;
-    if (data.baseUnit !== undefined) dbData.base_unit = data.baseUnit;
+    if (convertedData.name !== undefined) dbData.name = convertedData.name;
+    if (convertedData.description !== undefined) dbData.description = convertedData.description;
+    if (convertedData.category !== undefined) dbData.category = convertedData.category;
+    if (convertedData.unit !== undefined) dbData.unit = convertedData.unit;
+    if (convertedData.unitCost !== undefined) dbData.unit_cost = new Decimal(convertedData.unitCost);
+    if (convertedData.supplier !== undefined) dbData.supplier = convertedData.supplier;
+    if (convertedData.minStockLevel !== undefined) dbData.min_stock_level = new Decimal(convertedData.minStockLevel);
+    if (convertedData.maxStockLevel !== undefined) dbData.max_stock_level = new Decimal(convertedData.maxStockLevel);
+    if (convertedData.isActive !== undefined) dbData.is_active = convertedData.isActive;
+    if (convertedData.unitsPerPack !== undefined) dbData.units_per_pack = convertedData.unitsPerPack;
+    if (convertedData.baseUnit !== undefined) dbData.base_unit = convertedData.baseUnit;
 
     const material = await prisma().rawMaterial.update({
       where: { id },

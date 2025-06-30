@@ -7,7 +7,12 @@ import * as rawMaterialService from "../services/rawMaterialService.js";
  */
 export const getRawMaterials = asyncHandler(async (req, res) => {
   const { category, isActive, search } = req.query;
-  const filters = { category, isActive: isActive === "true", search };
+
+  // Build filters object, only including isActive if explicitly provided
+  const filters = {};
+  if (category) filters.category = category;
+  if (isActive !== undefined) filters.isActive = isActive === "true";
+  if (search) filters.search = search;
 
   const result = await rawMaterialService.getAllRawMaterials(filters);
 
@@ -24,8 +29,16 @@ export const getRawMaterials = asyncHandler(async (req, res) => {
  */
 export const getRawMaterial = asyncHandler(async (req, res) => {
   const { id } = req.params;
+  const materialId = parseInt(id);
 
-  const result = await rawMaterialService.getRawMaterialById(id);
+  if (isNaN(materialId)) {
+    return res.status(400).json({
+      success: false,
+      error: "Invalid raw material ID"
+    });
+  }
+
+  const result = await rawMaterialService.getRawMaterialById(materialId);
 
   if (!result.success) {
     return res.status(404).json({
@@ -77,6 +90,14 @@ export const createRawMaterial = asyncHandler(async (req, res) => {
  */
 export const updateRawMaterial = asyncHandler(async (req, res) => {
   const { id } = req.params;
+  const materialId = parseInt(id);
+
+  if (isNaN(materialId)) {
+    return res.status(400).json({
+      success: false,
+      error: "Invalid raw material ID"
+    });
+  }
 
   // TODO: Add validation schema
   // const validation = validateData(updateRawMaterialSchema, req.body);
@@ -88,7 +109,7 @@ export const updateRawMaterial = asyncHandler(async (req, res) => {
   //   });
   // }
 
-  const result = await rawMaterialService.updateRawMaterial({ id, ...req.body });
+  const result = await rawMaterialService.updateRawMaterial({ id: materialId, ...req.body });
 
   if (!result.success) {
     return res.status(404).json({
@@ -110,8 +131,16 @@ export const updateRawMaterial = asyncHandler(async (req, res) => {
  */
 export const deleteRawMaterial = asyncHandler(async (req, res) => {
   const { id } = req.params;
+  const materialId = parseInt(id);
 
-  const result = await rawMaterialService.deleteRawMaterial(id);
+  if (isNaN(materialId)) {
+    return res.status(400).json({
+      success: false,
+      error: "Invalid raw material ID"
+    });
+  }
+
+  const result = await rawMaterialService.deleteRawMaterial(materialId);
 
   if (!result.success) {
     return res.status(404).json({

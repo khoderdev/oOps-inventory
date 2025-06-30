@@ -2,9 +2,9 @@ import { Check, Plus, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useApp } from "../../hooks/useApp";
 import { useRawMaterials } from "../../hooks/useRawMaterials";
-import { useCreateStockEntry, useUpdateStockEntry, useStockEntries } from "../../hooks/useStock";
-import type { StockEntry, StockEntryFormProps } from "../../types/stock.types";
+import { useCreateStockEntry, useStockEntries, useUpdateStockEntry } from "../../hooks/useStock";
 import { MeasurementUnit } from "../../types";
+import type { StockEntry, StockEntryFormProps } from "../../types/stock.types";
 import Button from "../ui/Button";
 import Input from "../ui/Input";
 import Select from "../ui/Select";
@@ -130,7 +130,7 @@ const StockEntryForm = ({ onSuccess, onCancel, initialData }: ExtendedStockEntry
           batchNumber: formData.batchNumber || undefined,
           expiryDate: formData.expiryDate ? new Date(formData.expiryDate) : undefined,
           receivedDate: new Date(formData.receivedDate!),
-          receivedBy: state.user?.name || "Unknown",
+          receivedBy: state.user?.id || "1",
           notes: formData.notes || undefined
         });
       } else {
@@ -142,7 +142,7 @@ const StockEntryForm = ({ onSuccess, onCancel, initialData }: ExtendedStockEntry
           batchNumber: formData.batchNumber || undefined,
           expiryDate: formData.expiryDate ? new Date(formData.expiryDate) : undefined,
           receivedDate: new Date(formData.receivedDate!),
-          receivedBy: state.user?.name || "Unknown",
+          receivedBy: state.user?.id || "1",
           notes: formData.notes || undefined
         });
       }

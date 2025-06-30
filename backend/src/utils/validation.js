@@ -3,7 +3,7 @@
  * Provides input validation for API endpoints
  */
 
-import Joi from 'joi';
+import Joi from "joi";
 
 /**
  * User registration validation schema
@@ -13,51 +13,40 @@ export const registerSchema = Joi.object({
     .email({ tlds: { allow: false } })
     .required()
     .messages({
-      'string.email': 'Please provide a valid email address',
-      'any.required': 'Email is required',
+      "string.email": "Please provide a valid email address",
+      "any.required": "Email is required"
     }),
-  
-  password: Joi.string()
-    .min(8)
-    .max(128)
-    .pattern(new RegExp('^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]'))
-    .required()
-    .messages({
-      'string.min': 'Password must be at least 8 characters long',
-      'string.max': 'Password must not exceed 128 characters',
-      'string.pattern.base': 'Password must contain at least one lowercase letter, one uppercase letter, one number, and one special character',
-      'any.required': 'Password is required',
-    }),
-  
-  firstName: Joi.string()
-    .trim()
-    .min(1)
-    .max(100)
-    .required()
-    .messages({
-      'string.min': 'First name is required',
-      'string.max': 'First name must not exceed 100 characters',
-      'any.required': 'First name is required',
-    }),
-  
-  lastName: Joi.string()
-    .trim()
-    .min(1)
-    .max(100)
-    .required()
-    .messages({
-      'string.min': 'Last name is required',
-      'string.max': 'Last name must not exceed 100 characters',
-      'any.required': 'Last name is required',
-    }),
-  
-  role: Joi.string()
-    .valid('admin', 'manager', 'employee')
-    .default('employee')
-    .messages({
-      'any.only': 'Role must be one of: admin, manager, employee',
-    }),
-});
+
+  password: Joi.string().min(6).max(128).required().messages({
+    "string.min": "Password must be at least 6 characters long",
+    "string.max": "Password must not exceed 128 characters",
+    "any.required": "Password is required"
+  }),
+
+  // Allow either a single name field OR firstName/lastName fields
+  name: Joi.string().trim().min(1).max(200).messages({
+    "string.min": "Name is required",
+    "string.max": "Name must not exceed 200 characters"
+  }),
+
+  firstName: Joi.string().trim().min(1).max(100).messages({
+    "string.min": "First name cannot be empty",
+    "string.max": "First name must not exceed 100 characters"
+  }),
+
+  lastName: Joi.string().trim().min(1).max(100).messages({
+    "string.min": "Last name cannot be empty",
+    "string.max": "Last name must not exceed 100 characters"
+  }),
+
+  role: Joi.string().valid("ADMIN", "MANAGER", "STAFF").default("STAFF").messages({
+    "any.only": "Role must be one of: ADMIN, MANAGER, STAFF"
+  })
+})
+  .or("name", "firstName")
+  .messages({
+    "object.missing": "Either name or firstName is required"
+  });
 
 /**
  * User login validation schema
@@ -67,82 +56,64 @@ export const loginSchema = Joi.object({
     .email({ tlds: { allow: false } })
     .required()
     .messages({
-      'string.email': 'Please provide a valid email address',
-      'any.required': 'Email is required',
+      "string.email": "Please provide a valid email address",
+      "any.required": "Email is required"
     }),
-  
-  password: Joi.string()
-    .required()
-    .messages({
-      'any.required': 'Password is required',
-    }),
+
+  password: Joi.string().required().messages({
+    "any.required": "Password is required"
+  })
 });
 
 /**
  * Update user role validation schema
  */
 export const updateRoleSchema = Joi.object({
-  role: Joi.string()
-    .valid('admin', 'manager', 'employee')
-    .required()
-    .messages({
-      'any.only': 'Role must be one of: admin, manager, employee',
-      'any.required': 'Role is required',
-    }),
+  role: Joi.string().valid("ADMIN", "MANAGER", "STAFF").required().messages({
+    "any.only": "Role must be one of: ADMIN, MANAGER, STAFF",
+    "any.required": "Role is required"
+  })
 });
 
 /**
  * Update user profile validation schema
  */
 export const updateProfileSchema = Joi.object({
-  firstName: Joi.string()
-    .trim()
-    .min(1)
-    .max(100)
-    .messages({
-      'string.min': 'First name cannot be empty',
-      'string.max': 'First name must not exceed 100 characters',
-    }),
-  
-  lastName: Joi.string()
-    .trim()
-    .min(1)
-    .max(100)
-    .messages({
-      'string.min': 'Last name cannot be empty',
-      'string.max': 'Last name must not exceed 100 characters',
-    }),
-  
+  firstName: Joi.string().trim().min(1).max(100).messages({
+    "string.min": "First name cannot be empty",
+    "string.max": "First name must not exceed 100 characters"
+  }),
+
+  lastName: Joi.string().trim().min(1).max(100).messages({
+    "string.min": "Last name cannot be empty",
+    "string.max": "Last name must not exceed 100 characters"
+  }),
+
   email: Joi.string()
     .email({ tlds: { allow: false } })
     .messages({
-      'string.email': 'Please provide a valid email address',
-    }),
-}).min(1).messages({
-  'object.min': 'At least one field must be provided for update',
-});
+      "string.email": "Please provide a valid email address"
+    })
+})
+  .min(1)
+  .messages({
+    "object.min": "At least one field must be provided for update"
+  });
 
 /**
  * Change password validation schema
  */
 export const changePasswordSchema = Joi.object({
-  currentPassword: Joi.string()
-    .required()
-    .messages({
-      'any.required': 'Current password is required',
-    }),
-  
-  newPassword: Joi.string()
-    .min(8)
-    .max(128)
-    .pattern(new RegExp('^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]'))
-    .required()
-    .messages({
-      'string.min': 'New password must be at least 8 characters long',
-      'string.max': 'New password must not exceed 128 characters',
-      'string.pattern.base': 'New password must contain at least one lowercase letter, one uppercase letter, one number, and one special character',
-      'any.required': 'New password is required',
-    }),
+  currentPassword: Joi.string().required().messages({
+    "any.required": "Current password is required"
+  }),
+
+  newPassword: Joi.string().min(8).max(128).pattern(new RegExp("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]")).required().messages({
+    "string.min": "New password must be at least 8 characters long",
+    "string.max": "New password must not exceed 128 characters",
+    "string.pattern.base": "New password must contain at least one lowercase letter, one uppercase letter, one number, and one special character",
+    "any.required": "New password is required"
+  })
 });
 
 /**
@@ -154,25 +125,25 @@ export const changePasswordSchema = Joi.object({
 export const validateData = (schema, data) => {
   const { error, value } = schema.validate(data, {
     abortEarly: false,
-    stripUnknown: true,
+    stripUnknown: true
   });
 
   if (error) {
     const errors = error.details.map(detail => ({
-      field: detail.path.join('.'),
-      message: detail.message,
+      field: detail.path.join("."),
+      message: detail.message
     }));
-    
+
     return {
       isValid: false,
       errors,
-      data: null,
+      data: null
     };
   }
 
   return {
     isValid: true,
     errors: null,
-    data: value,
+    data: value
   };
-}; 
+};

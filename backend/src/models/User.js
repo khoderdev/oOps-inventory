@@ -53,7 +53,7 @@ export class User {
    * @returns {Promise<Object>} - Created user object
    */
   static async create(userData) {
-    const { email, passwordHash, firstName, lastName, role = "EMPLOYEE" } = userData;
+    const { email, passwordHash, firstName, lastName, role = "STAFF" } = userData;
 
     try {
       const user = await prisma().user.create({

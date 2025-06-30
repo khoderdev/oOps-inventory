@@ -14,7 +14,7 @@ const navigationItems = [
 ];
 
 const Layout = () => {
-  const { state, toggleSidebar } = useApp();
+  const { state, toggleSidebar, logout } = useApp();
   const { sidebarOpen, user } = state;
   const location = useLocation();
 
@@ -49,12 +49,15 @@ const Layout = () => {
           {/* User Info */}
           <div className="px-4 py-4 border-t border-gray-200 dark:border-gray-700">
             <div className="flex items-center gap-3">
-              <div className="flex items-center justify-center w-9 h-9 bg-blue-600 dark:bg-blue-500 rounded-full text-white text-sm font-semibold">{user?.name?.[0]?.toUpperCase()}</div>
-              <div>
-                <p className="text-sm font-medium text-gray-900 dark:text-white">{user?.name}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">{user?.role}</p>
+              <div className="flex items-center justify-center w-9 h-9 bg-blue-600 dark:bg-blue-500 rounded-full text-white text-sm font-semibold">{user?.firstName?.[0]?.toUpperCase() || user?.name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase()}</div>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-gray-900 dark:text-white">{user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : user?.name || user?.email}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">{user?.role?.toLowerCase()}</p>
               </div>
             </div>
+            <Button variant="ghost" size="sm" className="w-full mt-3 text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-900/20" onClick={logout}>
+              Sign out
+            </Button>
           </div>
         </div>
       </aside>

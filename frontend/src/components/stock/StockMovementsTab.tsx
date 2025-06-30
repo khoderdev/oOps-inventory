@@ -130,7 +130,12 @@ const StockMovementsTab = () => {
     {
       key: "performedBy",
       title: "Performed By",
-      render: (item: StockMovement) => item.performedBy
+      render: (item: StockMovement) => {
+        if (item.user) {
+          return `${item.user.firstName} ${item.user.lastName}`;
+        }
+        return `User #${item.performedBy}`;
+      }
     },
     {
       key: "createdAt",

@@ -60,8 +60,10 @@ const RawMaterialsPage = () => {
       const aValue = (a as unknown as Record<string, unknown>)[sortConfig.field];
       const bValue = (b as unknown as Record<string, unknown>)[sortConfig.field];
 
-      if (aValue < bValue) return sortConfig.order === "asc" ? -1 : 1;
-      if (aValue > bValue) return sortConfig.order === "asc" ? 1 : -1;
+      if (aValue != null && bValue != null) {
+        if (aValue < bValue) return sortConfig.order === "asc" ? -1 : 1;
+        if (aValue > bValue) return sortConfig.order === "asc" ? 1 : -1;
+      }
       return 0;
     });
 
@@ -86,12 +88,12 @@ const RawMaterialsPage = () => {
   };
 
   const getStockStatus = (materialId: string) => {
-    const stockLevel = stockLevels.find(level => level.rawMaterialId === materialId);
+    const stockLevel = stockLevels.find(level => level.rawMaterial?.id === materialId);
     if (!stockLevel) return { status: "no-stock", quantity: 0, unit: "" };
 
     return {
       status: stockLevel.isLowStock ? "low" : "normal",
-      quantity: stockLevel.availableQuantity,
+      quantity: stockLevel.availableUnitsQuantity,
       unit: stockLevel.rawMaterial?.unit || "",
       isLowStock: stockLevel.isLowStock
     };
@@ -246,7 +248,7 @@ const RawMaterialsPage = () => {
 
           <Select placeholder="Filter by category" options={[{ value: "", label: "All Categories" }, ...categoryOptions]} value={categoryFilter} onChange={e => setCategoryFilter(e.target.value as MaterialCategory | "")} />
 
-          <Select placeholder="Filter by status" options={statusOptions} value={statusFilter} onChange={e => setStatusFilter(e.target.value as any)} />
+          <Select placeholder="Filter by status" options={statusOptions} value={statusFilter} onChange={e => setStatusFilter(e.target.value as "all" | "active" | "inactive")} />
 
           <Button variant="outline" leftIcon={<Filter className="w-4 h-4" />}>
             Advanced Filters
@@ -256,7 +258,7 @@ const RawMaterialsPage = () => {
 
       {/* Materials Table */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
-        <Table data={filteredData as any} columns={columns} loading={isLoading} emptyMessage="No raw materials found. Add your first material to get started." sortConfig={sortConfig} onSort={handleSort} />
+        <Table data={filteredData as unknown as Record<string, unknown>[]} columns={columns as unknown as any} loading={isLoading} emptyMessage="No raw materials found. Add your first material to get started." sortConfig={sortConfig} onSort={handleSort} />
       </div>
 
       {/* Create Material Modal */}

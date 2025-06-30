@@ -44,7 +44,7 @@ const StockLevelsTab = () => {
 
       // Stock status filter
       if (stockFilter === "low" && !level.isLowStock) return false;
-      if (stockFilter === "available" && level.availableQuantity <= 0) return false;
+      if (stockFilter === "available" && level.availableUnitsQuantity <= 0) return false;
 
       return true;
     });
@@ -55,17 +55,21 @@ const StockLevelsTab = () => {
 
       if (sortConfig.field.includes(".")) {
         const [parent, child] = sortConfig.field.split(".");
-        const aParent = (a as unknown as Record<string, unknown>)[parent];
-        const bParent = (b as unknown as Record<string, unknown>)[parent];
-        aValue = aParent && typeof aParent === 'object' ? (aParent as Record<string, unknown>)[child] : undefined;
-        bValue = bParent && typeof bParent === 'object' ? (bParent as Record<string, unknown>)[child] : undefined;
+        if (parent && child) {
+          const aParent = (a as unknown as Record<string, unknown>)[parent];
+          const bParent = (b as unknown as Record<string, unknown>)[parent];
+          aValue = aParent && typeof aParent === "object" ? (aParent as Record<string, unknown>)[child] : undefined;
+          bValue = bParent && typeof bParent === "object" ? (bParent as Record<string, unknown>)[child] : undefined;
+        }
       } else {
         aValue = (a as unknown as Record<string, unknown>)[sortConfig.field];
         bValue = (b as unknown as Record<string, unknown>)[sortConfig.field];
       }
 
-      if (aValue < bValue) return sortConfig.order === "asc" ? -1 : 1;
-      if (aValue > bValue) return sortConfig.order === "asc" ? 1 : -1;
+      if (aValue != null && bValue != null) {
+        if (aValue < bValue) return sortConfig.order === "asc" ? -1 : 1;
+        if (aValue > bValue) return sortConfig.order === "asc" ? 1 : -1;
+      }
       return 0;
     });
 
@@ -80,9 +84,9 @@ const StockLevelsTab = () => {
   };
 
   // Helper function to format quantity display for pack/box materials
-  const formatQuantityDisplay = (quantity: number, material: any) => {
+  const formatQuantityDisplay = (quantity: number, material: StockLevel["rawMaterial"]) => {
     if (!material) return `${quantity}`;
-    
+
     const isPackOrBox = material.unit === MeasurementUnit.PACKS || material.unit === MeasurementUnit.BOXES;
     if (isPackOrBox) {
       const packInfo = material as unknown as { unitsPerPack?: number; baseUnit?: string };
@@ -91,7 +95,7 @@ const StockLevelsTab = () => {
       const packQuantity = quantity / unitsPerPack;
       return `${packQuantity} ${material.unit} (${quantity} ${baseUnit})`;
     }
-    
+
     return `${quantity} ${material.unit}`;
   };
 
@@ -100,18 +104,16 @@ const StockLevelsTab = () => {
     return stockLevels.reduce((sum, level) => {
       const material = level.rawMaterial;
       if (!material) return sum;
-      
+
       const isPackOrBox = material.unit === MeasurementUnit.PACKS || material.unit === MeasurementUnit.BOXES;
       if (isPackOrBox) {
         // For pack/box materials, unitCost is cost per pack/box
         // We need to calculate value based on pack quantity
-        const packInfo = material as unknown as { unitsPerPack?: number };
-        const unitsPerPack = packInfo.unitsPerPack || 1;
-        const packQuantity = level.availableQuantity / unitsPerPack;
-        return sum + (packQuantity * material.unitCost);
+        const packQuantity = level.availableUnitsQuantity;
+        return sum + packQuantity * material.unitCost;
       }
-      
-      return sum + (level.availableQuantity * material.unitCost);
+
+      return sum + level.availableUnitsQuantity * material.unitCost;
     }, 0);
   };
 
@@ -128,23 +130,21 @@ const StockLevelsTab = () => {
       )
     },
     {
-      key: "availableQuantity",
+      key: "availableUnitsQuantity",
       title: "Available",
       sortable: true,
       render: (item: StockLevel) => (
         <div className="flex items-center space-x-2">
-          <span className={`font-medium ${item.isLowStock ? "text-red-600 dark:text-red-400" : "text-green-600 dark:text-green-400"}`}>
-            {formatQuantityDisplay(item.availableQuantity, item.rawMaterial)}
-          </span>
+          <span className={`font-medium ${item.isLowStock ? "text-red-600 dark:text-red-400" : "text-green-600 dark:text-green-400"}`}>{formatQuantityDisplay(item.availableUnitsQuantity, item.rawMaterial)}</span>
           {item.isLowStock && <AlertTriangle className="w-4 h-4 text-red-500 dark:text-red-400" />}
         </div>
       )
     },
     {
-      key: "totalQuantity",
+      key: "totalUnitsQuantity",
       title: "Total Received",
       sortable: true,
-      render: (item: StockLevel) => formatQuantityDisplay(item.totalQuantity, item.rawMaterial)
+      render: (item: StockLevel) => formatQuantityDisplay(item.totalUnitsQuantity, item.rawMaterial)
     },
     {
       key: "minLevel",
@@ -162,7 +162,7 @@ const StockLevelsTab = () => {
       key: "status",
       title: "Status",
       render: (item: StockLevel) => (
-        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${item.isLowStock ? "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300" : item.availableQuantity > item.maxLevel ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300" : "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300"}`}>{item.isLowStock ? "Low Stock" : item.availableQuantity > item.maxLevel ? "Overstocked" : "Normal"}</span>
+        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${item.isLowStock ? "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300" : item.availableUnitsQuantity > item.maxLevel ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300" : "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300"}`}>{item.isLowStock ? "Low Stock" : item.availableUnitsQuantity > item.maxLevel ? "Overstocked" : "Normal"}</span>
       )
     },
     {
@@ -201,7 +201,7 @@ const StockLevelsTab = () => {
             <Package className="w-8 h-8 text-green-600 dark:text-green-400" />
             <div className="ml-3">
               <p className="text-sm font-medium text-green-600 dark:text-green-400">Available</p>
-              <p className="text-2xl font-bold text-green-900 dark:text-green-300">{stockLevels.filter(level => level.availableQuantity > 0).length}</p>
+              <p className="text-2xl font-bold text-green-900 dark:text-green-300">{stockLevels.filter(level => level.availableUnitsQuantity > 0).length}</p>
             </div>
           </div>
         </div>
@@ -240,7 +240,7 @@ const StockLevelsTab = () => {
       </div>
 
       {/* Table */}
-      <Table data={filteredData as any} columns={columns as any} loading={isLoading} emptyMessage="No stock levels found." sortConfig={sortConfig} onSort={handleSort} />
+      <Table data={filteredData as unknown as Record<string, unknown>[]} columns={columns as unknown as any} loading={isLoading} emptyMessage="No stock levels found." sortConfig={sortConfig} onSort={handleSort} />
     </div>
   );
 };
