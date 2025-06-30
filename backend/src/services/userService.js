@@ -120,20 +120,44 @@ export const getAllUsers = async (options = {}) => {
 
 export const changePassword = async (id, currentPassword, newPassword) => {
   try {
+    // Validate input parameters
+    if (!id || !currentPassword || !newPassword) {
+      throw new Error("Missing required parameters");
+    }
+
+    if (newPassword.length < 6) {
+      throw new Error("New password must be at least 6 characters long");
+    }
+
     const user = await User.findById(id);
     if (!user) {
       throw new Error("User not found");
     }
+
+    // Check if user account is active
+    if (!user.is_active) {
+      throw new Error("User account is inactive");
+    }
+
     const isCurrentPasswordValid = await comparePassword(currentPassword, user.password_hash);
     if (!isCurrentPasswordValid) {
       throw new Error("Current password is incorrect");
     }
+
+    // Don't allow changing to the same password
+    const isSamePassword = await comparePassword(newPassword, user.password_hash);
+    if (isSamePassword) {
+      throw new Error("New password must be different from current password");
+    }
+
     const newPasswordHash = await hashPassword(newPassword);
     const updated = await User.update(id, { passwordHash: newPasswordHash });
+
     if (updated) {
-      logger.info(`Password changed successfully for user: ${user.email}`);
+      logger.info(`Password changed successfully for user: ${user.email} (ID: ${id})`);
       return true;
     }
+
     return false;
   } catch (error) {
     logger.error("Error changing password:", error);

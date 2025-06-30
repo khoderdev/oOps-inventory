@@ -1,11 +1,12 @@
-import { Bell, Database, Palette, Save, Shield, User } from "lucide-react";
-import { useState } from "react";
+import { Bell, Database, Eye, EyeOff, Palette, Save, User } from "lucide-react";
+import { useEffect, useState } from "react";
+import { AuthAPI } from "../../data/auth.api";
 import { useApp } from "../../hooks/useApp";
 import Button from "../ui/Button";
 import Input from "../ui/Input";
 import Select from "../ui/Select";
 
-type SettingsTab = "profile" | "notifications" | "system" | "security" | "appearance";
+type SettingsTab = "profile" | "notifications" | "system" | "appearance";
 
 const SettingsPage = () => {
   const [activeTab, setActiveTab] = useState<SettingsTab>("profile");
@@ -17,6 +18,33 @@ const SettingsPage = () => {
     email: state.user?.email || "",
     role: state.user?.role || "STAFF"
   });
+
+  // Sync profileData with global user state when user changes
+  useEffect(() => {
+    if (state.user) {
+      setProfileData({
+        firstName: state.user.firstName || "",
+        lastName: state.user.lastName || "",
+        email: state.user.email || "",
+        role: state.user.role || "STAFF"
+      });
+    }
+  }, [state.user]);
+
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: ""
+  });
+
+  const [passwordVisibility, setPasswordVisibility] = useState({
+    currentPassword: false,
+    newPassword: false,
+    confirmPassword: false
+  });
+
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
 
   const [systemSettings, setSystemSettings] = useState({
     lowStockThreshold: "10",
@@ -34,7 +62,6 @@ const SettingsPage = () => {
     { id: "profile" as SettingsTab, label: "Profile", icon: User },
     { id: "notifications" as SettingsTab, label: "Notifications", icon: Bell },
     { id: "system" as SettingsTab, label: "System", icon: Database },
-    { id: "security" as SettingsTab, label: "Security", icon: Shield },
     { id: "appearance" as SettingsTab, label: "Appearance", icon: Palette }
   ];
 
@@ -46,17 +73,113 @@ const SettingsPage = () => {
     return true;
   });
 
-  const handleSaveProfile = () => {
-    setUser({
-      id: state.user?.id || "demo-user-1",
-      firstName: profileData.firstName,
-      lastName: profileData.lastName,
-      email: profileData.email,
-      role: profileData.role as "MANAGER" | "STAFF" | "ADMIN",
-      isActive: state.user?.isActive || true,
-      createdAt: state.user?.createdAt,
-      updatedAt: state.user?.updatedAt
-    });
+  const handleSaveProfile = async () => {
+    // Basic validation
+    if (!profileData.firstName.trim()) {
+      alert("First name is required");
+      return;
+    }
+
+    if (!profileData.lastName.trim()) {
+      alert("Last name is required");
+      return;
+    }
+
+    if (!profileData.email.trim()) {
+      alert("Email is required");
+      return;
+    }
+
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(profileData.email)) {
+      alert("Please enter a valid email address");
+      return;
+    }
+
+    setIsUpdatingProfile(true);
+
+    try {
+      const response = await AuthAPI.updateProfile({
+        firstName: profileData.firstName.trim(),
+        lastName: profileData.lastName.trim(),
+        email: profileData.email.trim()
+        // Note: role updates are handled separately by admins only
+      });
+
+      if (response.success) {
+        // Update the user in global state with the response data
+        setUser(response.user);
+
+        alert("Profile updated successfully!");
+      } else {
+        alert(response.message || "Failed to update profile");
+      }
+    } catch (error) {
+      alert("An error occurred while updating profile. Please try again.");
+      console.error("Profile update error:", error);
+    } finally {
+      setIsUpdatingProfile(false);
+    }
+  };
+
+  const handlePasswordChange = async () => {
+    // Validate password fields
+    if (!passwordData.currentPassword) {
+      alert("Please enter your current password");
+      return;
+    }
+
+    if (passwordData.newPassword.length < 6) {
+      alert("New password must be at least 6 characters long");
+      return;
+    }
+
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      alert("New passwords do not match");
+      return;
+    }
+
+    setIsChangingPassword(true);
+
+    try {
+      const response = await AuthAPI.changePassword({
+        currentPassword: passwordData.currentPassword,
+        newPassword: passwordData.newPassword
+      });
+
+      if (response.success) {
+        alert("Password changed successfully!");
+
+        // Clear password fields
+        setPasswordData({
+          currentPassword: "",
+          newPassword: "",
+          confirmPassword: ""
+        });
+
+        // Clear password visibility
+        setPasswordVisibility({
+          currentPassword: false,
+          newPassword: false,
+          confirmPassword: false
+        });
+      } else {
+        alert(response.message || "Failed to change password");
+      }
+    } catch (error) {
+      alert("An error occurred while changing password. Please try again.");
+      console.error("Password change error:", error);
+    } finally {
+      setIsChangingPassword(false);
+    }
+  };
+
+  const togglePasswordVisibility = (field: "currentPassword" | "newPassword" | "confirmPassword") => {
+    setPasswordVisibility(prev => ({
+      ...prev,
+      [field]: !prev[field]
+    }));
   };
 
   const renderTabContent = () => {
@@ -143,10 +266,73 @@ const SettingsPage = () => {
                 </div>
               </div>
 
+              {/* Password Security Section */}
+              <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-6 mb-6">
+                <h4 className="text-base font-semibold text-gray-900 dark:text-white mb-4">Password Security</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Current Password */}
+                  <div className="space-y-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Current Password</label>
+                    <div className="relative">
+                      <input
+                        type={passwordVisibility.currentPassword ? "text" : "password"}
+                        value={passwordData.currentPassword}
+                        onChange={e => setPasswordData(prev => ({ ...prev, currentPassword: e.target.value }))}
+                        placeholder="Enter your current password"
+                        className="block w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 pr-10 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:border-blue-500 dark:focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400"
+                      />
+                      <button type="button" onClick={() => togglePasswordVisibility("currentPassword")} className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
+                        {passwordVisibility.currentPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+                  <div></div> {/* Empty div for grid alignment */}
+                  {/* New Password */}
+                  <div className="space-y-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">New Password</label>
+                    <div className="relative">
+                      <input
+                        type={passwordVisibility.newPassword ? "text" : "password"}
+                        value={passwordData.newPassword}
+                        onChange={e => setPasswordData(prev => ({ ...prev, newPassword: e.target.value }))}
+                        placeholder="Enter new password (min. 6 characters)"
+                        className="block w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 pr-10 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:border-blue-500 dark:focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400"
+                      />
+                      <button type="button" onClick={() => togglePasswordVisibility("newPassword")} className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
+                        {passwordVisibility.newPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Password must be at least 6 characters long</p>
+                  </div>
+                  {/* Confirm New Password */}
+                  <div className="space-y-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Confirm New Password</label>
+                    <div className="relative">
+                      <input
+                        type={passwordVisibility.confirmPassword ? "text" : "password"}
+                        value={passwordData.confirmPassword}
+                        onChange={e => setPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                        placeholder="Confirm your new password"
+                        className="block w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 pr-10 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:border-blue-500 dark:focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400"
+                      />
+                      <button type="button" onClick={() => togglePasswordVisibility("confirmPassword")} className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
+                        {passwordVisibility.confirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex justify-end mt-4">
+                  <Button onClick={handlePasswordChange} variant="outline" disabled={!passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword || isChangingPassword}>
+                    {isChangingPassword ? "Changing..." : "Change Password"}
+                  </Button>
+                </div>
+              </div>
+
               {/* Save Button */}
               <div className="flex justify-end">
-                <Button onClick={handleSaveProfile} leftIcon={<Save className="w-4 h-4" />}>
-                  Save Profile Changes
+                <Button onClick={handleSaveProfile} leftIcon={<Save className="w-4 h-4" />} disabled={isUpdatingProfile}>
+                  {isUpdatingProfile ? "Saving..." : "Save Profile Changes"}
                 </Button>
               </div>
             </div>
@@ -273,28 +459,6 @@ const SettingsPage = () => {
                     }))
                   }
                 />
-              </div>
-            </div>
-          </div>
-        );
-
-      case "security":
-        return (
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Security Settings</h3>
-              <div className="space-y-4">
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                  <p className="text-sm text-yellow-800">
-                    <strong>Note:</strong> This is a demo application. In a production environment, this section would include password management, two-factor authentication, session management, and access control settings.
-                  </p>
-                </div>
-
-                <div className="space-y-4">
-                  <Button variant="outline">Change Password</Button>
-                  <Button variant="outline">Enable Two-Factor Authentication</Button>
-                  <Button variant="outline">View Login History</Button>
-                </div>
               </div>
             </div>
           </div>

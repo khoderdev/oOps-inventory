@@ -93,7 +93,12 @@ export const updateProfileSchema = Joi.object({
     .email({ tlds: { allow: false } })
     .messages({
       "string.email": "Please provide a valid email address"
-    })
+    }),
+
+  // Role is optional and typically handled by admin-only endpoints
+  role: Joi.string().valid("ADMIN", "MANAGER", "STAFF").optional().messages({
+    "any.only": "Role must be one of: ADMIN, MANAGER, STAFF"
+  })
 })
   .min(1)
   .messages({
@@ -108,10 +113,9 @@ export const changePasswordSchema = Joi.object({
     "any.required": "Current password is required"
   }),
 
-  newPassword: Joi.string().min(8).max(128).pattern(new RegExp("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]")).required().messages({
-    "string.min": "New password must be at least 8 characters long",
+  newPassword: Joi.string().min(6).max(128).required().messages({
+    "string.min": "New password must be at least 6 characters long",
     "string.max": "New password must not exceed 128 characters",
-    "string.pattern.base": "New password must contain at least one lowercase letter, one uppercase letter, one number, and one special character",
     "any.required": "New password is required"
   })
 });

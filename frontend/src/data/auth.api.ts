@@ -21,6 +21,29 @@ export interface AuthResponse {
   message: string;
 }
 
+export interface ChangePasswordData {
+  currentPassword: string;
+  newPassword: string;
+}
+
+export interface ChangePasswordResponse {
+  success: boolean;
+  message: string;
+}
+
+export interface UpdateProfileData {
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  role?: "ADMIN" | "MANAGER" | "STAFF";
+}
+
+export interface UpdateProfileResponse {
+  success: boolean;
+  message: string;
+  user: User;
+}
+
 export class AuthAPI {
   /**
    * Login user with email and password
@@ -184,5 +207,40 @@ export class AuthAPI {
    */
   static clearToken(): void {
     TokenManager.removeToken();
+  }
+
+  /**
+   * Change current user's password
+   */
+  static async changePassword(passwordData: ChangePasswordData): Promise<ChangePasswordResponse> {
+    try {
+      const response = await apiClient.post<ChangePasswordResponse>("/users/change-password", passwordData);
+
+      // The backend returns the response directly with success and message
+      return response as unknown as ChangePasswordResponse;
+    } catch (error) {
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : "Password change failed"
+      };
+    }
+  }
+
+  /**
+   * Update current user's profile
+   */
+  static async updateProfile(profileData: UpdateProfileData): Promise<UpdateProfileResponse> {
+    try {
+      const response = await apiClient.put<UpdateProfileResponse>("/users/profile", profileData);
+
+      // The backend returns the response directly with success, message, and user
+      return response as unknown as UpdateProfileResponse;
+    } catch (error) {
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : "Profile update failed",
+        user: {} as User
+      };
+    }
   }
 }
