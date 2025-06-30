@@ -3,11 +3,12 @@
 
 /* Custom scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
+  display: none;
+  /* width: 4px; */
 }
 
 ::-webkit-scrollbar-track {
-  background: #f1f5f9;
+  background: #152235;
   border-radius: 4px;
 }
 

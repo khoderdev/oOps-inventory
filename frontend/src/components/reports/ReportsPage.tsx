@@ -4,6 +4,7 @@ import { useRawMaterials } from "../../hooks/useRawMaterials";
 import { useSections } from "../../hooks/useSections";
 import { useStockEntries, useStockLevels, useStockMovements } from "../../hooks/useStock";
 import { MovementType } from "../../types";
+import { Tabs, type Tab } from "../ui";
 import Button from "../ui/Button";
 import Select from "../ui/Select";
 import CategoryBreakdown from "./CategoryBreakdown";
@@ -24,11 +25,11 @@ const ReportsPage = () => {
   const { data: stockEntries = [] } = useStockEntries();
   const { data: stockMovements = [] } = useStockMovements();
 
-  const reports = [
-    { id: "overview" as ReportType, label: "Overview", icon: BarChart3 },
-    { id: "stock-levels" as ReportType, label: "Stock Levels", icon: TrendingUp },
-    { id: "consumption" as ReportType, label: "Consumption", icon: Calendar },
-    { id: "expenses" as ReportType, label: "Expenses", icon: DollarSign }
+  const reports: Tab<ReportType>[] = [
+    { id: "overview", label: "Overview", icon: BarChart3 },
+    { id: "stock-levels", label: "Stock Levels", icon: TrendingUp },
+    { id: "consumption", label: "Consumption", icon: Calendar },
+    { id: "expenses", label: "Expenses", icon: DollarSign }
   ];
 
   const sectionOptions = sections.map(section => ({
@@ -264,21 +265,9 @@ const ReportsPage = () => {
         </Button>
       </div>
 
-      {/* Report Tabs */}
+      {/* Tabs */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm">
-        <div className="border-b border-gray-200 dark:border-gray-700">
-          <nav className="flex space-x-8 px-6">
-            {reports.map(report => {
-              const IconComponent = report.icon;
-              return (
-                <button key={report.id} onClick={() => setActiveReport(report.id)} className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 ${activeReport === report.id ? "border-blue-500 text-blue-600 dark:text-blue-400" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:border-gray-600"}`}>
-                  <IconComponent className="w-4 h-4" />
-                  <span>{report.label}</span>
-                </button>
-              );
-            })}
-          </nav>
-        </div>
+        <Tabs tabs={reports} activeTab={activeReport} onTabChange={setActiveReport} variant="default" size="md" className="px-6" />
 
         {/* Filters */}
         <div className="p-6 border-b border-gray-200 dark:border-gray-700">
@@ -296,7 +285,9 @@ const ReportsPage = () => {
         </div>
 
         {/* Report Content */}
-        <div className="p-6">{renderReportContent()}</div>
+        <div className="p-6" role="tabpanel" id={`tabpanel-${activeReport}`}>
+          {renderReportContent()}
+        </div>
       </div>
     </div>
   );

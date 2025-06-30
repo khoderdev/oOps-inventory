@@ -33,10 +33,9 @@ const Layout = () => {
 
   // Handle mobile navigation click - auto-close sidebar
   const handleMobileNavClick = () => {
-    // TEMPORARILY DISABLED FOR TESTING
-    // if (isMobile && sidebarOpen) {
-    //   setSidebar(false);
-    // }
+    if (isMobile && sidebarOpen) {
+      setSidebar(false);
+    }
   };
 
   // Get user display info with proper fallbacks
@@ -108,7 +107,7 @@ const Layout = () => {
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 overflow-y-auto overflow-x-hidden px-3 py-4 space-y-1 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600">
+          <nav className="flex-1 overflow-y-auto overflow-x-hidden px-3 py-4 space-y-1">
             {allNavigationItems.map(({ name, to, icon: Icon }) => {
               const isActive = location.pathname === to || (to === "/dashboard" && location.pathname === "/");
               return (
