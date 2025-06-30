@@ -1,174 +1,268 @@
-import { query } from "../config/database.js";
+/**
+ * User Model with Prisma ORM
+ * Demonstrates type-safe, clean database operations
+ */
+
+import prisma from "../config/prisma.js";
 import logger from "../utils/logger.js";
 
+/**
+ * User model using Prisma ORM
+ */
 export class User {
+  /**
+   * Find user by email
+   * @param {string} email - User email
+   * @returns {Promise<Object|null>} - User object or null
+   */
   static async findByEmail(email) {
     try {
-      const result = await query(
-        "SELECT * FROM users WHERE email = $1 AND is_active = true",
-        [email]
-      );
-      return result.rows[0] || null;
+      const user = await prisma().user.findFirst({
+        where: {
+          email,
+          is_active: true
+        }
+      });
+      return user;
     } catch (error) {
-      logger.error("Error finding user by email:", error);
+      logger.error("Error finding user by email with Prisma:", error);
       throw error;
     }
   }
 
+  /**
+   * Find user by ID
+   * @param {number} id - User ID
+   * @returns {Promise<Object|null>} - User object or null
+   */
   static async findById(id) {
     try {
-      const result = await query("SELECT * FROM users WHERE id = $1", [id]);
-      return result.rows[0] || null;
+      const user = await prisma().user.findUnique({
+        where: { id }
+      });
+      return user;
     } catch (error) {
-      logger.error("Error finding user by ID:", error);
+      logger.error("Error finding user by ID with Prisma:", error);
       throw error;
     }
   }
 
+  /**
+   * Create a new user
+   * @param {Object} userData - User data
+   * @returns {Promise<Object>} - Created user object
+   */
   static async create(userData) {
-    const {
-      email,
-      passwordHash,
-      firstName,
-      lastName,
-      role = "employee",
-    } = userData;
+    const { email, passwordHash, firstName, lastName, role = "EMPLOYEE" } = userData;
 
     try {
-      const result = await query(
-        `INSERT INTO users (email, password_hash, first_name, last_name, role)
-         VALUES ($1, $2, $3, $4, $5)
-         RETURNING id, email, first_name, last_name, role, is_active, created_at, updated_at`,
-        [email, passwordHash, firstName, lastName, role]
-      );
+      const user = await prisma().user.create({
+        data: {
+          email,
+          password_hash: passwordHash,
+          first_name: firstName,
+          last_name: lastName,
+          role: role.toUpperCase() // Convert to enum value
+        },
+        select: {
+          id: true,
+          email: true,
+          first_name: true,
+          last_name: true,
+          role: true,
+          is_active: true,
+          created_at: true,
+          updated_at: true
+          // Exclude password_hash from response
+        }
+      });
 
-      return result.rows[0];
+      return user;
     } catch (error) {
-      logger.error("Error creating user:", error);
-      throw error;
-    }
-  }
+      logger.error("Error creating user with Prisma:", error);
 
-  static async update(id, updateData) {
-    const fields = [];
-    const values = [];
-    let paramIndex = 1;
-
-    for (const [key, value] of Object.entries(updateData)) {
-      if (value !== undefined) {
-        const dbField = this.mapFieldToColumn(key);
-        fields.push(`${dbField} = $${paramIndex}`);
-        values.push(value);
-        paramIndex++;
+      // Handle Prisma-specific errors
+      if (error.code === "P2002") {
+        throw new Error("User with this email already exists");
       }
-    }
 
-    if (fields.length === 0) {
-      throw new Error("No fields to update");
-    }
-
-    values.push(id);
-    const queryText = `
-      UPDATE users 
-      SET ${fields.join(", ")} 
-      WHERE id = $${paramIndex}
-      RETURNING id, email, first_name, last_name, role, is_active, created_at, updated_at
-    `;
-
-    try {
-      const result = await query(queryText, values);
-      return result.rows[0] || null;
-    } catch (error) {
-      logger.error("Error updating user:", error);
       throw error;
     }
   }
 
+  /**
+   * Update user
+   * @param {number} id - User ID
+   * @param {Object} updateData - Data to update
+   * @returns {Promise<Object|null>} - Updated user object or null
+   */
+  static async update(id, updateData) {
+    try {
+      // Transform field names to match Prisma schema
+      const prismaData = {};
+
+      if (updateData.firstName !== undefined) {
+        prismaData.first_name = updateData.firstName;
+      }
+      if (updateData.lastName !== undefined) {
+        prismaData.last_name = updateData.lastName;
+      }
+      if (updateData.email !== undefined) {
+        prismaData.email = updateData.email;
+      }
+      if (updateData.passwordHash !== undefined) {
+        prismaData.password_hash = updateData.passwordHash;
+      }
+      if (updateData.role !== undefined) {
+        prismaData.role = updateData.role.toUpperCase();
+      }
+      if (updateData.isActive !== undefined) {
+        prismaData.is_active = updateData.isActive;
+      }
+
+      const user = await prisma().user.update({
+        where: { id },
+        data: prismaData,
+        select: {
+          id: true,
+          email: true,
+          first_name: true,
+          last_name: true,
+          role: true,
+          is_active: true,
+          created_at: true,
+          updated_at: true
+        }
+      });
+
+      return user;
+    } catch (error) {
+      logger.error("Error updating user with Prisma:", error);
+
+      if (error.code === "P2002") {
+        throw new Error("Email already in use");
+      }
+      if (error.code === "P2025") {
+        return null; // User not found
+      }
+
+      throw error;
+    }
+  }
+
+  /**
+   * Delete user (soft delete)
+   * @param {number} id - User ID
+   * @returns {Promise<boolean>} - True if user was deleted
+   */
   static async delete(id) {
     try {
-      const result = await query(
-        "UPDATE users SET is_active = false WHERE id = $1 RETURNING id",
-        [id]
-      );
-      return result.rowCount > 0;
+      await prisma().user.update({
+        where: { id },
+        data: { is_active: false }
+      });
+      return true;
     } catch (error) {
-      logger.error("Error deleting user:", error);
+      logger.error("Error deleting user with Prisma:", error);
+
+      if (error.code === "P2025") {
+        return false; // User not found
+      }
+
       throw error;
     }
   }
 
+  /**
+   * Get all users with pagination and filtering
+   * @param {Object} options - Query options
+   * @returns {Promise<Object>} - Users and pagination info
+   */
   static async findAll(options = {}) {
     const { page = 1, limit = 10, role, isActive = true, search } = options;
 
-    const offset = (page - 1) * limit;
-    const whereConditions = [];
-    const values = [];
-    let paramIndex = 1;
+    const skip = (page - 1) * limit;
+
+    // Build where clause
+    const where = {};
 
     if (isActive !== undefined) {
-      whereConditions.push(`is_active = $${paramIndex}`);
-      values.push(isActive);
-      paramIndex++;
+      where.is_active = isActive;
     }
 
     if (role) {
-      whereConditions.push(`role = $${paramIndex}`);
-      values.push(role);
-      paramIndex++;
+      where.role = role.toUpperCase();
     }
 
     if (search) {
-      whereConditions.push(
-        `(first_name ILIKE $${paramIndex} OR last_name ILIKE $${paramIndex} OR email ILIKE $${paramIndex})`
-      );
-      values.push(`%${search}%`);
-      paramIndex++;
+      where.OR = [{ first_name: { contains: search, mode: "insensitive" } }, { last_name: { contains: search, mode: "insensitive" } }, { email: { contains: search, mode: "insensitive" } }];
     }
 
-    const whereClause =
-      whereConditions.length > 0
-        ? `WHERE ${whereConditions.join(" AND ")}`
-        : "";
-
     try {
-      const countQuery = `SELECT COUNT(*) FROM users ${whereClause}`;
-      const countResult = await query(countQuery, values);
-      const total = parseInt(countResult.rows[0].count);
-
-      values.push(limit, offset);
-      const usersQuery = `
-        SELECT id, email, first_name, last_name, role, is_active, created_at, updated_at
-        FROM users 
-        ${whereClause}
-        ORDER BY created_at DESC
-        LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
-      `;
-
-      const usersResult = await query(usersQuery, values);
+      // Get total count and users in parallel
+      const [total, users] = await prisma().$transaction([
+        prisma().user.count({ where }),
+        prisma().user.findMany({
+          where,
+          select: {
+            id: true,
+            email: true,
+            first_name: true,
+            last_name: true,
+            role: true,
+            is_active: true,
+            created_at: true,
+            updated_at: true
+          },
+          orderBy: { created_at: "desc" },
+          skip,
+          take: limit
+        })
+      ]);
 
       return {
-        users: usersResult.rows,
+        users,
         pagination: {
           page,
           limit,
           total,
-          pages: Math.ceil(total / limit),
-        },
+          pages: Math.ceil(total / limit)
+        }
       };
     } catch (error) {
-      logger.error("Error finding users:", error);
+      logger.error("Error finding users with Prisma:", error);
       throw error;
     }
   }
 
-  static mapFieldToColumn(field) {
-    const fieldMap = {
-      firstName: "first_name",
-      lastName: "last_name",
-      passwordHash: "password_hash",
-      isActive: "is_active",
-    };
+  /**
+   * Get user with relationships (example of ORM benefits)
+   * @param {number} id - User ID
+   * @returns {Promise<Object|null>} - User with related data
+   */
+  static async findWithRelations(id) {
+    try {
+      const user = await prisma().user.findUnique({
+        where: { id },
+        include: {
+          stock_entries: {
+            take: 10, // Last 10 stock entries
+            orderBy: { created_at: "desc" },
+            include: {
+              raw_material: {
+                include: {
+                  category: true
+                }
+              }
+            }
+          }
+        }
+      });
 
-    return fieldMap[field] || field;
+      return user;
+    } catch (error) {
+      logger.error("Error finding user with relations:", error);
+      throw error;
+    }
   }
 }
