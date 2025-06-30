@@ -1,0 +1,248 @@
+// This is your Prisma schema file
+// Learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(cuid())
+  email         String?  @unique
+  password_hash String   @map("password_hash")
+  name          String
+  role          Role     @default(STAFF)
+  is_active     Boolean  @default(true) @map("is_active")
+  created_at    DateTime @default(now()) @map("created_at")
+  updated_at    DateTime @updatedAt @map("updated_at")
+
+  // Relationships
+  managed_sections     Section[]           @relation("SectionManager")
+  stock_entries        StockEntry[]        @relation("StockEntryCreatedBy")
+  stock_movements      StockMovement[]     @relation("StockMovementPerformedBy")
+  section_consumptions SectionConsumption[] @relation("ConsumptionPerformedBy")
+
+  @@map("users")
+  @@index([email])
+  @@index([role])
+  @@index([is_active])
+}
+
+enum Role {
+  MANAGER
+  STAFF
+
+  @@map("role")
+}
+
+
+
+model RawMaterial {
+  id               String            @id @default(cuid())
+  name             String
+  description      String?
+  category         MaterialCategory
+  unit             MeasurementUnit
+  unit_cost        Decimal           @db.Decimal(10, 2) @map("unit_cost")
+  supplier         String?
+  min_stock_level  Decimal           @db.Decimal(10, 2) @map("min_stock_level")
+  max_stock_level  Decimal           @db.Decimal(10, 2) @map("max_stock_level")
+  is_active        Boolean           @default(true) @map("is_active")
+  units_per_pack   Int?              @map("units_per_pack")
+  base_unit        MeasurementUnit?  @map("base_unit")
+  created_at       DateTime          @default(now()) @map("created_at")
+  updated_at       DateTime          @updatedAt @map("updated_at")
+
+  // Relationships
+  stock_entries        StockEntry[]
+  section_inventories  SectionInventory[]
+  section_consumptions SectionConsumption[]
+
+  @@map("raw_materials")
+  @@index([category])
+  @@index([is_active])
+}
+
+enum MaterialCategory {
+  MEAT
+  VEGETABLES
+  DAIRY
+  BEVERAGES
+  CONDIMENTS
+  GRAINS
+  SPICES
+  PACKAGING
+  OTHER
+
+  @@map("material_category")
+}
+
+enum MeasurementUnit {
+  KG
+  GRAMS
+  LITERS
+  ML
+  PIECES
+  PACKS
+  BOXES
+  BOTTLES
+
+  @@map("measurement_unit")
+}
+
+model Section {
+  id          String      @id @default(cuid())
+  name        String
+  description String?
+  type        SectionType
+  manager_id  String      @map("manager_id")
+  is_active   Boolean     @default(true) @map("is_active")
+  created_at  DateTime    @default(now()) @map("created_at")
+  updated_at  DateTime    @updatedAt @map("updated_at")
+
+  // Relationships
+  manager              User                   @relation("SectionManager", fields: [manager_id], references: [id])
+  section_inventories  SectionInventory[]
+  section_consumptions SectionConsumption[]
+  movements_from       StockMovement[]        @relation("MovementFromSection")
+  movements_to         StockMovement[]        @relation("MovementToSection")
+
+  @@map("sections")
+  @@index([manager_id])
+  @@index([type])
+  @@index([is_active])
+}
+
+enum SectionType {
+  KITCHEN
+  BAR
+  STORAGE
+  PREPARATION
+  OTHER
+
+  @@map("section_type")
+}
+
+model SectionInventory {
+  id                  String      @id @default(cuid())
+  section_id          String      @map("section_id")
+  raw_material_id     String      @map("raw_material_id")
+  quantity            Decimal     @db.Decimal(10, 2)
+  reserved_quantity   Decimal     @db.Decimal(10, 2) @default(0) @map("reserved_quantity")
+  min_level           Decimal?    @db.Decimal(10, 2) @map("min_level")
+  max_level           Decimal?    @db.Decimal(10, 2) @map("max_level")
+  last_updated        DateTime    @default(now()) @map("last_updated")
+  created_at          DateTime    @default(now()) @map("created_at")
+  updated_at          DateTime    @updatedAt @map("updated_at")
+
+  // Relationships
+  section      Section     @relation(fields: [section_id], references: [id])
+  raw_material RawMaterial @relation(fields: [raw_material_id], references: [id])
+
+  @@unique([section_id, raw_material_id])
+  @@map("section_inventories")
+  @@index([section_id])
+  @@index([raw_material_id])
+}
+
+model SectionConsumption {
+  id              String      @id @default(cuid())
+  section_id      String      @map("section_id")
+  raw_material_id String      @map("raw_material_id")
+  quantity        Decimal     @db.Decimal(10, 2)
+  consumed_date   DateTime    @map("consumed_date")
+  consumed_by     String      @map("consumed_by")
+  reason          String
+  order_id        String?     @map("order_id")
+  notes           String?
+  created_at      DateTime    @default(now()) @map("created_at")
+  updated_at      DateTime    @updatedAt @map("updated_at")
+
+  // Relationships
+  section      Section     @relation(fields: [section_id], references: [id])
+  raw_material RawMaterial @relation(fields: [raw_material_id], references: [id])
+  user         User        @relation("ConsumptionPerformedBy", fields: [consumed_by], references: [id])
+
+  @@map("section_consumptions")
+  @@index([section_id])
+  @@index([raw_material_id])
+  @@index([consumed_date])
+  @@index([consumed_by])
+}
+
+model StockEntry {
+  id              String      @id @default(cuid())
+  raw_material_id String      @map("raw_material_id")
+  quantity        Decimal     @db.Decimal(10, 2)
+  unit_cost       Decimal     @db.Decimal(10, 2) @map("unit_cost")
+  total_cost      Decimal     @db.Decimal(10, 2) @map("total_cost")
+  supplier        String?
+  batch_number    String?     @map("batch_number")
+  expiry_date     DateTime?   @map("expiry_date")
+  received_date   DateTime    @map("received_date")
+  received_by     String      @map("received_by")
+  notes           String?
+  created_at      DateTime    @default(now()) @map("created_at")
+  updated_at      DateTime    @updatedAt @map("updated_at")
+
+  // Relationships
+  raw_material    RawMaterial     @relation(fields: [raw_material_id], references: [id])
+  user            User            @relation("StockEntryCreatedBy", fields: [received_by], references: [id])
+  stock_movements StockMovement[]
+
+  @@map("stock_entries")
+  @@index([raw_material_id])
+  @@index([received_date])
+  @@index([expiry_date])
+  @@index([received_by])
+}
+
+model StockMovement {
+  id               String       @id @default(cuid())
+  stock_entry_id   String       @map("stock_entry_id")
+  type             MovementType
+  quantity         Decimal      @db.Decimal(10, 2)
+  from_section_id  String?      @map("from_section_id")
+  to_section_id    String?      @map("to_section_id")
+  reason           String
+  performed_by     String       @map("performed_by")
+  reference_id     String?      @map("reference_id")
+  created_at       DateTime     @default(now()) @map("created_at")
+  updated_at       DateTime     @updatedAt @map("updated_at")
+
+  // Relationships
+  stock_entry   StockEntry @relation(fields: [stock_entry_id], references: [id])
+  user          User       @relation("StockMovementPerformedBy", fields: [performed_by], references: [id])
+  from_section  Section?   @relation("MovementFromSection", fields: [from_section_id], references: [id])
+  to_section    Section?   @relation("MovementToSection", fields: [to_section_id], references: [id])
+
+  @@map("stock_movements")
+  @@index([stock_entry_id])
+  @@index([type])
+  @@index([performed_by])
+  @@index([created_at])
+}
+
+enum MovementType {
+  IN
+  OUT
+  TRANSFER
+  ADJUSTMENT
+  EXPIRED
+  DAMAGED
+
+  @@map("movement_type")
+}
+
+model OrderCounter {
+  id                String @id @default(cuid())
+  last_order_number Int    @default(0) @map("last_order_number")
+  created_at        DateTime @default(now()) @map("created_at")
+  updated_at        DateTime @updatedAt @map("updated_at")
+
+  @@map("order_counters")
+} 

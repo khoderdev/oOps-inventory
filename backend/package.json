@@ -10,9 +10,13 @@
     "dev": "nodemon index.js",
     "start": "node index.js",
     "test": "jest",
-    "migrate": "node src/scripts/migrate.js"
+    "migrate": "prisma migrate dev",
+    "db:push": "prisma db push",
+    "db:generate": "prisma generate",
+    "db:studio": "prisma studio"
   },
   "dependencies": {
+    "@prisma/client": "^6.10.1",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
@@ -27,8 +31,9 @@
   "devDependencies": {
     "jest": "^29.7.0",
     "nodemon": "^3.1.10",
-    "supertest": "^6.3.3",
-    "prettier": "^3.5.3"
+    "prettier": "^3.5.3",
+    "prisma": "^6.10.1",
+    "supertest": "^6.3.3"
   },
   "engines": {
     "node": ">=18.0.0"
