@@ -119,7 +119,7 @@ const convertPackToBase = (quantity, rawMaterial) => {
 const convertBaseToPack = (baseQuantity, rawMaterial) => {
   const packInfo = getPackInfo(rawMaterial);
   if (!packInfo) return baseQuantity;
-  return baseQuantity / packInfo.unitsPerPack;
+  return parseFloat((baseQuantity / packInfo.unitsPerPack).toFixed(1));
 };
 
 /**

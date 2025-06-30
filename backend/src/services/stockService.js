@@ -120,7 +120,7 @@ const convertPackToBase = (quantity, rawMaterial) => {
 const convertBaseToPack = (baseQuantity, rawMaterial) => {
   const packInfo = getPackInfo(rawMaterial);
   if (!packInfo) return baseQuantity;
-  return baseQuantity / packInfo.unitsPerPack;
+  return parseFloat((baseQuantity / packInfo.unitsPerPack).toFixed(1));
 };
 
 /**
@@ -422,8 +422,8 @@ export const getCurrentStockLevels = async () => {
         // For pack/box materials: totalReceived and availableQuantity are in base units
         totalSubUnitsQuantity = totalReceived;
         availableSubUnitsQuantity = availableQuantity;
-        totalUnitsQuantity = totalReceived / packInfo.unitsPerPack;
-        availableUnitsQuantity = availableQuantity / packInfo.unitsPerPack;
+        totalUnitsQuantity = parseFloat((totalReceived / packInfo.unitsPerPack).toFixed(1));
+        availableUnitsQuantity = parseFloat((availableQuantity / packInfo.unitsPerPack).toFixed(1));
       } else {
         // For regular materials: units and sub-units are the same
         totalUnitsQuantity = totalReceived;
