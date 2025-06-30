@@ -1,4 +1,4 @@
-import type { BaseEntity } from "./common.types";
+import type { BaseEntity, User } from "./common.types";
 import type { RawMaterial } from "./rawMaterials.types";
 
 export interface Section extends BaseEntity {
@@ -6,7 +6,8 @@ export interface Section extends BaseEntity {
   description?: string;
   type: SectionType;
   managerId: string;
-  isActive: boolean; 
+  manager?: User;
+  isActive: boolean;
 }
 
 export enum SectionType {
@@ -75,4 +76,34 @@ export interface SectionDetailsModalProps {
   section: Section | null;
   isOpen: boolean;
   onClose: () => void;
+}
+
+// Sections API filters interfaces
+export interface SectionFilters {
+  type?: string;
+  isActive?: boolean;
+  managerId?: string;
+}
+
+export interface SectionConsumptionFilters {
+  rawMaterialId?: string;
+  fromDate?: string;
+  toDate?: string;
+}
+
+export interface ConsumptionRequest {
+  sectionId: string;
+  rawMaterialId: string;
+  quantity: number;
+  consumedBy: string;
+  reason: string;
+  orderId?: string;
+  notes?: string;
+}
+
+export interface InventoryUpdateRequest {
+  inventoryId: string;
+  quantity: number;
+  updatedBy: string;
+  notes?: string;
 }

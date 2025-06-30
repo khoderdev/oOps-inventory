@@ -3,7 +3,7 @@ import type { ApiResponse, User } from "../types";
 import type { BackendUser, BackendUsersResponse, UserFilters, UserRole, UsersResponse } from "../types/users.types";
 
 // Transform backend user data to frontend format
-const transformUser = (backendUser: BackendUser): User => ({
+export const transformUser = (backendUser: BackendUser): User => ({
   id: backendUser.id,
   email: backendUser.email,
   firstName: backendUser.first_name,

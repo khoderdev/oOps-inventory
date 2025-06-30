@@ -598,10 +598,10 @@ export const getSectionConsumption = async (sectionId, filters = {}) => {
   try {
     logger.info("Fetching section consumption for:", sectionId);
 
-    const where = { section_id: sectionId };
+    const where = { section_id: parseInt(sectionId) };
 
     if (filters.rawMaterialId) {
-      where.raw_material_id = filters.rawMaterialId;
+      where.raw_material_id = parseInt(filters.rawMaterialId);
     }
 
     if (filters.fromDate || filters.toDate) {

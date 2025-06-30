@@ -12,6 +12,19 @@ interface SectionCardProps {
 const SectionCard = ({ section, onView, onEdit }: SectionCardProps) => {
   const { data: inventory = [] } = useSectionInventory(section.id);
 
+  const getManagerName = (section: Section) => {
+    if (section.manager) {
+      if (section.manager.firstName && section.manager.lastName) {
+        return `${section.manager.firstName} ${section.manager.lastName}`;
+      }
+      if (section.manager.name) {
+        return section.manager.name;
+      }
+      return section.manager.email;
+    }
+    return `Manager ${section.managerId}`;
+  };
+
   const getSectionIcon = (type: string) => {
     switch (type) {
       case "kitchen":
@@ -86,7 +99,7 @@ const SectionCard = ({ section, onView, onEdit }: SectionCardProps) => {
           <Users className="w-4 h-4 text-gray-500 dark:text-gray-400" />
           <div>
             <p className="text-xs text-gray-500 dark:text-gray-400">Manager</p>
-            <p className="text-sm font-medium text-gray-900 dark:text-white">{section.managerId}</p>
+            <p className="text-sm font-medium text-gray-900 dark:text-white">{getManagerName(section)}</p>
           </div>
         </div>
 

@@ -1,35 +1,5 @@
 import { apiClient } from "../lib/api";
-import { type ApiResponse, type CreateSectionAssignmentInput, type CreateSectionInput, type RawMaterial, type Section, type SectionConsumption, type SectionInventory, type UpdateSectionInput } from "../types";
-
-// Sections API filters interfaces
-export interface SectionFilters {
-  type?: string;
-  isActive?: boolean;
-  managerId?: string;
-}
-
-export interface SectionConsumptionFilters {
-  rawMaterialId?: string;
-  fromDate?: string;
-  toDate?: string;
-}
-
-export interface ConsumptionRequest {
-  sectionId: string;
-  rawMaterialId: string;
-  quantity: number;
-  consumedBy: string;
-  reason: string;
-  orderId?: string;
-  notes?: string;
-}
-
-export interface InventoryUpdateRequest {
-  inventoryId: string;
-  quantity: number;
-  updatedBy: string;
-  notes?: string;
-}
+import { type ApiResponse, type ConsumptionRequest, type CreateSectionAssignmentInput, type CreateSectionInput, type InventoryUpdateRequest, type RawMaterial, type Section, type SectionConsumption, type SectionConsumptionFilters, type SectionFilters, type SectionInventory, type UpdateSectionInput } from "../types";
 
 export class SectionsAPI {
   /**

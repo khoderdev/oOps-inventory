@@ -1,14 +1,14 @@
 import { Minus, Package, Plus } from "lucide-react";
 import { useState } from "react";
-import { useSectionInventory, useSectionConsumption } from "../../hooks/useSections";
-import type { RawMaterial, SectionDetailsModalProps, SectionInventory } from "../../types";
+import { useSectionConsumption, useSectionInventory } from "../../hooks/useSections";
+import type { RawMaterial, Section, SectionDetailsModalProps, SectionInventory } from "../../types";
 import { MeasurementUnit } from "../../types";
+import { splitQuantityAndUnit } from "../../utils/units";
 import Button from "../ui/Button";
 import Modal from "../ui/Modal";
 import ConsumptionModal from "./ConsumptionModal";
 import SectionInventoryEditModal from "./SectionInventoryEditModal";
 import StockAssignmentModal from "./StockAssignmentModal";
-import { splitQuantityAndUnit } from "../../utils/units";
 
 const SectionDetailsModal = ({ section, isOpen, onClose }: SectionDetailsModalProps) => {
   const [activeTab, setActiveTab] = useState<"inventory" | "consumption">("inventory");
@@ -20,6 +20,22 @@ const SectionDetailsModal = ({ section, isOpen, onClose }: SectionDetailsModalPr
   const { data: consumption = [], refetch: refetchConsumption } = useSectionConsumption(section?.id || "");
 
   if (!section) return null;
+
+  const getManagerName = (section: Section) => {
+    if (section.manager) {
+      // Check if firstName and lastName are available
+      if (section.manager.firstName && section.manager.lastName) {
+        return `${section.manager.firstName} ${section.manager.lastName}`;
+      }
+      // Fall back to name if available
+      if (section.manager.name) {
+        return section.manager.name;
+      }
+      // Fall back to email
+      return section.manager.email;
+    }
+    return `Manager ${section.managerId}`;
+  };
 
   const tabs = [
     { id: "inventory" as const, label: "Current Inventory" },
@@ -82,7 +98,7 @@ const SectionDetailsModal = ({ section, isOpen, onClose }: SectionDetailsModalPr
               </div>
               <div>
                 <p className="text-sm font-medium text-gray-600">Manager</p>
-                <p className="text-lg text-gray-900 dark:text-gray-300">{section.managerId}</p>
+                <p className="text-lg text-gray-900 dark:text-gray-300">{getManagerName(section)}</p>
               </div>
             </div>
             {section.description && (
