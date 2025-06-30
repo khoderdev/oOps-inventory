@@ -58,7 +58,6 @@ const StockManagementPage = () => {
 
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm">
         <Tabs tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} variant="default" size="md" className="px-6" />
-
         <div className="p-6" role="tabpanel" id={`tabpanel-${activeTab}`}>
           {renderTabContent()}
         </div>

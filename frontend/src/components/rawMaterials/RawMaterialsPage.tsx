@@ -215,42 +215,42 @@ const RawMaterialsPage = () => {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-blue-50 p-6 rounded-lg">
+        <div className="bg-blue-50 p-6 rounded-lg dark:bg-blue-900/10 dark:text-white">
           <div className="flex items-center">
-            <Package className="w-8 h-8 text-blue-600" />
+            <Package className="w-8 h-8 text-blue-600 dark:text-blue-400" />
             <div className="ml-4">
-              <p className="text-sm font-medium text-blue-600">Total Materials</p>
-              <p className="text-2xl font-bold text-blue-900">{rawMaterials.length}</p>
+              <p className="text-sm font-medium text-blue-600 dark:text-blue-400">Total Materials</p>
+              <p className="text-2xl font-bold text-blue-900 dark:text-blue-400">{rawMaterials.length}</p>
             </div>
           </div>
         </div>
 
-        <div className="bg-green-50 p-6 rounded-lg">
+        <div className="bg-green-50 p-6 rounded-lg dark:bg-green-900/10 dark:text-white">
           <div className="flex items-center">
-            <Package className="w-8 h-8 text-green-600" />
+            <Package className="w-8 h-8 text-green-600 dark:text-green-400" />
             <div className="ml-4">
-              <p className="text-sm font-medium text-green-600">Active Materials</p>
-              <p className="text-2xl font-bold text-green-900">{activeCount}</p>
+              <p className="text-sm font-medium text-green-600 dark:text-green-400">Active Materials</p>
+              <p className="text-2xl font-bold text-green-900 dark:text-green-400">{activeCount}</p>
             </div>
           </div>
         </div>
 
-        <div className="bg-red-50 p-6 rounded-lg">
+        <div className="bg-red-50 p-6 rounded-lg dark:bg-red-900/10 dark:text-white">
           <div className="flex items-center">
-            <AlertTriangle className="w-8 h-8 text-red-600" />
+            <AlertTriangle className="w-8 h-8 text-red-600 dark:text-red-400" />
             <div className="ml-4">
-              <p className="text-sm font-medium text-red-600">Low Stock</p>
-              <p className="text-2xl font-bold text-red-900">{lowStockCount}</p>
+              <p className="text-sm font-medium text-red-600 dark:text-red-400">Low Stock</p>
+              <p className="text-2xl font-bold text-red-900 dark:text-red-400">{lowStockCount}</p>
             </div>
           </div>
         </div>
 
-        <div className="bg-purple-50 p-6 rounded-lg">
+        <div className="bg-purple-50 p-6 rounded-lg dark:bg-purple-900/10 dark:text-white">
           <div className="flex items-center">
-            <Package className="w-8 h-8 text-purple-600" />
+            <Package className="w-8 h-8 text-purple-600 dark:text-purple-400" />
             <div className="ml-4">
-              <p className="text-sm font-medium text-purple-600">Categories</p>
-              <p className="text-2xl font-bold text-purple-900">{Object.keys(categoryBreakdown).length}</p>
+              <p className="text-sm font-medium text-purple-600 dark:text-purple-400">Categories</p>
+              <p className="text-2xl font-bold text-purple-900 dark:text-purple-400">{Object.keys(categoryBreakdown).length}</p>
             </div>
           </div>
         </div>

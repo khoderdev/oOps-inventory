@@ -45,40 +45,42 @@ function Table<T extends Record<string, unknown>>({ data, columns, loading = fal
   }
 
   return (
-    <div className={clsx("overflow-x-auto", className)}>
-      <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-        <thead className="bg-gray-50 dark:bg-gray-800">
-          <tr>
-            {columns.map(column => (
-              <th key={column.key} className={clsx("px-6 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider", column.align === "center" && "text-center", column.align === "right" && "text-right", column.sortable && "cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700")} style={{ width: column.width }} onClick={column.sortable ? () => handleSort(column.key) : undefined}>
-                <div className="flex items-center space-x-1">
-                  <span>{column.title}</span>
-                  {column.sortable && getSortIcon(column.key)}
-                </div>
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-          {data.length === 0 ? (
+    <div className={clsx("overflow-hidden border border-gray-200 dark:border-gray-700 rounded-lg", className)}>
+      <div className="overflow-x-auto max-h-96 overflow-y-auto">
+        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+          <thead className="bg-gray-50 dark:bg-gray-700 sticky top-0 z-10">
             <tr>
-              <td colSpan={columns.length} className="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
-                {emptyMessage}
-              </td>
+              {columns.map(column => (
+                <th key={column.key} className={clsx("px-6 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-200 dark:border-gray-700", column.align === "center" && "text-center", column.align === "right" && "text-right", column.sortable && "cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700")} style={{ width: column.width }} onClick={column.sortable ? () => handleSort(column.key) : undefined}>
+                  <div className="flex items-center space-x-1">
+                    <span>{column.title}</span>
+                    {column.sortable && getSortIcon(column.key)}
+                  </div>
+                </th>
+              ))}
             </tr>
-          ) : (
-            data.map((item, index) => (
-              <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                {columns.map(column => (
-                  <td key={column.key} className={clsx("px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100", column.align === "center" && "text-center", column.align === "right" && "text-right")}>
-                    {column.render ? column.render(item, index) : item[column.key]?.toString() || "-"}
-                  </td>
-                ))}
+          </thead>
+          <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+            {data.length === 0 ? (
+              <tr>
+                <td colSpan={columns.length} className="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
+                  {emptyMessage}
+                </td>
               </tr>
-            ))
-          )}
-        </tbody>
-      </table>
+            ) : (
+              data.map((item, index) => (
+                <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                  {columns.map(column => (
+                    <td key={column.key} className={clsx("px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100", column.align === "center" && "text-center", column.align === "right" && "text-right")}>
+                      {column.render ? column.render(item, index) : item[column.key]?.toString() || "-"}
+                    </td>
+                  ))}
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

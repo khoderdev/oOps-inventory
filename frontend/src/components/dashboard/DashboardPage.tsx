@@ -1,8 +1,14 @@
 import { AlertTriangle, Building2, Package, TrendingUp, Users, Warehouse } from "lucide-react";
+import { useContext, useState } from "react";
+import { AppContext } from "../../contexts/AppContext";
 import { useRawMaterials } from "../../hooks/useRawMaterials";
 import { useSections } from "../../hooks/useSections";
 import { useStockLevels } from "../../hooks/useStock";
-import { MeasurementUnit } from "../../types";
+import { MeasurementUnit, type User } from "../../types";
+import RawMaterialForm from "../rawMaterials/RawMaterialForm";
+import SectionForm from "../sections/SectionForm";
+import StockEntryForm from "../stock/StockEntryForm";
+import Modal from "../ui/Modal";
 
 // Helper function to format quantity display for pack/box materials
 const formatQuantityDisplay = (quantity: number, material: { unit: string; unitsPerPack?: number; baseUnit?: string } | undefined) => {
@@ -23,6 +29,15 @@ const DashboardPage = () => {
   const { data: rawMaterials = [] } = useRawMaterials({ isActive: true });
   const { data: stockLevels = [] } = useStockLevels();
   const { data: sections = [] } = useSections({ isActive: true });
+
+  // Quick Actions Modal States
+  const [showAddMaterialModal, setShowAddMaterialModal] = useState(false);
+  const [showAddStockModal, setShowAddStockModal] = useState(false);
+  const [showCreateSectionModal, setShowCreateSectionModal] = useState(false);
+
+  const {
+    state: { user }
+  } = useContext(AppContext) as { state: { user: User } };
 
   const lowStockItems = stockLevels.filter(level => level.isLowStock);
   const totalValue = stockLevels.reduce((sum, level) => sum + level.availableUnitsQuantity * (level.rawMaterial?.unitCost || 0), 0);
@@ -64,6 +79,28 @@ const DashboardPage = () => {
 
   return (
     <div className="space-y-6">
+      {/* Quick Actions */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Quick Actions</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <button onClick={() => setShowAddMaterialModal(true)} disabled={!(user?.role === "MANAGER" || user?.role === "ADMIN")} className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed">
+            <Package className="w-6 h-6 text-blue-600 dark:text-blue-400 mb-2" />
+            <h4 className="font-medium text-gray-900 dark:text-white">Add Raw Material</h4>
+            <p className="text-sm text-gray-600 dark:text-gray-400">Add new ingredients to your inventory</p>
+          </button>
+          <button onClick={() => setShowAddStockModal(true)} disabled={!(user?.role === "MANAGER" || user?.role === "ADMIN")} className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed">
+            <Warehouse className="w-6 h-6 text-green-600 dark:text-green-400 mb-2" />
+            <h4 className="font-medium text-gray-900 dark:text-white">Record Stock</h4>
+            <p className="text-sm text-gray-600 dark:text-gray-400">Add new stock to your inventory</p>
+          </button>
+          <button onClick={() => setShowCreateSectionModal(true)} disabled={!(user?.role === "MANAGER" || user?.role === "ADMIN")} className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed">
+            <Building2 className="w-6 h-6 text-purple-600 dark:text-purple-400 mb-2" />
+            <h4 className="font-medium text-gray-900 dark:text-white">Create Section</h4>
+            <p className="text-sm text-gray-600 dark:text-gray-400">Set up new kitchen or bar sections</p>
+          </button>
+        </div>
+      </div>
+
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {stats.map(stat => {
@@ -135,27 +172,18 @@ const DashboardPage = () => {
         </div>
       </div>
 
-      {/* Quick Actions */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Quick Actions</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <button className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-left">
-            <Package className="w-6 h-6 text-blue-600 dark:text-blue-400 mb-2" />
-            <h4 className="font-medium text-gray-900 dark:text-white">Add Raw Material</h4>
-            <p className="text-sm text-gray-600 dark:text-gray-400">Add new ingredients to your inventory</p>
-          </button>
-          <button className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-left">
-            <Warehouse className="w-6 h-6 text-green-600 dark:text-green-400 mb-2" />
-            <h4 className="font-medium text-gray-900 dark:text-white">Record Stock</h4>
-            <p className="text-sm text-gray-600 dark:text-gray-400">Add new stock to your inventory</p>
-          </button>
-          <button className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-left">
-            <Building2 className="w-6 h-6 text-purple-600 dark:text-purple-400 mb-2" />
-            <h4 className="font-medium text-gray-900 dark:text-white">Create Section</h4>
-            <p className="text-sm text-gray-600 dark:text-gray-400">Set up new kitchen or bar sections</p>
-          </button>
-        </div>
-      </div>
+      {/* Quick Action Modals */}
+      <Modal isOpen={showAddMaterialModal} onClose={() => setShowAddMaterialModal(false)} title="Add Raw Material" size="lg">
+        <RawMaterialForm onSuccess={() => setShowAddMaterialModal(false)} onCancel={() => setShowAddMaterialModal(false)} />
+      </Modal>
+
+      <Modal isOpen={showAddStockModal} onClose={() => setShowAddStockModal(false)} title="Add Stock Entry" size="lg">
+        <StockEntryForm onSuccess={() => setShowAddStockModal(false)} onCancel={() => setShowAddStockModal(false)} />
+      </Modal>
+
+      <Modal isOpen={showCreateSectionModal} onClose={() => setShowCreateSectionModal(false)} title="Create New Section" size="lg">
+        <SectionForm onSuccess={() => setShowCreateSectionModal(false)} onCancel={() => setShowCreateSectionModal(false)} />
+      </Modal>
     </div>
   );
 };
