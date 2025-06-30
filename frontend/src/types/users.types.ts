@@ -1,5 +1,50 @@
 import type { User, UserRole } from "./common.types";
 
+// Authentication types
+export interface LoginCredentials {
+  username: string;
+  password: string;
+}
+
+export interface RegisterData {
+  username: string;
+  email?: string;
+  password: string;
+  name: string;
+  role?: UserRole;
+}
+
+export interface AuthResponse {
+  success: boolean;
+  user: User;
+  token: string;
+  message: string;
+}
+
+export interface ChangePasswordData {
+  currentPassword: string;
+  newPassword: string;
+}
+
+export interface ChangePasswordResponse {
+  success: boolean;
+  message: string;
+}
+
+export interface UpdateProfileData {
+  username?: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  role?: UserRole;
+}
+
+export interface UpdateProfileResponse {
+  success: boolean;
+  message: string;
+  user: User;
+}
+
 // Backend user data structure (snake_case)
 export interface BackendUser {
   id: string;

@@ -1,6 +1,5 @@
 import { clsx } from "clsx";
 import { BarChart3, Building2, ChevronLeft, ChevronRight, Home, Menu, Package, Settings, Users, Warehouse, X } from "lucide-react";
-import { useEffect } from "react";
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import { useApp } from "../../hooks/useApp";
 import Button from "../ui/Button";
@@ -22,13 +21,6 @@ const Layout = () => {
   const { sidebarOpen, sidebarCollapsed, isMobile, user } = state;
   const location = useLocation();
 
-  // Auto-close sidebar on mobile navigation
-  useEffect(() => {
-    if (isMobile && sidebarOpen) {
-      setSidebar(false);
-    }
-  }, [location.pathname, isMobile, sidebarOpen, setSidebar]);
-
   // Combine navigation items and filter admin-only items
   const allNavigationItems = [...navigationItems, ...adminNavigationItems.filter(item => !item.adminOnly || user?.role === "ADMIN")];
 
@@ -37,6 +29,14 @@ const Layout = () => {
     if (event.key === "Escape" && sidebarOpen && isMobile) {
       setSidebar(false);
     }
+  };
+
+  // Handle mobile navigation click - auto-close sidebar
+  const handleMobileNavClick = () => {
+    // TEMPORARILY DISABLED FOR TESTING
+    // if (isMobile && sidebarOpen) {
+    //   setSidebar(false);
+    // }
   };
 
   // Get user display info with proper fallbacks
@@ -118,6 +118,7 @@ const Layout = () => {
                   className={clsx("flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group relative", sidebarCollapsed && !isMobile ? "justify-center" : "justify-start", isActive ? "bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 shadow-sm" : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white")}
                   title={sidebarCollapsed && !isMobile ? name : undefined}
                   aria-label={name}
+                  onClick={handleMobileNavClick}
                 >
                   <Icon className={clsx("flex-shrink-0 transition-transform duration-200", sidebarCollapsed && !isMobile ? "w-5 h-5" : "w-5 h-5 mr-3", isActive && "scale-110")} />
 

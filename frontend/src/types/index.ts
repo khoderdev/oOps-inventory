@@ -1,5 +1,6 @@
 // Common types
 export * from "./common.types";
+export * from "./users.types";
 
 // Domain types
 export * from "./consumptions.types";
