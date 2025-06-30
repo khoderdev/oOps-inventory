@@ -1,5 +1,6 @@
 import { AlertTriangle, Building2, Package, TrendingUp, Users, Warehouse } from "lucide-react";
 import { useContext, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { AppContext } from "../../contexts/AppContext";
 import { useRawMaterials } from "../../hooks/useRawMaterials";
 import { useSections } from "../../hooks/useSections";
@@ -26,6 +27,7 @@ const formatQuantityDisplay = (quantity: number, material: { unit: string; units
 };
 
 const DashboardPage = () => {
+  const navigate = useNavigate();
   const { data: rawMaterials = [] } = useRawMaterials({ isActive: true });
   const { data: stockLevels = [] } = useStockLevels();
   const { data: sections = [] } = useSections({ isActive: true });
@@ -76,6 +78,22 @@ const DashboardPage = () => {
       bgColor: "bg-purple-50 dark:bg-purple-900/20"
     }
   ];
+
+  // Navigation handlers
+  const handleMaterialSuccess = () => {
+    setShowAddMaterialModal(false);
+    navigate("/raw-materials");
+  };
+
+  const handleStockSuccess = () => {
+    setShowAddStockModal(false);
+    navigate("/stock");
+  };
+
+  const handleSectionSuccess = () => {
+    setShowCreateSectionModal(false);
+    navigate("/sections");
+  };
 
   return (
     <div className="space-y-6">
@@ -174,15 +192,15 @@ const DashboardPage = () => {
 
       {/* Quick Action Modals */}
       <Modal isOpen={showAddMaterialModal} onClose={() => setShowAddMaterialModal(false)} title="Add Raw Material" size="lg">
-        <RawMaterialForm onSuccess={() => setShowAddMaterialModal(false)} onCancel={() => setShowAddMaterialModal(false)} />
+        <RawMaterialForm onSuccess={handleMaterialSuccess} onCancel={() => setShowAddMaterialModal(false)} />
       </Modal>
 
       <Modal isOpen={showAddStockModal} onClose={() => setShowAddStockModal(false)} title="Add Stock Entry" size="lg">
-        <StockEntryForm onSuccess={() => setShowAddStockModal(false)} onCancel={() => setShowAddStockModal(false)} />
+        <StockEntryForm onSuccess={handleStockSuccess} onCancel={() => setShowAddStockModal(false)} />
       </Modal>
 
       <Modal isOpen={showCreateSectionModal} onClose={() => setShowCreateSectionModal(false)} title="Create New Section" size="lg">
-        <SectionForm onSuccess={() => setShowCreateSectionModal(false)} onCancel={() => setShowCreateSectionModal(false)} />
+        <SectionForm onSuccess={handleSectionSuccess} onCancel={() => setShowCreateSectionModal(false)} />
       </Modal>
     </div>
   );
