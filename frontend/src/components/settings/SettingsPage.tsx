@@ -546,12 +546,6 @@ const SettingsPage = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Settings</h1>
-        <p className="text-gray-600 dark:text-gray-400">Manage your application preferences and configuration</p>
-      </div>
-
       {/* Settings Content */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm">
         <div className="grid grid-cols-1 lg:grid-cols-4">

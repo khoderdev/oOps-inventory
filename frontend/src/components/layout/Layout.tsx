@@ -172,7 +172,7 @@ const Layout = () => {
               </Button>
             )}
 
-            <div className="hidden sm:block">
+            <div className="block">
               <h1 className="text-lg font-semibold text-gray-900 dark:text-white">{allNavigationItems.find(item => location.pathname === item.to || (item.to === "/dashboard" && location.pathname === "/"))?.name || "Dashboard"}</h1>
             </div>
           </div>

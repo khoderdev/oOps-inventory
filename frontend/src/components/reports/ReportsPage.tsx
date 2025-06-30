@@ -255,11 +255,7 @@ const ReportsPage = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Reports & Analytics</h1>
-          <p className="text-gray-600 dark:text-gray-400">Comprehensive insights into your inventory performance</p>
-        </div>
+      <div className="flex justify-end items-center">
         <Button leftIcon={<Download className="w-4 h-4" />} variant="outline">
           Export Reports
         </Button>

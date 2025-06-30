@@ -24,11 +24,7 @@ const SectionsPage = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Sections</h1>
-          <p className="text-gray-600 dark:text-gray-400">Manage kitchen, bar, and storage sections</p>
-        </div>
+      <div className="flex justify-end items-center">
         {user?.role === "MANAGER" || user?.role === "ADMIN" ? (
           <Button onClick={() => setShowCreateModal(true)} leftIcon={<Plus className="w-4 h-4" />}>
             Create Section
