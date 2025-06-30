@@ -49,7 +49,7 @@ export const getSections = asyncHandler(async (req, res) => {
 export const getSection = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
-  const result = await sectionsService.getSectionById(id);
+  const result = await sectionsService.getSectionById(parseInt(id, 10));
 
   if (!result.success) {
     return res.status(404).json({
@@ -71,7 +71,7 @@ export const getSection = asyncHandler(async (req, res) => {
 export const updateSection = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
-  const result = await sectionsService.updateSection({ id, ...req.body });
+  const result = await sectionsService.updateSection({ id: parseInt(id, 10), ...req.body });
 
   if (!result.success) {
     return res.status(404).json({
@@ -94,7 +94,7 @@ export const updateSection = asyncHandler(async (req, res) => {
 export const deleteSection = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
-  const result = await sectionsService.deleteSection(id);
+  const result = await sectionsService.deleteSection(parseInt(id, 10));
 
   if (!result.success) {
     return res.status(400).json({
@@ -105,6 +105,7 @@ export const deleteSection = asyncHandler(async (req, res) => {
 
   res.json({
     success: true,
+    data: result.data,
     message: result.message
   });
 });
@@ -118,7 +119,7 @@ export const assignStockToSection = asyncHandler(async (req, res) => {
   const { rawMaterialId, quantity, assignedBy, notes } = req.body;
 
   const result = await sectionsService.assignStockToSection({
-    sectionId,
+    sectionId: parseInt(sectionId, 10),
     rawMaterialId,
     quantity,
     assignedBy,
@@ -134,6 +135,7 @@ export const assignStockToSection = asyncHandler(async (req, res) => {
 
   res.json({
     success: true,
+    data: result.data,
     message: result.message
   });
 });
@@ -145,7 +147,7 @@ export const assignStockToSection = asyncHandler(async (req, res) => {
 export const getSectionInventory = asyncHandler(async (req, res) => {
   const { id: sectionId } = req.params;
 
-  const result = await sectionsService.getSectionInventory(sectionId);
+  const result = await sectionsService.getSectionInventory(parseInt(sectionId, 10));
 
   res.json({
     success: true,
@@ -162,7 +164,7 @@ export const recordConsumption = asyncHandler(async (req, res) => {
   const { rawMaterialId, quantity, consumedBy, reason, orderId, notes } = req.body;
 
   const result = await sectionsService.recordSectionConsumption({
-    sectionId,
+    sectionId: parseInt(sectionId, 10),
     rawMaterialId,
     quantity,
     consumedBy,
@@ -198,7 +200,7 @@ export const getSectionConsumption = asyncHandler(async (req, res) => {
   if (fromDate) filters.fromDate = fromDate;
   if (toDate) filters.toDate = toDate;
 
-  const result = await sectionsService.getSectionConsumption(sectionId, filters);
+  const result = await sectionsService.getSectionConsumption(parseInt(sectionId, 10), filters);
 
   res.json({
     success: true,
@@ -225,6 +227,7 @@ export const updateSectionInventory = asyncHandler(async (req, res) => {
 
   res.json({
     success: true,
+    data: result.data,
     message: result.message
   });
 });

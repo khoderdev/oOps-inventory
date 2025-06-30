@@ -1,6 +1,7 @@
+import { Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useApp } from "../../hooks/useApp";
-import { useCreateSection, useUpdateSection } from "../../hooks/useSections";
+import { useCreateSection, useDeleteSection, useUpdateSection } from "../../hooks/useSections";
 import { useActiveUsers } from "../../hooks/useUsers";
 import { SectionType, type Section } from "../../types";
 import Button from "../ui/Button";
@@ -26,6 +27,7 @@ const SectionForm = ({ initialData, onSuccess, onCancel }: SectionFormProps) => 
   const { state } = useApp();
   const createMutation = useCreateSection();
   const updateMutation = useUpdateSection();
+  const removeMutation = useDeleteSection();
   const { data: users = [], isLoading: usersLoading } = useActiveUsers();
 
   useEffect(() => {
@@ -82,16 +84,23 @@ const SectionForm = ({ initialData, onSuccess, onCancel }: SectionFormProps) => 
 
     try {
       if (initialData) {
-        await updateMutation.mutateAsync({
+        const result = await updateMutation.mutateAsync({
           id: initialData.id,
           ...formData
         });
+        if (!result.success) {
+          throw new Error(result.message || "Failed to update section");
+        }
       } else {
-        await createMutation.mutateAsync(formData);
+        const result = await createMutation.mutateAsync(formData);
+        if (!result.success) {
+          throw new Error(result.message || "Failed to create section");
+        }
       }
       onSuccess();
     } catch (error) {
       console.error("Error saving section:", error);
+      // You might want to show a toast notification here
     }
   };
 
@@ -100,6 +109,19 @@ const SectionForm = ({ initialData, onSuccess, onCancel }: SectionFormProps) => 
     // Clear error when user starts typing
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: "" }));
+    }
+  };
+
+  const handleDeleteClick = async () => {
+    if (!initialData) return;
+
+    if (window.confirm(`Are you sure you want to delete "${initialData.name}"? This action cannot be undone.`)) {
+      try {
+        await removeMutation.mutateAsync(initialData.id);
+        onSuccess();
+      } catch (error) {
+        console.error("Error deleting section:", error);
+      }
     }
   };
 
@@ -119,13 +141,21 @@ const SectionForm = ({ initialData, onSuccess, onCancel }: SectionFormProps) => 
 
       <Input label="Description" value={formData.description} onChange={e => handleInputChange("description", e.target.value)} placeholder="Optional description of this section" />
 
-      <div className="flex justify-end space-x-3 pt-6">
-        <Button type="button" variant="outline" onClick={onCancel} disabled={isLoading}>
-          Cancel
-        </Button>
-        <Button type="submit" loading={isLoading}>
-          {initialData ? "Update" : "Create"} Section
-        </Button>
+      <div className="flex justify-between items-center space-x-3 mt-10">
+        {initialData && (
+          <Button size="sm" variant="danger" leftIcon={<Trash2 className="w-3 h-3" />} onClick={handleDeleteClick} title="Delete section" loading={removeMutation.isPending}>
+            Delete
+          </Button>
+        )}
+        {!initialData && <div></div>}
+        <div className="flex space-x-3">
+          <Button type="button" variant="outline" onClick={onCancel} disabled={isLoading || removeMutation.isPending}>
+            Cancel
+          </Button>
+          <Button type="submit" loading={isLoading} disabled={removeMutation.isPending}>
+            {initialData ? "Update" : "Create"} Section
+          </Button>
+        </div>
       </div>
     </form>
   );

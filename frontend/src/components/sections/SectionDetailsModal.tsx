@@ -194,7 +194,7 @@ const SectionDetailsModal = ({ section, isOpen, onClose }: SectionDetailsModalPr
                             </>
                           );
                         })()}
-                        {item.orderId && <p className="text-xs text-blue-600 dark:text-blue-400">Order: {item.orderId}</p>}
+                        {item.orderId && <p className="text-xs text-blue-600 dark:text-blue-400">Order #: {item.orderId}</p>}
                       </div>
                     </div>
                   ))}

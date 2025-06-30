@@ -86,17 +86,17 @@ const DashboardPage = () => {
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Quick Actions</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <button onClick={() => setShowAddMaterialModal(true)} disabled={!(user?.role === "MANAGER" || user?.role === "ADMIN")} className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed">
+          <button onClick={() => setShowAddMaterialModal(true)} disabled={!(user?.role === "MANAGER" || user?.role === "ADMIN")} className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer">
             <Package className="w-6 h-6 text-blue-600 dark:text-blue-400 mb-2" />
             <h4 className="font-medium text-gray-900 dark:text-white">Add Raw Material</h4>
             <p className="text-sm text-gray-600 dark:text-gray-400">Add new ingredients to your inventory</p>
           </button>
-          <button onClick={() => setShowAddStockModal(true)} disabled={!(user?.role === "MANAGER" || user?.role === "ADMIN")} className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed">
+          <button onClick={() => setShowAddStockModal(true)} disabled={!(user?.role === "MANAGER" || user?.role === "ADMIN")} className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer">
             <Warehouse className="w-6 h-6 text-green-600 dark:text-green-400 mb-2" />
             <h4 className="font-medium text-gray-900 dark:text-white">Record Stock</h4>
             <p className="text-sm text-gray-600 dark:text-gray-400">Add new stock to your inventory</p>
           </button>
-          <button onClick={() => setShowCreateSectionModal(true)} disabled={!(user?.role === "MANAGER" || user?.role === "ADMIN")} className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed">
+          <button onClick={() => setShowCreateSectionModal(true)} disabled={!(user?.role === "MANAGER" || user?.role === "ADMIN")} className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer">
             <Building2 className="w-6 h-6 text-purple-600 dark:text-purple-400 mb-2" />
             <h4 className="font-medium text-gray-900 dark:text-white">Create Section</h4>
             <p className="text-sm text-gray-600 dark:text-gray-400">Set up new kitchen or bar sections</p>

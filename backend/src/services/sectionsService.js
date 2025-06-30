@@ -45,7 +45,7 @@ const formatSectionConsumptionForFrontend = consumption => ({
   rawMaterialId: consumption.raw_material_id,
   quantity: parseFloat(consumption.quantity.toString()),
   consumedDate: consumption.consumed_date,
-  consumedBy: consumption.consumed_by,
+  consumedBy: consumption.user ? formatUserForFrontend(consumption.user) : null,
   reason: consumption.reason,
   orderId: consumption.order_id,
   notes: consumption.notes,
@@ -81,8 +81,11 @@ const formatRawMaterialForFrontend = material => ({
  */
 const formatUserForFrontend = user => ({
   id: user.id,
-  name: user.name,
+  username: user.username,
   email: user.email,
+  firstName: user.first_name,
+  lastName: user.last_name,
+  displayName: user.first_name && user.last_name ? `${user.first_name} ${user.last_name}`.trim() : user.username,
   role: user.role,
   isActive: user.is_active
 });
@@ -412,8 +415,25 @@ export const assignStockToSection = async assignmentData => {
       performedBy: parseInt(assignedBy, 10)
     });
 
+    // Get user information for response
+    const assignedByUser = await prisma().user.findUnique({
+      where: { id: parseInt(assignedBy, 10) }
+    });
+
+    // Get raw material information for response
+    const assignmentDetails = {
+      sectionId: parseInt(sectionId, 10),
+      rawMaterialId: parseInt(rawMaterialId, 10),
+      quantity: quantity,
+      baseQuantity: baseQuantityToAssign,
+      assignedBy: assignedByUser ? formatUserForFrontend(assignedByUser) : null,
+      rawMaterial: formatRawMaterialForFrontend(rawMaterial),
+      notes: notes,
+      assignedAt: new Date()
+    };
+
     return {
-      data: true,
+      data: assignmentDetails,
       success: true,
       message: "Stock assigned to section successfully"
     };
@@ -442,20 +462,44 @@ export const getSectionInventory = async sectionId => {
       }
     });
 
-    // Add pack information for display purposes
-    const inventoryWithPackInfo = inventory.map(item => {
-      const formatted = formatSectionInventoryForFrontend(item);
+    // Add pack information and assignment details for display purposes
+    const inventoryWithPackInfo = await Promise.all(
+      inventory.map(async item => {
+        const formatted = formatSectionInventoryForFrontend(item);
 
-      if (item.raw_material) {
-        const packInfo = getPackInfo(item.raw_material);
-        if (packInfo) {
-          formatted.packQuantity = convertBaseToPack(formatted.quantity, item.raw_material);
-          formatted.packInfo = packInfo;
+        if (item.raw_material) {
+          const packInfo = getPackInfo(item.raw_material);
+          if (packInfo) {
+            formatted.packQuantity = convertBaseToPack(formatted.quantity, item.raw_material);
+            formatted.packInfo = packInfo;
+          }
         }
-      }
 
-      return formatted;
-    });
+        // Get the most recent assignment information from stock movements
+        const recentMovement = await prisma().stockMovement.findFirst({
+          where: {
+            to_section_id: item.section_id,
+            stock_entry: {
+              raw_material_id: item.raw_material_id
+            },
+            type: "TRANSFER"
+          },
+          include: {
+            user: true
+          },
+          orderBy: {
+            created_at: "desc"
+          }
+        });
+
+        if (recentMovement && recentMovement.user) {
+          formatted.lastAssignedBy = formatUserForFrontend(recentMovement.user);
+          formatted.lastAssignedAt = recentMovement.created_at;
+        }
+
+        return formatted;
+      })
+    );
 
     return {
       data: inventoryWithPackInfo,
@@ -576,8 +620,14 @@ export const recordSectionConsumption = async consumptionData => {
       }
     }
 
+    // Create detailed response with user information
+    const responseData = {
+      ...formatSectionConsumptionForFrontend(consumption),
+      consumedBy: consumption.user ? formatUserForFrontend(consumption.user) : null
+    };
+
     return {
-      data: formatSectionConsumptionForFrontend(consumption),
+      data: responseData,
       success: true,
       message: "Consumption recorded successfully"
     };
@@ -740,8 +790,23 @@ export const updateSectionInventory = async (inventoryId, quantity, updatedBy, n
       });
     }
 
+    // Get user information for response
+    const updatedByUser = await prisma().user.findUnique({
+      where: { id: parseInt(updatedBy, 10) }
+    });
+
+    const updateDetails = {
+      inventoryId: inventoryId,
+      quantity: quantity,
+      baseQuantity: baseQuantityToAssign,
+      updatedBy: updatedByUser ? formatUserForFrontend(updatedByUser) : null,
+      rawMaterial: formatRawMaterialForFrontend(rawMaterial),
+      notes: notes,
+      updatedAt: new Date()
+    };
+
     return {
-      data: true,
+      data: updateDetails,
       success: true,
       message: "Section inventory updated successfully"
     };
@@ -818,8 +883,22 @@ export const removeSectionInventory = async (inventoryId, removedBy, notes) => {
       });
     }
 
+    // Get user information for response
+    const removedByUser = await prisma().user.findUnique({
+      where: { id: parseInt(removedBy, 10) }
+    });
+
+    const removalDetails = {
+      inventoryId: inventoryId,
+      quantity: currentQuantity,
+      removedBy: removedByUser ? formatUserForFrontend(removedByUser) : null,
+      rawMaterial: formatRawMaterialForFrontend(rawMaterial),
+      notes: notes,
+      removedAt: new Date()
+    };
+
     return {
-      data: true,
+      data: removalDetails,
       success: true,
       message: "Section inventory removed successfully"
     };
