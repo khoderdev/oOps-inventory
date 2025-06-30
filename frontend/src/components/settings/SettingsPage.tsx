@@ -551,7 +551,21 @@ const SettingsPage = () => {
         <div className="grid grid-cols-1 lg:grid-cols-4">
           {/* Sidebar */}
           <div className="lg:col-span-1 border-b lg:border-b-0 lg:border-r border-gray-200 dark:border-gray-700">
-            <nav className="space-y-1 p-6">
+            {/* Mobile: Horizontal Scrollable Navigation */}
+            <nav className="lg:hidden flex overflow-x-auto space-x-2 p-4">
+              {visibleTabs.map(tab => {
+                const IconComponent = tab.icon;
+                return (
+                  <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex-shrink-0 flex items-center px-4 py-2 text-sm font-medium rounded-lg whitespace-nowrap ${activeTab === tab.id ? "bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300" : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white"}`}>
+                    <IconComponent className="w-4 h-4 mr-2" />
+                    {tab.label}
+                  </button>
+                );
+              })}
+            </nav>
+
+            {/* Desktop: Vertical Navigation */}
+            <nav className="hidden lg:block space-y-1 p-6">
               {visibleTabs.map(tab => {
                 const IconComponent = tab.icon;
                 return (

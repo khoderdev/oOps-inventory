@@ -3,8 +3,7 @@
 
 /* Custom scrollbar */
 ::-webkit-scrollbar {
-  display: none;
-  /* width: 4px; */
+  width: 4px;
 }
 
 ::-webkit-scrollbar-track {

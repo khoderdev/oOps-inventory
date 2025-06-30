@@ -198,14 +198,12 @@ const RawMaterialsPage = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-end items-center">
-        {user?.role === "MANAGER" ||
-          (user?.role === "ADMIN" && (
-            <Button onClick={() => setShowCreateModal(true)} leftIcon={<Plus className="w-4 h-4" />}>
-              Add Material
-            </Button>
-          ))}
-      </div>
+      {user?.role === "MANAGER" ||
+        (user?.role === "ADMIN" && (
+          <Button className="fixed bottom-5 right-5 z-10 !rounded-full !p-4" onClick={() => setShowCreateModal(true)} leftIcon={<Plus className="w-4 h-4" />}>
+            Add Material
+          </Button>
+        ))}
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">

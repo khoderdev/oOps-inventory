@@ -1,6 +1,7 @@
-import { Activity, Package, Plus, TrendingUp } from "lucide-react";
+import { Activity, Package, PlusIcon, TrendingUp } from "lucide-react";
 import { useContext, useState } from "react";
 import { AppContext } from "../../contexts/AppContext";
+import useFloatingButtonVisibility from "../../hooks/useFloatingButtonVisibility";
 import type { User } from "../../types";
 import { Tabs, type Tab } from "../ui";
 import Button from "../ui/Button";
@@ -15,6 +16,7 @@ type TabType = "entries" | "movements" | "levels";
 const StockManagementPage = () => {
   const [activeTab, setActiveTab] = useState<TabType>("levels");
   const [showAddStockModal, setShowAddStockModal] = useState(false);
+
   const {
     state: { user }
   } = useContext(AppContext) as { state: { user: User } };
@@ -32,41 +34,38 @@ const StockManagementPage = () => {
       case "movements":
         return <StockMovementsTab />;
       case "levels":
-        return <StockLevelsTab />;
       default:
         return <StockLevelsTab />;
     }
   };
 
+  const floating = true;
+
+  const { visible: isVisible } = useFloatingButtonVisibility({
+    minScrollDistance: 200,
+    showOnTop: true
+  });
+
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex justify-end items-center">
-        {user?.role === "MANAGER" || user?.role === "ADMIN" ? (
-          <Button onClick={() => setShowAddStockModal(true)} leftIcon={<Plus className="w-4 h-4" />}>
+      <>
+        {(user?.role === "MANAGER" || user?.role === "ADMIN") && (!floating || isVisible) && (
+          <Button floating={floating} animationType="scale" threshold={15} autoHideDelay={500} minScrollDistance={200} variant="primary" leftIcon={<PlusIcon />} onClick={() => setShowAddStockModal(true)}>
             Add Stock Entry
           </Button>
-        ) : null}
-      </div>
+        )}
+      </>
 
-      {/* Tabs */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm">
         <Tabs tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} variant="default" size="md" className="px-6" />
 
-        {/* Tab Content */}
         <div className="p-6" role="tabpanel" id={`tabpanel-${activeTab}`}>
           {renderTabContent()}
         </div>
       </div>
 
-      {/* Add Stock Modal */}
       <Modal isOpen={showAddStockModal} onClose={() => setShowAddStockModal(false)} title="Add Stock Entry" size="lg">
-        <StockEntryForm
-          onSuccess={() => {
-            setShowAddStockModal(false);
-          }}
-          onCancel={() => setShowAddStockModal(false)}
-        />
+        <StockEntryForm onSuccess={() => setShowAddStockModal(false)} onCancel={() => setShowAddStockModal(false)} />
       </Modal>
     </div>
   );
