@@ -2,7 +2,12 @@
 export * from "./common.types";
 
 // Domain types
-export * from "./rawMaterials.types";
-export * from "./stock.types";
-export * from "./sections.types";
 export * from "./consumptions.types";
+export * from "./rawMaterials.types";
+export * from "./sections.types";
+
+// Stock types (excluding User to avoid conflict)
+export type { ConsumptionReportData, CreateStockEntryInput, CreateStockMovementInput, ExpenseReportData, LowStockReportData, ReportsData, StockEntry, StockEntryFilters, StockLevel, StockMovement, StockMovementFilters, StockTransferRequest, UpdateStockEntryInput } from "./stock.types";
+
+// Export enums separately
+export { MovementType } from "./stock.types";

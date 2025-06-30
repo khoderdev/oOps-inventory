@@ -663,3 +663,403 @@ export const transferStock = async (stockEntryId, fromSectionId, toSectionId, qu
     };
   }
 };
+
+/**
+ * Get comprehensive reports data
+ */
+export const getReportsData = async (days = 30, sectionId = null) => {
+  try {
+    logger.info("Generating comprehensive reports data");
+
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - days);
+
+    // Get all required data
+    const [stockLevels, stockEntries, stockMovements, rawMaterials, sections] = await Promise.all([getCurrentStockLevels(), getAllStockEntries({ fromDate: cutoffDate.toISOString() }), getStockMovements({ fromDate: cutoffDate.toISOString(), ...(sectionId && { sectionId }) }), prisma().rawMaterial.findMany({ where: { is_active: true } }), prisma().section.findMany({ where: { is_active: true } })]);
+
+    // Calculate metrics
+    const totalInventoryValue = stockLevels.data.reduce((sum, level) => sum + level.availableUnitsQuantity * level.rawMaterial.unitCost, 0);
+
+    const lowStockItems = stockLevels.data.filter(level => level.isLowStock);
+
+    const totalPurchaseValue = stockEntries.data.reduce((sum, entry) => sum + entry.totalCost, 0);
+
+    const consumptionMovements = stockMovements.data.filter(movement => movement.type === "OUT" || movement.type === "EXPIRED" || movement.type === "DAMAGED");
+
+    const totalConsumptionValue = consumptionMovements.reduce((sum, movement) => {
+      const material = rawMaterials.find(m => {
+        const entry = stockEntries.data.find(e => e.id === movement.stockEntryId);
+        return entry && entry.rawMaterialId === m.id;
+      });
+      return sum + movement.quantity * (material?.unit_cost ? parseFloat(material.unit_cost.toString()) : 0);
+    }, 0);
+
+    const wasteValue = stockMovements.data
+      .filter(movement => movement.type === "EXPIRED" || movement.type === "DAMAGED")
+      .reduce((sum, movement) => {
+        const material = rawMaterials.find(m => {
+          const entry = stockEntries.data.find(e => e.id === movement.stockEntryId);
+          return entry && entry.rawMaterialId === m.id;
+        });
+        return sum + movement.quantity * (material?.unit_cost ? parseFloat(material.unit_cost.toString()) : 0);
+      }, 0);
+
+    // Category breakdown
+    const categoryBreakdown = rawMaterials.reduce((acc, material) => {
+      const level = stockLevels.data.find(l => l.rawMaterial.id === material.id);
+      const value = level ? level.availableUnitsQuantity * parseFloat(material.unit_cost.toString()) : 0;
+      acc[material.category] = (acc[material.category] || 0) + value;
+      return acc;
+    }, {});
+
+    // Consumption by category
+    const consumptionByCategory = consumptionMovements.reduce((acc, movement) => {
+      const entry = stockEntries.data.find(e => e.id === movement.stockEntryId);
+      const material = rawMaterials.find(m => m.id === entry?.rawMaterialId);
+      if (material) {
+        const value = movement.quantity * parseFloat(material.unit_cost.toString());
+        acc[material.category] = (acc[material.category] || 0) + value;
+      }
+      return acc;
+    }, {});
+
+    // Expense breakdown
+    const purchasesByCategory = stockEntries.data.reduce((acc, entry) => {
+      const material = rawMaterials.find(m => m.id === entry.rawMaterialId);
+      if (material) {
+        acc[material.category] = (acc[material.category] || 0) + entry.totalCost;
+      }
+      return acc;
+    }, {});
+
+    const totalPurchases = Object.values(purchasesByCategory).reduce((sum, val) => sum + val, 0);
+
+    const topSuppliers = [...new Set(stockEntries.data.map(e => e.supplier).filter(Boolean))]
+      .map(supplier => ({
+        name: supplier,
+        total: stockEntries.data.filter(e => e.supplier === supplier).reduce((sum, e) => sum + e.totalCost, 0)
+      }))
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 5);
+
+    const reportData = {
+      metrics: {
+        totalInventoryValue,
+        lowStockCount: lowStockItems.length,
+        totalPurchaseValue,
+        totalConsumptionValue,
+        wasteValue,
+        totalMovements: stockMovements.data.length,
+        totalEntries: stockEntries.data.length,
+        activeMaterials: rawMaterials.length,
+        activeSections: sections.length
+      },
+      categoryBreakdown,
+      consumptionByCategory,
+      expenseBreakdown: {
+        purchases: purchasesByCategory,
+        totalPurchases,
+        averageOrderValue: stockEntries.data.length > 0 ? totalPurchases / stockEntries.data.length : 0,
+        topSuppliers
+      },
+      lowStockItems: lowStockItems.map(item => ({
+        id: item.rawMaterial.id,
+        name: item.rawMaterial.name,
+        category: item.rawMaterial.category,
+        currentStock: item.availableUnitsQuantity,
+        minLevel: item.minLevel,
+        unit: item.rawMaterial.unit
+      }))
+    };
+
+    return {
+      data: reportData,
+      success: true
+    };
+  } catch (error) {
+    logger.error("Error in getReportsData service:", error);
+    throw new Error("Failed to generate reports data");
+  }
+};
+
+/**
+ * Get consumption report data
+ */
+export const getConsumptionReport = async (days = 30, sectionId = null) => {
+  try {
+    logger.info("Generating consumption report data");
+
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - days);
+
+    const filters = {
+      fromDate: cutoffDate.toISOString(),
+      ...(sectionId && { sectionId })
+    };
+
+    const [stockMovements, stockEntries, rawMaterials] = await Promise.all([getStockMovements(filters), getAllStockEntries(), prisma().rawMaterial.findMany({ where: { is_active: true } })]);
+
+    // Filter consumption movements
+    const consumptionMovements = stockMovements.data.filter(movement => movement.type === "OUT" || movement.type === "EXPIRED" || movement.type === "DAMAGED");
+
+    // Calculate consumption data
+    const totalQuantityConsumed = consumptionMovements.reduce((sum, movement) => sum + movement.quantity, 0);
+
+    const totalValueConsumed = consumptionMovements.reduce((sum, movement) => {
+      const entry = stockEntries.data.find(e => e.id === movement.stockEntryId);
+      const material = rawMaterials.find(m => m.id === entry?.rawMaterialId);
+      return sum + movement.quantity * (material?.unit_cost ? parseFloat(material.unit_cost.toString()) : 0);
+    }, 0);
+
+    // Group by reason
+    const byReason = consumptionMovements.reduce((acc, movement) => {
+      const reason = movement.reason || "Unknown";
+      if (!acc[reason]) {
+        acc[reason] = { count: 0, totalValue: 0 };
+      }
+
+      const entry = stockEntries.data.find(e => e.id === movement.stockEntryId);
+      const material = rawMaterials.find(m => m.id === entry?.rawMaterialId);
+      const value = movement.quantity * (material?.unit_cost ? parseFloat(material.unit_cost.toString()) : 0);
+
+      acc[reason].count += 1;
+      acc[reason].totalValue += value;
+      return acc;
+    }, {});
+
+    // Group by material
+    const byMaterial = consumptionMovements.reduce((acc, movement) => {
+      const entry = stockEntries.data.find(e => e.id === movement.stockEntryId);
+      const material = rawMaterials.find(m => m.id === entry?.rawMaterialId);
+
+      if (material) {
+        if (!acc[material.id]) {
+          acc[material.id] = {
+            material: formatRawMaterialForFrontend(material),
+            totalQuantity: 0,
+            totalValue: 0,
+            movements: []
+          };
+        }
+
+        const value = movement.quantity * parseFloat(material.unit_cost.toString());
+        acc[material.id].totalQuantity += movement.quantity;
+        acc[material.id].totalValue += value;
+        acc[material.id].movements.push(movement);
+      }
+      return acc;
+    }, {});
+
+    // Waste analysis
+    const wasteMovements = consumptionMovements.filter(m => m.type === "EXPIRED" || m.type === "DAMAGED");
+    const wasteValue = wasteMovements.reduce((sum, movement) => {
+      const entry = stockEntries.data.find(e => e.id === movement.stockEntryId);
+      const material = rawMaterials.find(m => m.id === entry?.rawMaterialId);
+      return sum + movement.quantity * (material?.unit_cost ? parseFloat(material.unit_cost.toString()) : 0);
+    }, 0);
+
+    // Category consumption
+    const consumptionByCategory = consumptionMovements.reduce((acc, movement) => {
+      const entry = stockEntries.data.find(e => e.id === movement.stockEntryId);
+      const material = rawMaterials.find(m => m.id === entry?.rawMaterialId);
+      if (material) {
+        const value = movement.quantity * parseFloat(material.unit_cost.toString());
+        acc[material.category] = (acc[material.category] || 0) + value;
+      }
+      return acc;
+    }, {});
+
+    const consumptionData = {
+      totalQuantityConsumed,
+      totalValueConsumed,
+      byReason,
+      byMaterial,
+      wasteValue,
+      wasteCount: wasteMovements.length,
+      totalMovements: consumptionMovements.length,
+      consumptionByCategory,
+      topConsumedMaterials: Object.values(byMaterial)
+        .sort((a, b) => b.totalValue - a.totalValue)
+        .slice(0, 10),
+      recentActivity: consumptionMovements.slice(0, 10)
+    };
+
+    return {
+      data: consumptionData,
+      success: true
+    };
+  } catch (error) {
+    logger.error("Error in getConsumptionReport service:", error);
+    throw new Error("Failed to generate consumption report");
+  }
+};
+
+/**
+ * Get expense report data
+ */
+export const getExpenseReport = async (days = 30) => {
+  try {
+    logger.info("Generating expense report data");
+
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - days);
+
+    const [stockEntries, rawMaterials] = await Promise.all([getAllStockEntries({ fromDate: cutoffDate.toISOString() }), prisma().rawMaterial.findMany({ where: { is_active: true } })]);
+
+    // Calculate expense breakdown by category
+    const purchasesByCategory = stockEntries.data.reduce((acc, entry) => {
+      const material = rawMaterials.find(m => m.id === entry.rawMaterialId);
+      if (material) {
+        acc[material.category] = (acc[material.category] || 0) + entry.totalCost;
+      }
+      return acc;
+    }, {});
+
+    const totalPurchases = Object.values(purchasesByCategory).reduce((sum, val) => sum + val, 0);
+
+    // Supplier analysis
+    const topSuppliers = [...new Set(stockEntries.data.map(e => e.supplier).filter(Boolean))]
+      .map(supplier => {
+        const supplierEntries = stockEntries.data.filter(e => e.supplier === supplier);
+        const total = supplierEntries.reduce((sum, e) => sum + e.totalCost, 0);
+        const uniqueMaterials = new Set(supplierEntries.map(e => e.rawMaterialId)).size;
+        const lastOrder = supplierEntries.length > 0 ? new Date(Math.max(...supplierEntries.map(e => new Date(e.receivedDate).getTime()))) : null;
+
+        return {
+          name: supplier,
+          total,
+          orderCount: supplierEntries.length,
+          avgOrderValue: supplierEntries.length > 0 ? total / supplierEntries.length : 0,
+          uniqueMaterials,
+          lastOrder
+        };
+      })
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 10);
+
+    // Material cost analysis
+    const materialCosts = rawMaterials
+      .map(material => {
+        const materialEntries = stockEntries.data.filter(entry => entry.rawMaterialId === material.id);
+        const totalCost = materialEntries.reduce((sum, entry) => sum + entry.totalCost, 0);
+        const totalQuantity = materialEntries.reduce((sum, entry) => sum + entry.quantity, 0);
+        const avgUnitCost = totalQuantity > 0 ? totalCost / totalQuantity : 0;
+
+        return {
+          material: formatRawMaterialForFrontend(material),
+          totalCost,
+          totalQuantity,
+          avgUnitCost,
+          entryCount: materialEntries.length,
+          lastPurchase: materialEntries.length > 0 ? new Date(Math.max(...materialEntries.map(e => new Date(e.receivedDate).getTime()))) : null
+        };
+      })
+      .filter(item => item.totalCost > 0)
+      .sort((a, b) => b.totalCost - a.totalCost);
+
+    // Monthly trend (last 4 periods)
+    const periods = [];
+    for (let i = 3; i >= 0; i--) {
+      const endDate = new Date();
+      endDate.setDate(endDate.getDate() - (i * days) / 4);
+      const startDate = new Date(endDate);
+      startDate.setDate(startDate.getDate() - days / 4);
+
+      const periodEntries = stockEntries.data.filter(entry => {
+        const entryDate = new Date(entry.receivedDate);
+        return entryDate >= startDate && entryDate <= endDate;
+      });
+
+      periods.push({
+        period: `Period ${4 - i}`,
+        total: periodEntries.reduce((sum, entry) => sum + entry.totalCost, 0),
+        count: periodEntries.length
+      });
+    }
+
+    const expenseData = {
+      purchases: purchasesByCategory,
+      totalPurchases,
+      averageOrderValue: stockEntries.data.length > 0 ? totalPurchases / stockEntries.data.length : 0,
+      topSuppliers,
+      materialCosts,
+      periods,
+      totalEntries: stockEntries.data.length
+    };
+
+    return {
+      data: expenseData,
+      success: true
+    };
+  } catch (error) {
+    logger.error("Error in getExpenseReport service:", error);
+    throw new Error("Failed to generate expense report");
+  }
+};
+
+/**
+ * Get low stock report data
+ */
+export const getLowStockReport = async () => {
+  try {
+    logger.info("Generating low stock report data");
+
+    const stockLevels = await getCurrentStockLevels();
+    if (!stockLevels.success) {
+      throw new Error("Failed to get stock levels");
+    }
+
+    const lowStockItems = stockLevels.data.filter(level => level.isLowStock);
+    const criticalItems = lowStockItems.filter(level => level.availableUnitsQuantity <= 0);
+    const warningItems = lowStockItems.filter(level => level.availableUnitsQuantity > 0 && level.availableUnitsQuantity <= level.minLevel * 0.5);
+
+    const lowStockData = {
+      summary: {
+        totalLowStock: lowStockItems.length,
+        critical: criticalItems.length,
+        warning: warningItems.length
+      },
+      items: {
+        critical: criticalItems.map(item => ({
+          id: item.rawMaterial.id,
+          name: item.rawMaterial.name,
+          category: item.rawMaterial.category,
+          currentStock: item.availableUnitsQuantity,
+          minLevel: item.minLevel,
+          unit: item.rawMaterial.unit,
+          unitCost: item.rawMaterial.unitCost,
+          value: item.availableUnitsQuantity * item.rawMaterial.unitCost
+        })),
+        warning: warningItems.map(item => ({
+          id: item.rawMaterial.id,
+          name: item.rawMaterial.name,
+          category: item.rawMaterial.category,
+          currentStock: item.availableUnitsQuantity,
+          minLevel: item.minLevel,
+          unit: item.rawMaterial.unit,
+          unitCost: item.rawMaterial.unitCost,
+          value: item.availableUnitsQuantity * item.rawMaterial.unitCost
+        })),
+        all: lowStockItems.map(item => ({
+          id: item.rawMaterial.id,
+          name: item.rawMaterial.name,
+          category: item.rawMaterial.category,
+          currentStock: item.availableUnitsQuantity,
+          minLevel: item.minLevel,
+          unit: item.rawMaterial.unit,
+          unitCost: item.rawMaterial.unitCost,
+          value: item.availableUnitsQuantity * item.rawMaterial.unitCost,
+          stockPercentage: (item.availableUnitsQuantity / item.minLevel) * 100
+        }))
+      }
+    };
+
+    return {
+      data: lowStockData,
+      success: true
+    };
+  } catch (error) {
+    logger.error("Error in getLowStockReport service:", error);
+    throw new Error("Failed to generate low stock report");
+  }
+};

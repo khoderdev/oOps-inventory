@@ -1,67 +1,7 @@
 import { apiClient } from "../lib/api";
-import { MeasurementUnit, MovementType, type ApiResponse, type CreateStockEntryInput, type CreateStockMovementInput, type RawMaterial, type StockEntry, type StockLevel, type StockMovement } from "../types";
-
-// Stock API filters interfaces
-export interface StockEntryFilters {
-  rawMaterialId?: string;
-  supplier?: string;
-  fromDate?: string;
-  toDate?: string;
-}
-
-export interface StockMovementFilters {
-  stockEntryId?: string;
-  type?: MovementType;
-  fromDate?: string;
-  toDate?: string;
-  sectionId?: string;
-}
-
-export interface StockTransferRequest {
-  fromSectionId: string;
-  toSectionId: string;
-  items: Array<{
-    stockEntryId: string;
-    quantity: number;
-  }>;
-  reason: string;
-  performedBy: string;
-}
+import { type ApiResponse, type ConsumptionReportData, type CreateStockEntryInput, type CreateStockMovementInput, type ExpenseReportData, type LowStockReportData, type ReportsData, type StockEntry, type StockEntryFilters, type StockLevel, type StockMovement, type StockMovementFilters, type StockTransferRequest } from "../types";
 
 export class StockAPI {
-  // Helper function to get pack information from raw material
-  private static getPackInfo(rawMaterial: RawMaterial) {
-    const isPackOrBox = rawMaterial.unit === MeasurementUnit.PACKS || rawMaterial.unit === MeasurementUnit.BOXES;
-    if (!isPackOrBox) return null;
-
-    const material = rawMaterial as unknown as {
-      unitsPerPack?: number;
-      baseUnit?: MeasurementUnit;
-    };
-
-    return {
-      unitsPerPack: material.unitsPerPack || 1,
-      baseUnit: material.baseUnit || MeasurementUnit.PIECES,
-      packUnit: rawMaterial.unit
-    };
-  }
-
-  // Helper function to convert pack quantity to base units
-  private static convertPackToBase(quantity: number, rawMaterial: RawMaterial): number {
-    const packInfo = this.getPackInfo(rawMaterial);
-    if (!packInfo) return quantity;
-
-    return quantity * packInfo.unitsPerPack;
-  }
-
-  // Helper function to convert base units to pack quantity
-  private static convertBaseToPack(baseQuantity: number, rawMaterial: RawMaterial): number {
-    const packInfo = this.getPackInfo(rawMaterial);
-    if (!packInfo) return baseQuantity;
-
-    return baseQuantity / packInfo.unitsPerPack;
-  }
-
   /**
    * Create a new stock entry
    * POST /api/stock/entries
@@ -323,6 +263,88 @@ export class StockAPI {
         data: null,
         success: false,
         message: error instanceof Error ? error.message : "Failed to fetch stock movement"
+      };
+    }
+  }
+
+  /**
+   * Get comprehensive reports data
+   * GET /api/stock/reports
+   */
+  static async getReportsData(dateRange: number = 30, sectionId?: string): Promise<ApiResponse<ReportsData>> {
+    try {
+      const params = new URLSearchParams();
+      params.append("dateRange", dateRange.toString());
+      if (sectionId) {
+        params.append("sectionId", sectionId);
+      }
+
+      const endpoint = `/stock/reports?${params.toString()}`;
+      return await apiClient.get<ReportsData>(endpoint);
+    } catch (error) {
+      return {
+        data: {} as ReportsData,
+        success: false,
+        message: error instanceof Error ? error.message : "Failed to fetch reports data"
+      };
+    }
+  }
+
+  /**
+   * Get consumption report data
+   * GET /api/stock/reports/consumption
+   */
+  static async getConsumptionReport(dateRange: number = 30, sectionId?: string): Promise<ApiResponse<ConsumptionReportData>> {
+    try {
+      const params = new URLSearchParams();
+      params.append("dateRange", dateRange.toString());
+      if (sectionId) {
+        params.append("sectionId", sectionId);
+      }
+
+      const endpoint = `/stock/reports/consumption?${params.toString()}`;
+      return await apiClient.get<ConsumptionReportData>(endpoint);
+    } catch (error) {
+      return {
+        data: {} as ConsumptionReportData,
+        success: false,
+        message: error instanceof Error ? error.message : "Failed to fetch consumption report"
+      };
+    }
+  }
+
+  /**
+   * Get expense report data
+   * GET /api/stock/reports/expenses
+   */
+  static async getExpenseReport(dateRange: number = 30): Promise<ApiResponse<ExpenseReportData>> {
+    try {
+      const params = new URLSearchParams();
+      params.append("dateRange", dateRange.toString());
+
+      const endpoint = `/stock/reports/expenses?${params.toString()}`;
+      return await apiClient.get<ExpenseReportData>(endpoint);
+    } catch (error) {
+      return {
+        data: {} as ExpenseReportData,
+        success: false,
+        message: error instanceof Error ? error.message : "Failed to fetch expense report"
+      };
+    }
+  }
+
+  /**
+   * Get low stock report data
+   * GET /api/stock/reports/low-stock
+   */
+  static async getLowStockReport(): Promise<ApiResponse<LowStockReportData>> {
+    try {
+      return await apiClient.get<LowStockReportData>("/stock/reports/low-stock");
+    } catch (error) {
+      return {
+        data: {} as LowStockReportData,
+        success: false,
+        message: error instanceof Error ? error.message : "Failed to fetch low stock report"
       };
     }
   }

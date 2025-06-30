@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useApp } from "../../hooks/useApp";
 import { useCreateSection, useUpdateSection } from "../../hooks/useSections";
+import { useActiveUsers } from "../../hooks/useUsers";
 import { SectionType, type Section } from "../../types";
 import Button from "../ui/Button";
 import Input from "../ui/Input";
@@ -25,6 +26,7 @@ const SectionForm = ({ initialData, onSuccess, onCancel }: SectionFormProps) => 
   const { state } = useApp();
   const createMutation = useCreateSection();
   const updateMutation = useUpdateSection();
+  const { data: users = [], isLoading: usersLoading } = useActiveUsers();
 
   useEffect(() => {
     if (initialData) {
@@ -35,17 +37,25 @@ const SectionForm = ({ initialData, onSuccess, onCancel }: SectionFormProps) => 
         managerId: initialData.managerId
       });
     } else {
-      // Set current user as default manager
-      setFormData(prev => ({
-        ...prev,
-        managerId: state.user?.name || ""
-      }));
+      // Set current user as default manager if available
+      if (state.user?.id) {
+        setFormData(prev => ({
+          ...prev,
+          managerId: state.user?.id || ""
+        }));
+      }
     }
   }, [initialData, state.user]);
 
   const sectionTypeOptions = Object.values(SectionType).map(type => ({
     value: type,
     label: type.charAt(0).toUpperCase() + type.slice(1)
+  }));
+
+  // Transform users data for the Select component
+  const userOptions = users.map(user => ({
+    value: user.id,
+    label: `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email || user.name || `User ${user.id}`
   }));
 
   const validateForm = () => {
@@ -102,7 +112,7 @@ const SectionForm = ({ initialData, onSuccess, onCancel }: SectionFormProps) => 
 
         <Select label="Section Type" options={sectionTypeOptions} value={formData.type} onChange={e => handleInputChange("type", e.target.value)} required />
 
-        <Input label="Manager" value={formData.managerId} onChange={e => handleInputChange("managerId", e.target.value)} error={errors.managerId} required placeholder="Manager name or ID" />
+        <Select label="Manager" options={userOptions} value={formData.managerId} onChange={e => handleInputChange("managerId", e.target.value)} error={errors.managerId} required placeholder={usersLoading ? "Loading users..." : "Select a manager"} disabled={usersLoading} />
 
         <div></div>
       </div>

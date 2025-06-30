@@ -326,3 +326,64 @@ export const transferStock = asyncHandler(async (req, res) => {
     message: result.message
   });
 });
+
+/**
+ * Get comprehensive reports data
+ * GET /api/stock/reports
+ */
+export const getReportsData = asyncHandler(async (req, res) => {
+  const { dateRange = 30, sectionId } = req.query;
+  const days = parseInt(dateRange);
+
+  const result = await stockService.getReportsData(days, sectionId);
+
+  res.json({
+    success: true,
+    data: result.data
+  });
+});
+
+/**
+ * Get consumption report data
+ * GET /api/stock/reports/consumption
+ */
+export const getConsumptionReport = asyncHandler(async (req, res) => {
+  const { dateRange = 30, sectionId } = req.query;
+  const days = parseInt(dateRange);
+
+  const result = await stockService.getConsumptionReport(days, sectionId);
+
+  res.json({
+    success: true,
+    data: result.data
+  });
+});
+
+/**
+ * Get expense report data
+ * GET /api/stock/reports/expenses
+ */
+export const getExpenseReport = asyncHandler(async (req, res) => {
+  const { dateRange = 30 } = req.query;
+  const days = parseInt(dateRange);
+
+  const result = await stockService.getExpenseReport(days);
+
+  res.json({
+    success: true,
+    data: result.data
+  });
+});
+
+/**
+ * Get low stock report data
+ * GET /api/stock/reports/low-stock
+ */
+export const getLowStockReport = asyncHandler(async (req, res) => {
+  const result = await stockService.getLowStockReport();
+
+  res.json({
+    success: true,
+    data: result.data
+  });
+});

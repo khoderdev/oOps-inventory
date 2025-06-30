@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { createStockEntry, createStockMovement, deleteStockEntry, getCurrentStockLevels, getStockEntries, getStockLevel, getStockMovements, transferStock, updateStockEntry } from "../controllers/stockController.js";
+import { createStockEntry, createStockMovement, deleteStockEntry, getConsumptionReport, getCurrentStockLevels, getExpenseReport, getLowStockReport, getReportsData, getStockEntries, getStockLevel, getStockMovements, transferStock, updateStockEntry } from "../controllers/stockController.js";
 import { authenticate } from "../middleware/auth.js";
 import { requireManager } from "../middleware/rbac.js";
 
@@ -42,5 +42,19 @@ router.get("/levels/:rawMaterialId", getStockLevel);
 
 // POST /api/stock/transfer - Transfer stock between sections (Manager only)
 router.post("/transfer", requireManager, transferStock);
+
+// Reports Routes
+
+// GET /api/stock/reports - Get comprehensive reports data
+router.get("/reports", getReportsData);
+
+// GET /api/stock/reports/consumption - Get consumption report data
+router.get("/reports/consumption", getConsumptionReport);
+
+// GET /api/stock/reports/expenses - Get expense report data
+router.get("/reports/expenses", getExpenseReport);
+
+// GET /api/stock/reports/low-stock - Get low stock report data
+router.get("/reports/low-stock", getLowStockReport);
 
 export default router;

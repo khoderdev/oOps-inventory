@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { StockAPI } from "../data/stock.api";
 import type { CreateStockEntryInput, CreateStockMovementInput, MovementType, UpdateStockEntryInput } from "../types";
 
@@ -13,7 +13,16 @@ const QUERY_KEYS = {
 export const useStockEntries = (filters?: { rawMaterialId?: string; supplier?: string; fromDate?: Date; toDate?: Date }) => {
   return useQuery({
     queryKey: [QUERY_KEYS.stockEntries, filters],
-    queryFn: () => StockAPI.getAllEntries(filters),
+    queryFn: () =>
+      StockAPI.getAllEntries(
+        filters
+          ? {
+              ...filters,
+              fromDate: filters.fromDate?.toISOString(),
+              toDate: filters.toDate?.toISOString()
+            }
+          : undefined
+      ),
     select: response => response.data,
     staleTime: 5 * 60 * 1000 // 5 minutes
   });
@@ -23,7 +32,16 @@ export const useStockEntries = (filters?: { rawMaterialId?: string; supplier?: s
 export const useStockMovements = (filters?: { stockEntryId?: string; type?: MovementType; fromDate?: Date; toDate?: Date; sectionId?: string }) => {
   return useQuery({
     queryKey: [QUERY_KEYS.stockMovements, filters],
-    queryFn: () => StockAPI.getMovements(filters),
+    queryFn: () =>
+      StockAPI.getMovements(
+        filters
+          ? {
+              ...filters,
+              fromDate: filters.fromDate?.toISOString(),
+              toDate: filters.toDate?.toISOString()
+            }
+          : undefined
+      ),
     select: response => response.data,
     staleTime: 2 * 60 * 1000 // 2 minutes
   });
@@ -138,5 +156,51 @@ export const useTransferStock = () => {
         queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.stockLevels] });
       }
     }
+  });
+};
+
+// Report hooks
+
+// Get comprehensive reports data
+export const useReportsData = (dateRange: number = 30, sectionId?: string) => {
+  return useQuery({
+    queryKey: ["reportsData", dateRange, sectionId],
+    queryFn: () => StockAPI.getReportsData(dateRange, sectionId),
+    select: response => response.data,
+    staleTime: 2 * 60 * 1000, // 2 minutes
+    enabled: true
+  });
+};
+
+// Get consumption report data
+export const useConsumptionReport = (dateRange: number = 30, sectionId?: string) => {
+  return useQuery({
+    queryKey: ["consumptionReport", dateRange, sectionId],
+    queryFn: () => StockAPI.getConsumptionReport(dateRange, sectionId),
+    select: response => response.data,
+    staleTime: 2 * 60 * 1000, // 2 minutes
+    enabled: true
+  });
+};
+
+// Get expense report data
+export const useExpenseReport = (dateRange: number = 30) => {
+  return useQuery({
+    queryKey: ["expenseReport", dateRange],
+    queryFn: () => StockAPI.getExpenseReport(dateRange),
+    select: response => response.data,
+    staleTime: 2 * 60 * 1000, // 2 minutes
+    enabled: true
+  });
+};
+
+// Get low stock report data
+export const useLowStockReport = () => {
+  return useQuery({
+    queryKey: ["lowStockReport"],
+    queryFn: () => StockAPI.getLowStockReport(),
+    select: response => response.data,
+    staleTime: 1 * 60 * 1000, // 1 minute
+    enabled: true
   });
 };
