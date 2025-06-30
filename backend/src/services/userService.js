@@ -16,6 +16,15 @@ export const getUserById = async id => {
   }
 };
 
+export const getUserByUsername = async username => {
+  try {
+    return await User.findByUsername(username);
+  } catch (error) {
+    logger.error("Error getting user by username:", error);
+    throw new Error("Failed to retrieve user");
+  }
+};
+
 export const getUserByEmail = async email => {
   try {
     return await User.findByEmail(email);
@@ -26,21 +35,29 @@ export const getUserByEmail = async email => {
 };
 
 export const createUser = async userData => {
-  const { email, password, firstName, lastName, role } = userData;
+  const { username, email, password, firstName, lastName, role } = userData;
   try {
-    const existingUser = await User.findByEmail(email);
+    const existingUser = await User.findByUsername(username);
     if (existingUser) {
-      throw new Error("User with this email already exists");
+      throw new Error("User with this username already exists");
+    }
+    // Check email uniqueness if provided
+    if (email) {
+      const existingEmailUser = await User.findByEmail(email);
+      if (existingEmailUser) {
+        throw new Error("User with this email already exists");
+      }
     }
     const passwordHash = await hashPassword(password);
     const newUser = await User.create({
-      email,
+      username,
+      email: email || null,
       passwordHash,
-      firstName,
-      lastName,
+      firstName: firstName || null,
+      lastName: lastName || null,
       role
     });
-    logger.info(`User created successfully: ${newUser.email}`);
+    logger.info(`User created successfully: ${newUser.username}`);
     return newUser;
   } catch (error) {
     logger.error("Error creating user:", error);
@@ -54,6 +71,12 @@ export const updateUser = async (id, updateData) => {
     if (!existingUser) {
       throw new Error("User not found");
     }
+    if (updateData.username && updateData.username !== existingUser.username) {
+      const usernameExists = await User.findByUsername(updateData.username);
+      if (usernameExists) {
+        throw new Error("Username already in use");
+      }
+    }
     if (updateData.email && updateData.email !== existingUser.email) {
       const emailExists = await User.findByEmail(updateData.email);
       if (emailExists) {
@@ -64,9 +87,22 @@ export const updateUser = async (id, updateData) => {
       updateData.passwordHash = await hashPassword(updateData.password);
       delete updateData.password;
     }
-    const updatedUser = await User.update(id, updateData);
+
+    // Convert empty strings to null for optional fields
+    const processedUpdateData = { ...updateData };
+    if (processedUpdateData.firstName === "") {
+      processedUpdateData.firstName = null;
+    }
+    if (processedUpdateData.lastName === "") {
+      processedUpdateData.lastName = null;
+    }
+    if (processedUpdateData.email === "") {
+      processedUpdateData.email = null;
+    }
+
+    const updatedUser = await User.update(id, processedUpdateData);
     if (updatedUser) {
-      logger.info(`User updated successfully: ${updatedUser.email}`);
+      logger.info(`User updated successfully: ${updatedUser.username}`);
     }
     return updatedUser;
   } catch (error) {
@@ -83,7 +119,7 @@ export const updateUserRole = async (id, role) => {
     }
     const updatedUser = await User.update(id, { role });
     if (updatedUser) {
-      logger.info(`User role updated successfully: ${updatedUser.email} -> ${role}`);
+      logger.info(`User role updated successfully: ${updatedUser.username} -> ${role}`);
     }
     return updatedUser;
   } catch (error) {
@@ -100,7 +136,7 @@ export const deleteUser = async id => {
     }
     const deleted = await User.delete(id);
     if (deleted) {
-      logger.info(`User deleted successfully: ${user.email}`);
+      logger.info(`User deleted successfully: ${user.email || user.username}`);
     }
     return deleted;
   } catch (error) {

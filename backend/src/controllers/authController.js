@@ -27,10 +27,27 @@ export const login = asyncHandler(async (req, res) => {
     });
   }
 
-  const { email, password } = validation.data;
-  const result = await loginUser(email, password);
+  try {
+    const { username, password } = validation.data;
+    const result = await loginUser(username, password);
 
-  res.json(result);
+    res.json(result);
+  } catch (error) {
+    // Handle account deactivation specifically
+    if (error.code === "ACCOUNT_DEACTIVATED") {
+      return res.status(403).json({
+        success: false,
+        error: error.message,
+        code: "ACCOUNT_DEACTIVATED"
+      });
+    }
+
+    // Handle other login errors (invalid credentials, etc.)
+    return res.status(401).json({
+      success: false,
+      error: error.message || "Login failed"
+    });
+  }
 });
 
 export const logout = asyncHandler(async (req, res) => {

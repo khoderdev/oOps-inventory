@@ -1,13 +1,8 @@
-import type { ApiResponse } from "../types";
+import { showAccountDeactivatedToast } from "../hooks/useToast";
+import type { ApiResponse, RequestData } from "../types";
 
-// API Configuration
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://192.168.88.86:5000/api";
 
-// Type for request data - more flexible to allow interfaces
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type RequestData = any;
-
-// Token management
 class TokenManager {
   private static readonly TOKEN_KEY = "auth_token";
 
@@ -21,6 +16,28 @@ class TokenManager {
 
   static removeToken(): void {
     localStorage.removeItem(this.TOKEN_KEY);
+  }
+}
+
+// Account deactivation handler
+class AccountHandler {
+  static handleDeactivatedAccount(errorCode?: string, message?: string, isLoginAttempt: boolean = false): void {
+    // Remove token since account is deactivated
+    TokenManager.removeToken();
+
+    // Only show toast and redirect for authenticated API calls, not login attempts
+    if (!isLoginAttempt) {
+      // Show user-friendly toast notification
+      showAccountDeactivatedToast(message);
+
+      // Redirect to home page where ProtectedRoute will show login
+      if (typeof window !== "undefined") {
+        setTimeout(() => {
+          window.location.href = "/";
+        }, 3000); // Give more time for user to see the toast
+      }
+    }
+    // For login attempts, let the error bubble up to the form to handle inline
   }
 }
 
@@ -61,9 +78,17 @@ class ApiClient {
       // Handle authentication errors
       if (response.status === 401) {
         TokenManager.removeToken();
-        // Optionally redirect to login or dispatch logout action
-        window.location.href = "/login";
+        // Redirect to root where ProtectedRoute will handle showing login
+        window.location.href = "/";
         throw new Error("Authentication required");
+      }
+
+      // Handle account deactivation errors
+      if (response.status === 403 && data?.code === "ACCOUNT_DEACTIVATED") {
+        // Check if this is a login attempt
+        const isLoginAttempt = endpoint.includes("/auth/login");
+        AccountHandler.handleDeactivatedAccount(data.code, data.error, isLoginAttempt);
+        throw new Error(data.error || "Account has been deactivated");
       }
 
       if (!response.ok) {
@@ -81,8 +106,6 @@ class ApiClient {
         success: true
       };
     } catch (error) {
-      console.error("API Request Error:", error);
-
       // Return consistent error format
       return {
         data: {} as T,
@@ -127,7 +150,7 @@ class ApiClient {
 export const apiClient = new ApiClient(API_BASE_URL);
 
 // Export token manager for use in auth context
-export { TokenManager };
+export { AccountHandler, TokenManager };
 
 // Helper function for handling API responses
 export const handleApiResponse = <T>(response: ApiResponse<T>): T => {

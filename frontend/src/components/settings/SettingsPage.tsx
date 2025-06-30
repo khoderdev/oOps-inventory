@@ -13,6 +13,7 @@ const SettingsPage = () => {
   const { state, setUser, setTheme } = useApp();
 
   const [profileData, setProfileData] = useState({
+    username: state.user?.username || "",
     firstName: state.user?.firstName || "",
     lastName: state.user?.lastName || "",
     email: state.user?.email || "",
@@ -23,6 +24,7 @@ const SettingsPage = () => {
   useEffect(() => {
     if (state.user) {
       setProfileData({
+        username: state.user.username || "",
         firstName: state.user.firstName || "",
         lastName: state.user.lastName || "",
         email: state.user.email || "",
@@ -75,37 +77,70 @@ const SettingsPage = () => {
 
   const handleSaveProfile = async () => {
     // Basic validation
-    if (!profileData.firstName.trim()) {
-      alert("First name is required");
+    if (!profileData.username.trim()) {
+      alert("Username is required");
       return;
     }
 
-    if (!profileData.lastName.trim()) {
-      alert("Last name is required");
+    if (profileData.username.length < 3) {
+      alert("Username must be at least 3 characters long");
       return;
     }
 
-    if (!profileData.email.trim()) {
-      alert("Email is required");
+    if (!/^[a-zA-Z0-9_]+$/.test(profileData.username)) {
+      alert("Username can only contain letters, numbers, and underscores");
       return;
     }
 
-    // Basic email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(profileData.email)) {
-      alert("Please enter a valid email address");
+    // firstName validation (optional but must be valid if provided)
+    if (profileData.firstName.trim() && profileData.firstName.trim().length === 0) {
+      alert("First name cannot be empty if provided");
       return;
+    }
+
+    // lastName validation (optional but must be valid if provided)
+    if (profileData.lastName.trim() && profileData.lastName.trim().length === 0) {
+      alert("Last name cannot be empty if provided");
+      return;
+    }
+
+    // Email validation (optional but must be valid if provided)
+    if (profileData.email.trim()) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(profileData.email)) {
+        alert("Please enter a valid email address");
+        return;
+      }
     }
 
     setIsUpdatingProfile(true);
 
     try {
-      const response = await AuthAPI.updateProfile({
-        firstName: profileData.firstName.trim(),
-        lastName: profileData.lastName.trim(),
-        email: profileData.email.trim()
-        // Note: role updates are handled separately by admins only
-      });
+      const updateData: {
+        username: string;
+        firstName?: string;
+        lastName?: string;
+        email?: string;
+      } = {
+        username: profileData.username.trim()
+      };
+
+      // Only include firstName if provided and not empty
+      if (profileData.firstName.trim()) {
+        updateData.firstName = profileData.firstName.trim();
+      }
+
+      // Only include lastName if provided and not empty
+      if (profileData.lastName.trim()) {
+        updateData.lastName = profileData.lastName.trim();
+      }
+
+      // Only include email if provided and not empty
+      if (profileData.email.trim()) {
+        updateData.email = profileData.email.trim();
+      }
+
+      const response = await AuthAPI.updateProfile(updateData);
 
       if (response.success) {
         // Update the user in global state with the response data
@@ -194,11 +229,13 @@ const SettingsPage = () => {
               <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-6 mb-6">
                 <h4 className="text-base font-semibold text-gray-900 dark:text-white mb-4">Basic Information</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <Input label="First Name" value={profileData.firstName} onChange={e => setProfileData(prev => ({ ...prev, firstName: e.target.value }))} placeholder="Enter your first name" required />
+                  <Input label="Username" value={profileData.username} onChange={e => setProfileData(prev => ({ ...prev, username: e.target.value }))} placeholder="Enter your username" required />
 
-                  <Input label="Last Name" value={profileData.lastName} onChange={e => setProfileData(prev => ({ ...prev, lastName: e.target.value }))} placeholder="Enter your last name" required />
+                  <Input label="First Name" value={profileData.firstName} onChange={e => setProfileData(prev => ({ ...prev, firstName: e.target.value }))} placeholder="Enter your first name" />
 
-                  <Input label="Email Address" type="email" value={profileData.email} onChange={e => setProfileData(prev => ({ ...prev, email: e.target.value }))} placeholder="Enter your email address" required />
+                  <Input label="Last Name" value={profileData.lastName} onChange={e => setProfileData(prev => ({ ...prev, lastName: e.target.value }))} placeholder="Enter your last name" />
+
+                  <Input label="Email Address" type="email" value={profileData.email} onChange={e => setProfileData(prev => ({ ...prev, email: e.target.value }))} placeholder="Enter your email address" />
 
                   {/* Role field - only editable by admins */}
                   {state.user?.role === "ADMIN" ? (

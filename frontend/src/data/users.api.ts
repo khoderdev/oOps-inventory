@@ -5,6 +5,7 @@ import type { BackendUser, BackendUsersResponse, UserFilters, UserRole, UsersRes
 // Transform backend user data to frontend format
 export const transformUser = (backendUser: BackendUser): User => ({
   id: backendUser.id,
+  username: backendUser.username,
   email: backendUser.email,
   firstName: backendUser.first_name,
   lastName: backendUser.last_name,
@@ -118,17 +119,30 @@ export class UsersAPI {
    * Create a new user
    * POST /api/auth/register
    */
-  static async create(userData: { firstName: string; lastName: string; email: string; role: "ADMIN" | "MANAGER" | "STAFF"; password: string; isActive?: boolean }): Promise<ApiResponse<User>> {
+  static async create(userData: { username: string; firstName?: string; lastName?: string; email?: string; role: "ADMIN" | "MANAGER" | "STAFF"; password: string; isActive?: boolean }): Promise<ApiResponse<User>> {
     try {
       // Transform frontend data to backend format (auth/register expects camelCase)
-      const backendData = {
-        firstName: userData.firstName,
-        lastName: userData.lastName,
-        email: userData.email,
+      const backendData: Record<string, string | boolean> = {
+        username: userData.username,
         role: userData.role,
         password: userData.password,
         isActive: userData.isActive ?? true
       };
+
+      // Only include firstName if provided
+      if (userData.firstName) {
+        backendData.firstName = userData.firstName;
+      }
+
+      // Only include lastName if provided
+      if (userData.lastName) {
+        backendData.lastName = userData.lastName;
+      }
+
+      // Only include email if provided
+      if (userData.email) {
+        backendData.email = userData.email;
+      }
 
       const response = await apiClient.post<{ user: BackendUser }>("/auth/register", backendData);
 
@@ -153,9 +167,10 @@ export class UsersAPI {
   static async update(
     id: string,
     userData: {
-      firstName: string;
-      lastName: string;
-      email: string;
+      username: string;
+      firstName?: string;
+      lastName?: string;
+      email?: string;
       role: UserRole;
       isActive: boolean;
       password?: string;
@@ -164,12 +179,25 @@ export class UsersAPI {
     try {
       // Transform frontend data to backend format
       const backendData: Record<string, string | boolean> = {
-        first_name: userData.firstName,
-        last_name: userData.lastName,
-        email: userData.email,
+        username: userData.username,
         role: userData.role,
         is_active: userData.isActive
       };
+
+      // Only include firstName if provided
+      if (userData.firstName) {
+        backendData.first_name = userData.firstName;
+      }
+
+      // Only include lastName if provided
+      if (userData.lastName) {
+        backendData.last_name = userData.lastName;
+      }
+
+      // Only include email if provided
+      if (userData.email) {
+        backendData.email = userData.email;
+      }
 
       // Only include password if provided
       if (userData.password && userData.password.trim()) {

@@ -67,6 +67,15 @@ export const updateProfile = asyncHandler(async (req, res) => {
     });
   }
 
+  // Check if the user being updated is active (for self-updates)
+  if (userId === req.user.id && !req.user.is_active) {
+    return res.status(403).json({
+      success: false,
+      error: "Your account has been deactivated. Please contact an administrator to reactivate your account.",
+      code: "ACCOUNT_DEACTIVATED"
+    });
+  }
+
   // Validate request data
   const validation = validateData(updateProfileSchema, req.body);
   if (!validation.isValid) {
@@ -105,6 +114,15 @@ export const updateRole = asyncHandler(async (req, res) => {
     return res.status(400).json({
       success: false,
       error: "Invalid user ID"
+    });
+  }
+
+  // Check if the current user (admin) is active
+  if (!req.user.is_active) {
+    return res.status(403).json({
+      success: false,
+      error: "Your account has been deactivated. Please contact another administrator to reactivate your account.",
+      code: "ACCOUNT_DEACTIVATED"
     });
   }
 
@@ -158,6 +176,15 @@ export const deleteUserById = asyncHandler(async (req, res) => {
     });
   }
 
+  // Check if the current user (admin) is active
+  if (!req.user.is_active) {
+    return res.status(403).json({
+      success: false,
+      error: "Your account has been deactivated. Please contact another administrator to reactivate your account.",
+      code: "ACCOUNT_DEACTIVATED"
+    });
+  }
+
   // Prevent user from deleting themselves
   if (userId === req.user.id) {
     return res.status(403).json({
@@ -196,6 +223,15 @@ export const changeUserPassword = asyncHandler(async (req, res) => {
     });
   }
 
+  // Check if the current user (admin) is active
+  if (!req.user.is_active) {
+    return res.status(403).json({
+      success: false,
+      error: "Your account has been deactivated. Please contact another administrator to reactivate your account.",
+      code: "ACCOUNT_DEACTIVATED"
+    });
+  }
+
   // Validate request data
   const validation = validateData(changePasswordSchema, req.body);
   if (!validation.isValid) {
@@ -228,6 +264,14 @@ export const changeUserPassword = asyncHandler(async (req, res) => {
       return res.status(400).json({
         success: false,
         error: "Current password is incorrect"
+      });
+    }
+
+    if (error.message === "User account is inactive") {
+      return res.status(403).json({
+        success: false,
+        error: "The target user account has been deactivated. Please contact an administrator to reactivate the account.",
+        code: "TARGET_ACCOUNT_DEACTIVATED"
       });
     }
 
@@ -266,6 +310,15 @@ export const updateStatus = asyncHandler(async (req, res) => {
     });
   }
 
+  // Check if the current user (admin) is active
+  if (!req.user.is_active) {
+    return res.status(403).json({
+      success: false,
+      error: "Your account has been deactivated. Please contact another administrator to reactivate your account.",
+      code: "ACCOUNT_DEACTIVATED"
+    });
+  }
+
   // Prevent user from deactivating themselves
   if (userId === req.user.id && !isActive) {
     return res.status(403).json({
@@ -297,6 +350,15 @@ export const updateStatus = asyncHandler(async (req, res) => {
 export const changeCurrentUserPassword = asyncHandler(async (req, res) => {
   // Use the authenticated user's ID from the middleware
   const userId = req.user.id;
+
+  // Check if the current user is active
+  if (!req.user.is_active) {
+    return res.status(403).json({
+      success: false,
+      error: "Your account has been deactivated. Please contact an administrator to reactivate your account.",
+      code: "ACCOUNT_DEACTIVATED"
+    });
+  }
 
   // Validate request data
   const validation = validateData(changePasswordSchema, req.body);
@@ -333,6 +395,14 @@ export const changeCurrentUserPassword = asyncHandler(async (req, res) => {
       });
     }
 
+    if (error.message === "User account is inactive") {
+      return res.status(403).json({
+        success: false,
+        error: "Your account has been deactivated. Please contact an administrator to reactivate your account.",
+        code: "ACCOUNT_DEACTIVATED"
+      });
+    }
+
     if (error.message === "User not found") {
       return res.status(404).json({
         success: false,
@@ -352,6 +422,15 @@ export const changeCurrentUserPassword = asyncHandler(async (req, res) => {
 export const updateCurrentUserProfile = asyncHandler(async (req, res) => {
   // Use the authenticated user's ID from the middleware
   const userId = req.user.id;
+
+  // Check if the current user is active
+  if (!req.user.is_active) {
+    return res.status(403).json({
+      success: false,
+      error: "Your account has been deactivated. Please contact an administrator to reactivate your account.",
+      code: "ACCOUNT_DEACTIVATED"
+    });
+  }
 
   // Remove role from request body for regular users (only admins can change roles)
   const { role, ...allowedData } = req.body;
@@ -384,6 +463,7 @@ export const updateCurrentUserProfile = asyncHandler(async (req, res) => {
     // Format user data for frontend (camelCase)
     const formattedUser = {
       id: updatedUser.id,
+      username: updatedUser.username,
       email: updatedUser.email,
       firstName: updatedUser.first_name,
       lastName: updatedUser.last_name,
@@ -404,6 +484,13 @@ export const updateCurrentUserProfile = asyncHandler(async (req, res) => {
       return res.status(400).json({
         success: false,
         error: "Email address is already in use"
+      });
+    }
+
+    if (error.message === "Username already in use") {
+      return res.status(400).json({
+        success: false,
+        error: "Username is already in use"
       });
     }
 

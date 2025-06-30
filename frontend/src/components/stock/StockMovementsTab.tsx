@@ -132,7 +132,8 @@ const StockMovementsTab = () => {
       title: "Performed By",
       render: (item: StockMovement) => {
         if (item.user) {
-          return `${item.user.firstName} ${item.user.lastName}`;
+          const fullName = `${item.user.firstName || ""} ${item.user.lastName || ""}`.trim();
+          return fullName || item.user.username || item.user.email || `User #${item.performedBy}`;
         }
         return `User #${item.performedBy}`;
       }
@@ -178,7 +179,21 @@ const StockMovementsTab = () => {
       </div>
 
       {/* Table */}
-      <Table data={filteredData as unknown as Record<string, unknown>[]} columns={columns as unknown as any} loading={isLoading} emptyMessage="No stock movements found." sortConfig={sortConfig} onSort={handleSort} />
+      <Table
+        data={filteredData as unknown as Record<string, unknown>[]}
+        columns={
+          columns as unknown as Array<{
+            key: string;
+            title: string;
+            sortable?: boolean;
+            render: (item: Record<string, unknown>, index: number) => React.ReactNode;
+          }>
+        }
+        loading={isLoading}
+        emptyMessage="No stock movements found."
+        sortConfig={sortConfig}
+        onSort={handleSort}
+      />
     </div>
   );
 };

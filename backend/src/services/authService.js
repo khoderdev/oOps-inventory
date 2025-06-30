@@ -1,41 +1,44 @@
 import { comparePassword, generateToken, verifyToken } from "../utils/auth.js";
 import logger from "../utils/logger.js";
-import { createUser, getUserByEmail, getUserById } from "./userService.js";
+import { createUser, getUserById, getUserByUsername } from "./userService.js";
 
-/**
- * Register a new user
- * @param {Object} userData - User registration data
- * @returns {Promise<Object>} - User object and token
- */
 export const registerUser = async userData => {
   try {
-    // Handle name field - split into firstName and lastName if provided as single field
     let processedUserData = { ...userData };
 
     if (userData.name && !userData.firstName && !userData.lastName) {
       const nameParts = userData.name.trim().split(" ");
       processedUserData.firstName = nameParts[0] || "";
-      processedUserData.lastName = nameParts.slice(1).join(" ") || nameParts[0] || "User";
-      delete processedUserData.name; // Remove the original name field
+      processedUserData.lastName = nameParts.slice(1).join(" ") || "";
+      delete processedUserData.name;
     }
 
-    // Create user
+    if (processedUserData.firstName === "") {
+      processedUserData.firstName = null;
+    }
+    if (processedUserData.lastName === "") {
+      processedUserData.lastName = null;
+    }
+    if (processedUserData.email === "") {
+      processedUserData.email = null;
+    }
+
     const newUser = await createUser(processedUserData);
 
-    // Generate JWT token
     const token = generateToken({
       id: newUser.id,
-      email: newUser.email,
+      username: newUser.username,
       role: newUser.role
     });
 
-    logger.info(`User registered successfully: ${newUser.email}`);
+    logger.info(`User registered successfully: ${newUser.username}`);
 
     return {
       success: true,
       message: "User registered successfully",
       user: {
         id: newUser.id,
+        username: newUser.username,
         email: newUser.email,
         firstName: newUser.first_name,
         lastName: newUser.last_name,
@@ -51,45 +54,38 @@ export const registerUser = async userData => {
   }
 };
 
-/**
- * Authenticate user login
- * @param {string} email - User email
- * @param {string} password - User password
- * @returns {Promise<Object>} - User object and token
- */
-export const loginUser = async (email, password) => {
+export const loginUser = async (username, password) => {
   try {
-    // Find user by email
-    const user = await getUserByEmail(email);
+    const user = await getUserByUsername(username);
     if (!user) {
-      throw new Error("Invalid email or password");
+      throw new Error("Invalid username or password");
     }
 
-    // Check if user is active
     if (!user.is_active) {
-      throw new Error("Account is inactive. Please contact administrator.");
+      const error = new Error("Your account has been deactivated. Please contact an administrator to reactivate your account.");
+      error.code = "ACCOUNT_DEACTIVATED";
+      throw error;
     }
 
-    // Verify password
     const isPasswordValid = await comparePassword(password, user.password_hash);
     if (!isPasswordValid) {
-      throw new Error("Invalid email or password");
+      throw new Error("Invalid username or password");
     }
 
-    // Generate JWT token
     const token = generateToken({
       id: user.id,
-      email: user.email,
+      username: user.username,
       role: user.role
     });
 
-    logger.info(`User logged in successfully: ${user.email}`);
+    logger.info(`User logged in successfully: ${user.username}`);
 
     return {
       success: true,
       message: "Login successful",
       user: {
         id: user.id,
+        username: user.username,
         email: user.email,
         firstName: user.first_name,
         lastName: user.last_name,
@@ -106,29 +102,23 @@ export const loginUser = async (email, password) => {
   }
 };
 
-/**
- * Validate user token and return user info
- * @param {string} token - JWT token
- * @returns {Promise<Object>} - User object
- */
 export const validateToken = async token => {
   try {
     const decoded = verifyToken(token);
-
-    // Get fresh user data from database
     const user = await getUserById(decoded.id);
     if (!user) {
       throw new Error("User not found");
     }
-
     if (!user.is_active) {
-      throw new Error("User account is inactive");
+      const error = new Error("Your account has been deactivated. Please contact an administrator to reactivate your account.");
+      error.code = "ACCOUNT_DEACTIVATED";
+      throw error;
     }
-
     return {
       success: true,
       user: {
         id: user.id,
+        username: user.username,
         email: user.email,
         firstName: user.first_name,
         lastName: user.last_name,
@@ -144,21 +134,15 @@ export const validateToken = async token => {
   }
 };
 
-/**
- * Refresh user token
- * @param {Object} user - User object from middleware
- * @returns {Promise<Object>} - New token
- */
 export const refreshToken = async user => {
   try {
-    // Generate new JWT token
     const token = generateToken({
       id: user.id,
-      email: user.email,
+      username: user.username,
       role: user.role
     });
 
-    logger.info(`Token refreshed for user: ${user.email}`);
+    logger.info(`Token refreshed for user: ${user.username}`);
 
     return {
       success: true,
@@ -171,11 +155,6 @@ export const refreshToken = async user => {
   }
 };
 
-/**
- * Logout user (token blacklisting could be implemented here)
- * @param {Object} user - User object from middleware
- * @returns {Promise<Object>} - Logout confirmation
- */
 export const logoutUser = async user => {
   try {
     // In a production environment, you might want to:
@@ -183,7 +162,7 @@ export const logoutUser = async user => {
     // 2. Store token in Redis with expiration
     // 3. Invalidate refresh tokens
 
-    logger.info(`User logged out: ${user.email}`);
+    logger.info(`User logged out: ${user.username}`);
 
     return {
       success: true,

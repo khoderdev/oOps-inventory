@@ -262,7 +262,8 @@ const StockEntriesTab = () => {
       title: "Received By",
       render: (item: StockEntry) => {
         if (item.user) {
-          return `${item.user.firstName} ${item.user.lastName}`;
+          const fullName = `${item.user.firstName || ""} ${item.user.lastName || ""}`.trim();
+          return fullName || item.user.username || item.user.email || `User #${item.receivedBy}`;
         }
         return `User #${item.receivedBy}`;
       }

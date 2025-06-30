@@ -3,12 +3,13 @@ import type { ApiResponse, User } from "../types";
 
 // Authentication types
 export interface LoginCredentials {
-  email: string;
+  username: string;
   password: string;
 }
 
 export interface RegisterData {
-  email: string;
+  username: string;
+  email?: string;
   password: string;
   name: string;
   role?: "MANAGER" | "STAFF";
@@ -32,6 +33,7 @@ export interface ChangePasswordResponse {
 }
 
 export interface UpdateProfileData {
+  username?: string;
   firstName?: string;
   lastName?: string;
   email?: string;
@@ -46,7 +48,7 @@ export interface UpdateProfileResponse {
 
 export class AuthAPI {
   /**
-   * Login user with email and password
+   * Login user with username and password
    */
   static async login(credentials: LoginCredentials): Promise<AuthResponse> {
     try {
@@ -210,13 +212,13 @@ export class AuthAPI {
   }
 
   /**
-   * Change current user's password
+   * Change user password
    */
   static async changePassword(passwordData: ChangePasswordData): Promise<ChangePasswordResponse> {
     try {
-      const response = await apiClient.post<ChangePasswordResponse>("/users/change-password", passwordData);
+      const response = await apiClient.post<ChangePasswordResponse>("/auth/change-password", passwordData);
 
-      // The backend returns the response directly with success and message
+      // Cast to the expected format since backend returns direct response
       return response as unknown as ChangePasswordResponse;
     } catch (error) {
       return {
@@ -227,13 +229,13 @@ export class AuthAPI {
   }
 
   /**
-   * Update current user's profile
+   * Update user profile
    */
   static async updateProfile(profileData: UpdateProfileData): Promise<UpdateProfileResponse> {
     try {
-      const response = await apiClient.put<UpdateProfileResponse>("/users/profile", profileData);
+      const response = await apiClient.put<UpdateProfileResponse>("/auth/profile", profileData);
 
-      // The backend returns the response directly with success, message, and user
+      // Cast to the expected format since backend returns direct response
       return response as unknown as UpdateProfileResponse;
     } catch (error) {
       return {

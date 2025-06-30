@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
 import { UsersAPI } from "../../data/users.api";
-import { UserRole, type UserFormProps, type UserSubmitData } from "../../types/users.types";
+import { UserRole } from "../../types/common.types";
+import { type UserFormProps, type UserSubmitData } from "../../types/users.types";
 import Button from "../ui/Button";
 import Input from "../ui/Input";
 import Select from "../ui/Select";
 
 const UserForm = ({ initialData, onSuccess, onCancel }: UserFormProps) => {
   const [formData, setFormData] = useState({
+    username: "",
     firstName: "",
     lastName: "",
     email: "",
@@ -21,9 +23,10 @@ const UserForm = ({ initialData, onSuccess, onCancel }: UserFormProps) => {
   useEffect(() => {
     if (initialData) {
       setFormData({
+        username: initialData.username || "",
         firstName: initialData.firstName || "",
         lastName: initialData.lastName || "",
-        email: initialData.email,
+        email: initialData.email || "",
         role: initialData.role as UserRole,
         password: "",
         confirmPassword: "",
@@ -46,20 +49,27 @@ const UserForm = ({ initialData, onSuccess, onCancel }: UserFormProps) => {
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
-    // First name validation
-    if (!formData.firstName.trim()) {
-      newErrors.firstName = "First name is required";
+    // Username validation
+    if (!formData.username.trim()) {
+      newErrors.username = "Username is required";
+    } else if (formData.username.length < 3) {
+      newErrors.username = "Username must be at least 3 characters long";
+    } else if (!/^[a-zA-Z0-9_]+$/.test(formData.username)) {
+      newErrors.username = "Username can only contain letters, numbers, and underscores";
     }
 
-    // Last name validation
-    if (!formData.lastName.trim()) {
-      newErrors.lastName = "Last name is required";
+    // First name validation (optional but must be valid if provided)
+    if (formData.firstName.trim() && formData.firstName.trim().length === 0) {
+      newErrors.firstName = "First name cannot be empty if provided";
     }
 
-    // Email validation
-    if (!formData.email.trim()) {
-      newErrors.email = "Email is required";
-    } else {
+    // Last name validation (optional but must be valid if provided)
+    if (formData.lastName.trim() && formData.lastName.trim().length === 0) {
+      newErrors.lastName = "Last name cannot be empty if provided";
+    }
+
+    // Email validation (optional but must be valid if provided)
+    if (formData.email.trim()) {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(formData.email)) {
         newErrors.email = "Please enter a valid email address";
@@ -93,12 +103,25 @@ const UserForm = ({ initialData, onSuccess, onCancel }: UserFormProps) => {
     try {
       // Prepare data for submission
       const submitData: UserSubmitData = {
-        firstName: formData.firstName.trim(),
-        lastName: formData.lastName.trim(),
-        email: formData.email.trim(),
+        username: formData.username.trim(),
         role: formData.role as UserRole,
         isActive: formData.isActive
       };
+
+      // Only include firstName if provided and not empty
+      if (formData.firstName.trim()) {
+        submitData.firstName = formData.firstName.trim();
+      }
+
+      // Only include lastName if provided and not empty
+      if (formData.lastName.trim()) {
+        submitData.lastName = formData.lastName.trim();
+      }
+
+      // Only include email if provided and not empty
+      if (formData.email.trim()) {
+        submitData.email = formData.email.trim();
+      }
 
       // Only include password if it's a new user or password is being changed
       if (!initialData || formData.password) {
@@ -108,24 +131,67 @@ const UserForm = ({ initialData, onSuccess, onCancel }: UserFormProps) => {
       let response;
       if (initialData) {
         // Update existing user
-        response = await UsersAPI.update(initialData.id, {
-          firstName: submitData.firstName,
-          lastName: submitData.lastName,
-          email: submitData.email,
+        const updateData: {
+          username: string;
+          firstName?: string;
+          lastName?: string;
+          email?: string;
+          role: UserRole;
+          isActive: boolean;
+          password?: string;
+        } = {
+          username: submitData.username,
           role: submitData.role,
-          isActive: submitData.isActive,
-          password: submitData.password
-        });
+          isActive: submitData.isActive
+        };
+
+        if (submitData.firstName) {
+          updateData.firstName = submitData.firstName;
+        }
+
+        if (submitData.lastName) {
+          updateData.lastName = submitData.lastName;
+        }
+
+        if (submitData.email) {
+          updateData.email = submitData.email;
+        }
+
+        if (submitData.password) {
+          updateData.password = submitData.password;
+        }
+
+        response = await UsersAPI.update(initialData.id, updateData);
       } else {
         // Create new user
-        response = await UsersAPI.create({
-          firstName: submitData.firstName,
-          lastName: submitData.lastName,
-          email: submitData.email,
+        const createData: {
+          username: string;
+          firstName?: string;
+          lastName?: string;
+          email?: string;
+          role: UserRole;
+          password: string;
+          isActive: boolean;
+        } = {
+          username: submitData.username,
           role: submitData.role,
           password: submitData.password!,
           isActive: submitData.isActive
-        });
+        };
+
+        if (submitData.firstName) {
+          createData.firstName = submitData.firstName;
+        }
+
+        if (submitData.lastName) {
+          createData.lastName = submitData.lastName;
+        }
+
+        if (submitData.email) {
+          createData.email = submitData.email;
+        }
+
+        response = await UsersAPI.create(createData);
       }
 
       if (response.success) {
@@ -151,13 +217,15 @@ const UserForm = ({ initialData, onSuccess, onCancel }: UserFormProps) => {
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* Basic Information */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Input label="First Name" value={formData.firstName} onChange={e => handleInputChange("firstName", e.target.value)} error={errors.firstName} required placeholder="Enter first name" />
+      <Input label="Username" value={formData.username} onChange={e => handleInputChange("username", e.target.value)} error={errors.username} required placeholder="Enter username" />
 
-        <Input label="Last Name" value={formData.lastName} onChange={e => handleInputChange("lastName", e.target.value)} error={errors.lastName} required placeholder="Enter last name" />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Input label="First Name" value={formData.firstName} onChange={e => handleInputChange("firstName", e.target.value)} error={errors.firstName} placeholder="Enter first name" />
+
+        <Input label="Last Name" value={formData.lastName} onChange={e => handleInputChange("lastName", e.target.value)} error={errors.lastName} placeholder="Enter last name" />
       </div>
 
-      <Input label="Email Address" type="email" value={formData.email} onChange={e => handleInputChange("email", e.target.value)} error={errors.email} required placeholder="Enter email address" />
+      <Input label="Email Address (Optional)" type="email" value={formData.email} onChange={e => handleInputChange("email", e.target.value)} error={errors.email} placeholder="Enter email address" />
 
       {/* Role and Status */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

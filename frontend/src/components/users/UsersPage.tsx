@@ -17,7 +17,7 @@ const UsersPage = () => {
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
-  const [sortConfig, setSortConfig] = useState<SortConfig>({ field: "firstName", order: "asc" });
+  const [sortConfig, setSortConfig] = useState<SortConfig>({ field: "username", order: "asc" });
 
   const {
     state: { user: currentUser }
@@ -40,11 +40,12 @@ const UsersPage = () => {
 
   const filteredData = useMemo(() => {
     const filtered = users.filter(user => {
-      // Search filter
+      // Search filter - search by username and email only
       if (searchTerm) {
         const searchLower = searchTerm.toLowerCase();
-        const fullName = `${user.firstName || ""} ${user.lastName || ""}`.toLowerCase();
-        if (!fullName.includes(searchLower) && !user.email.toLowerCase().includes(searchLower) && !(user.name || "").toLowerCase().includes(searchLower)) {
+        const usernameMatch = user.username.toLowerCase().includes(searchLower);
+        const emailMatch = (user.email || "").toLowerCase().includes(searchLower);
+        if (!usernameMatch && !emailMatch) {
           return false;
         }
       }
@@ -117,7 +118,6 @@ const UsersPage = () => {
     }
 
     const action = user.isActive ? "deactivate" : "activate";
-    // if (window.confirm(`Are you sure you want to ${action} "${user.firstName} ${user.lastName || user.name || user.email}"?`)) {
     try {
       const response = await toggleUserStatusMutation.mutateAsync({
         id: user.id,
@@ -133,7 +133,6 @@ const UsersPage = () => {
       console.error("Error toggling user status:", error);
       alert(`An error occurred while trying to ${action} the user`);
     }
-    // }
   };
 
   const handleDeleteUser = async (user: User) => {
@@ -143,7 +142,7 @@ const UsersPage = () => {
       return;
     }
 
-    if (window.confirm(`Are you sure you want to permanently delete "${user.firstName} ${user.lastName || user.name || user.email}"?\n\nThis will remove the user from the database completely and cannot be undone.\n\nNote: If this user has associated records (sections managed, stock entries, etc.), the deletion will fail.`)) {
+    if (window.confirm(`Are you sure you want to permanently delete user "${user.username}"?\n\nThis will remove the user from the database completely and cannot be undone.\n\nNote: If this user has associated records (sections managed, stock entries, etc.), the deletion will fail.`)) {
       try {
         const response = await deleteUserMutation.mutateAsync(user.id);
 
@@ -181,18 +180,19 @@ const UsersPage = () => {
 
   const columns = [
     {
-      key: "name",
+      key: "username",
       title: "User",
       sortable: true,
       render: (item: UserTableData) => {
         const user = item as User;
+        const initials = user.username?.[0]?.toUpperCase() || "U";
+
         return (
           <div className="flex items-center space-x-3">
-            <div className="flex items-center justify-center w-10 h-10 bg-blue-600 dark:bg-blue-500 rounded-full text-white text-sm font-semibold">{user.firstName?.[0]?.toUpperCase() || user.name?.[0]?.toUpperCase() || user.email[0]?.toUpperCase()}</div>
-            <div>
-              <p className="font-medium text-gray-900 dark:text-white">{user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : user.name || "Unnamed User"}</p>
-              <p className="text-sm text-gray-500 dark:text-gray-400">{user.email}</p>
-            </div>
+            <div className="flex items-center justify-center w-10 h-10 bg-blue-600 dark:bg-blue-500 rounded-full text-white text-sm font-semibold">{initials}</div>
+            {/* <div> */}
+            <p className="font-medium text-gray-900 dark:text-white">{user.username}</p>
+            {/* </div> */}
           </div>
         );
       }
@@ -318,7 +318,7 @@ const UsersPage = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-            <Input placeholder="Search users..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10" />
+            <Input placeholder="Search by username or email..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10" />
           </div>
 
           <Select options={roleOptions} value={roleFilter} onChange={e => setRoleFilter(e.target.value as "" | "ADMIN" | "MANAGER" | "STAFF")} placeholder="Filter by role" />

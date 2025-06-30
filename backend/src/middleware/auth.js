@@ -25,19 +25,22 @@ export const authenticate = async (req, res, next) => {
     }
 
     if (!user.is_active) {
-      return res.status(401).json({
+      return res.status(403).json({
         success: false,
-        error: "Access denied. User account is inactive."
+        error: "Your account has been deactivated. Please contact an administrator to reactivate your account.",
+        code: "ACCOUNT_DEACTIVATED"
       });
     }
 
     // Add user to request object (exclude password hash)
     req.user = {
       id: user.id,
+      username: user.username,
       email: user.email,
       firstName: user.first_name,
       lastName: user.last_name,
       role: user.role,
+      is_active: user.is_active,
       isActive: user.is_active,
       createdAt: user.created_at,
       updatedAt: user.updated_at
@@ -88,10 +91,12 @@ export const optionalAuth = async (req, res, next) => {
       // Add user to request object (exclude password hash)
       req.user = {
         id: user.id,
+        username: user.username,
         email: user.email,
         firstName: user.first_name,
         lastName: user.last_name,
         role: user.role,
+        is_active: user.is_active,
         isActive: user.is_active,
         createdAt: user.created_at,
         updatedAt: user.updated_at

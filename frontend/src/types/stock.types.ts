@@ -1,14 +1,5 @@
-import type { BaseEntity } from "./common.types";
+import type { BaseEntity, User } from "./common.types";
 import type { RawMaterial } from "./rawMaterials.types";
-
-export interface User {
-  id: string;
-  firstName: string;
-  lastName: string;
-  email?: string;
-  role: "ADMIN" | "MANAGER" | "STAFF";
-  isActive: boolean;
-}
 
 export interface StockEntry extends BaseEntity {
   rawMaterialId: string;

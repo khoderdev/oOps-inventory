@@ -4,13 +4,20 @@ export interface BaseEntity {
   updatedAt: Date;
 }
 
+export enum UserRole {
+  ADMIN = "ADMIN",
+  MANAGER = "MANAGER",
+  STAFF = "STAFF"
+}
+
 export interface User {
   id: string;
+  username: string;
   name?: string;
   firstName?: string;
   lastName?: string;
-  email: string;
-  role: "ADMIN" | "MANAGER" | "STAFF";
+  email?: string;
+  role: UserRole;
   isActive: boolean;
   createdAt?: Date;
   updatedAt?: Date;
@@ -21,6 +28,9 @@ export interface ApiResponse<T> {
   success: boolean;
   message?: string;
 }
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type RequestData = any;
 
 export interface PaginatedResponse<T> extends ApiResponse<T[]> {
   pagination: {

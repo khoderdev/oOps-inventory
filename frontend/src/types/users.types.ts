@@ -1,9 +1,10 @@
-import type { User } from "./common.types";
+import type { User, UserRole } from "./common.types";
 
 // Backend user data structure (snake_case)
 export interface BackendUser {
   id: string;
-  email: string;
+  username: string;
+  email?: string;
   first_name?: string;
   last_name?: string;
   role: UserRole;
@@ -48,16 +49,11 @@ export interface UserFormProps {
   onCancel: () => void;
 }
 
-export enum UserRole {
-  ADMIN = "ADMIN",
-  MANAGER = "MANAGER",
-  STAFF = "STAFF"
-}
-
 export interface UserSubmitData {
-  firstName: string;
-  lastName: string;
-  email: string;
+  username: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
   role: UserRole;
   isActive: boolean;
   password?: string;
@@ -65,9 +61,10 @@ export interface UserSubmitData {
 
 // Types for user operations
 export interface CreateUserData {
-  firstName: string;
-  lastName: string;
-  email: string;
+  username: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
   role: UserRole;
   password: string;
   isActive?: boolean;
@@ -75,9 +72,10 @@ export interface CreateUserData {
 
 export interface UpdateUserData {
   id: string;
-  firstName: string;
-  lastName: string;
-  email: string;
+  username: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
   role: UserRole;
   isActive: boolean;
   password?: string;
@@ -89,10 +87,11 @@ export interface UsersQueryOptions extends UserFilters {
 
 export interface UserTableData extends Record<string, unknown> {
   id: string;
+  username: string;
   firstName?: string;
   lastName?: string;
   name?: string;
-  email: string;
+  email?: string;
   role: UserRole;
   isActive: boolean;
   createdAt?: Date;

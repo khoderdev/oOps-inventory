@@ -1,20 +1,28 @@
-/**
- * Validation schemas using Joi
- * Provides input validation for API endpoints
- */
-
 import Joi from "joi";
 
 /**
  * User registration validation schema
  */
 export const registerSchema = Joi.object({
-  email: Joi.string()
-    .email({ tlds: { allow: false } })
+  username: Joi.string()
+    .trim()
+    .min(3)
+    .max(50)
+    .pattern(/^[a-zA-Z0-9_]+$/)
     .required()
     .messages({
-      "string.email": "Please provide a valid email address",
-      "any.required": "Email is required"
+      "string.min": "Username must be at least 3 characters long",
+      "string.max": "Username must not exceed 50 characters",
+      "string.pattern.base": "Username can only contain letters, numbers, and underscores",
+      "any.required": "Username is required"
+    }),
+
+  email: Joi.string()
+    .email({ tlds: { allow: false } })
+    .optional()
+    .allow("")
+    .messages({
+      "string.email": "Please provide a valid email address"
     }),
 
   password: Joi.string().min(6).max(128).required().messages({
@@ -24,41 +32,31 @@ export const registerSchema = Joi.object({
   }),
 
   // Allow either a single name field OR firstName/lastName fields
-  name: Joi.string().trim().min(1).max(200).messages({
-    "string.min": "Name is required",
+  name: Joi.string().trim().min(1).max(200).optional().allow("").messages({
+    "string.min": "Name cannot be empty if provided",
     "string.max": "Name must not exceed 200 characters"
   }),
 
-  firstName: Joi.string().trim().min(1).max(100).messages({
-    "string.min": "First name cannot be empty",
+  firstName: Joi.string().trim().max(100).optional().allow("").messages({
     "string.max": "First name must not exceed 100 characters"
   }),
 
-  lastName: Joi.string().trim().min(1).max(100).messages({
-    "string.min": "Last name cannot be empty",
+  lastName: Joi.string().trim().max(100).optional().allow("").messages({
     "string.max": "Last name must not exceed 100 characters"
   }),
 
   role: Joi.string().valid("ADMIN", "MANAGER", "STAFF").default("STAFF").messages({
     "any.only": "Role must be one of: ADMIN, MANAGER, STAFF"
   })
-})
-  .or("name", "firstName")
-  .messages({
-    "object.missing": "Either name or firstName is required"
-  });
+});
 
 /**
  * User login validation schema
  */
 export const loginSchema = Joi.object({
-  email: Joi.string()
-    .email({ tlds: { allow: false } })
-    .required()
-    .messages({
-      "string.email": "Please provide a valid email address",
-      "any.required": "Email is required"
-    }),
+  username: Joi.string().trim().required().messages({
+    "any.required": "Username is required"
+  }),
 
   password: Joi.string().required().messages({
     "any.required": "Password is required"
@@ -79,18 +77,30 @@ export const updateRoleSchema = Joi.object({
  * Update user profile validation schema
  */
 export const updateProfileSchema = Joi.object({
-  firstName: Joi.string().trim().min(1).max(100).messages({
-    "string.min": "First name cannot be empty",
+  username: Joi.string()
+    .trim()
+    .min(3)
+    .max(50)
+    .pattern(/^[a-zA-Z0-9_]+$/)
+    .optional()
+    .messages({
+      "string.min": "Username must be at least 3 characters long",
+      "string.max": "Username must not exceed 50 characters",
+      "string.pattern.base": "Username can only contain letters, numbers, and underscores"
+    }),
+
+  firstName: Joi.string().trim().max(100).optional().allow("").messages({
     "string.max": "First name must not exceed 100 characters"
   }),
 
-  lastName: Joi.string().trim().min(1).max(100).messages({
-    "string.min": "Last name cannot be empty",
+  lastName: Joi.string().trim().max(100).optional().allow("").messages({
     "string.max": "Last name must not exceed 100 characters"
   }),
 
   email: Joi.string()
     .email({ tlds: { allow: false } })
+    .optional()
+    .allow("")
     .messages({
       "string.email": "Please provide a valid email address"
     }),
@@ -99,11 +109,7 @@ export const updateProfileSchema = Joi.object({
   role: Joi.string().valid("ADMIN", "MANAGER", "STAFF").optional().messages({
     "any.only": "Role must be one of: ADMIN, MANAGER, STAFF"
   })
-})
-  .min(1)
-  .messages({
-    "object.min": "At least one field must be provided for update"
-  });
+});
 
 /**
  * Change password validation schema
