@@ -1,7 +1,8 @@
 import { Activity, Building2, Package, Plus } from "lucide-react";
-import { useState } from "react";
+import { useContext, useState } from "react";
+import { AppContext } from "../../contexts/AppContext";
 import { useSections } from "../../hooks/useSections";
-import type { Section } from "../../types";
+import type { Section, User } from "../../types";
 import Button from "../ui/Button";
 import Modal from "../ui/Modal";
 import SectionCard from "./SectionCard";
@@ -12,7 +13,9 @@ const SectionsPage = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedSection, setSelectedSection] = useState<Section | null>(null);
   const [editingSection, setEditingSection] = useState<Section | null>(null);
-
+  const {
+    state: { user }
+  } = useContext(AppContext) as { state: { user: User } };
   const { data: sections = [], isLoading } = useSections({ isActive: true });
 
   const activeSections = sections.filter(section => section.isActive);
@@ -26,9 +29,11 @@ const SectionsPage = () => {
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Sections</h1>
           <p className="text-gray-600 dark:text-gray-400">Manage kitchen, bar, and storage sections</p>
         </div>
-        <Button onClick={() => setShowCreateModal(true)} leftIcon={<Plus className="w-4 h-4" />}>
-          Create Section
-        </Button>
+        {user?.role === "MANAGER" || user?.role === "ADMIN" ? (
+          <Button onClick={() => setShowCreateModal(true)} leftIcon={<Plus className="w-4 h-4" />}>
+            Create Section
+          </Button>
+        ) : null}
       </div>
 
       {/* Overview Stats */}
@@ -84,9 +89,11 @@ const SectionsPage = () => {
           <Building2 className="w-16 h-16 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 dark:text-gray-300 mb-2">No sections yet</h3>
           <p className="text-gray-600 dark:text-gray-400 mb-6">Create your first section to start organizing your inventory</p>
-          <Button onClick={() => setShowCreateModal(true)} leftIcon={<Plus className="w-4 h-4" />}>
-            Create First Section
-          </Button>
+          {user?.role === "MANAGER" || user?.role === "ADMIN" ? (
+            <Button onClick={() => setShowCreateModal(true)} leftIcon={<Plus className="w-4 h-4" />}>
+              Create First Section
+            </Button>
+          ) : null}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

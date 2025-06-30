@@ -10,7 +10,7 @@ export interface User {
   firstName?: string;
   lastName?: string;
   email: string;
-  role: "MANAGER" | "STAFF";
+  role: "ADMIN" | "MANAGER" | "STAFF";
   isActive: boolean;
   createdAt?: Date;
   updatedAt?: Date;

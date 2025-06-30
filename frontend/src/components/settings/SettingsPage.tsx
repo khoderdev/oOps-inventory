@@ -12,9 +12,10 @@ const SettingsPage = () => {
   const { state, setUser, setTheme } = useApp();
 
   const [profileData, setProfileData] = useState({
-    name: state.user?.name || "",
+    firstName: state.user?.firstName || "",
+    lastName: state.user?.lastName || "",
     email: state.user?.email || "",
-    role: state.user?.role || "staff"
+    role: state.user?.role || "STAFF"
   });
 
   const [systemSettings, setSystemSettings] = useState({
@@ -37,12 +38,24 @@ const SettingsPage = () => {
     { id: "appearance" as SettingsTab, label: "Appearance", icon: Palette }
   ];
 
+  // Filter tabs based on user role - hide system tab for non-MANAGER/ADMIN users
+  const visibleTabs = tabs.filter(tab => {
+    if (tab.id === "system") {
+      return state.user?.role === "MANAGER" || state.user?.role === "ADMIN";
+    }
+    return true;
+  });
+
   const handleSaveProfile = () => {
     setUser({
       id: state.user?.id || "demo-user-1",
-      name: profileData.name,
+      firstName: profileData.firstName,
+      lastName: profileData.lastName,
       email: profileData.email,
-      role: profileData.role as "manager" | "staff"
+      role: profileData.role as "MANAGER" | "STAFF" | "ADMIN",
+      isActive: state.user?.isActive || true,
+      createdAt: state.user?.createdAt,
+      updatedAt: state.user?.updatedAt
     });
   };
 
@@ -53,25 +66,87 @@ const SettingsPage = () => {
           <div className="space-y-6">
             <div>
               <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Profile Information</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Input label="Full Name" value={profileData.name} onChange={e => setProfileData(prev => ({ ...prev, name: e.target.value }))} placeholder="Enter your full name" />
 
-                <Input label="Email Address" type="email" value={profileData.email} onChange={e => setProfileData(prev => ({ ...prev, email: e.target.value }))} placeholder="Enter your email" />
+              {/* Basic Information Section */}
+              <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-6 mb-6">
+                <h4 className="text-base font-semibold text-gray-900 dark:text-white mb-4">Basic Information</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <Input label="First Name" value={profileData.firstName} onChange={e => setProfileData(prev => ({ ...prev, firstName: e.target.value }))} placeholder="Enter your first name" required />
 
-                <Select
-                  label="Role"
-                  options={[
-                    { value: "manager", label: "Manager" },
-                    { value: "staff", label: "Staff" }
-                  ]}
-                  value={profileData.role}
-                  onChange={e => setProfileData(prev => ({ ...prev, role: e.target.value as "manager" | "staff" }))}
-                />
+                  <Input label="Last Name" value={profileData.lastName} onChange={e => setProfileData(prev => ({ ...prev, lastName: e.target.value }))} placeholder="Enter your last name" required />
+
+                  <Input label="Email Address" type="email" value={profileData.email} onChange={e => setProfileData(prev => ({ ...prev, email: e.target.value }))} placeholder="Enter your email address" required />
+
+                  {/* Role field - only editable by admins */}
+                  {state.user?.role === "ADMIN" ? (
+                    <Select
+                      label="Role"
+                      options={[
+                        { value: "ADMIN", label: "Administrator" },
+                        { value: "MANAGER", label: "Manager" },
+                        { value: "STAFF", label: "Staff" }
+                      ]}
+                      value={profileData.role}
+                      onChange={e => setProfileData(prev => ({ ...prev, role: e.target.value as "ADMIN" | "MANAGER" | "STAFF" }))}
+                    />
+                  ) : (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Role</label>
+                      <div className="px-3 py-2 bg-gray-100 dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-md text-gray-900 dark:text-white text-sm">{profileData.role === "ADMIN" ? "Administrator" : profileData.role === "MANAGER" ? "Manager" : "Staff"}</div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Contact an administrator to change your role</p>
+                    </div>
+                  )}
+                </div>
               </div>
 
-              <div className="mt-6">
+              {/* Account Information Section */}
+              <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-6 mb-6">
+                <h4 className="text-base font-semibold text-gray-900 dark:text-white mb-4">Account Information</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">User ID</label>
+                    <p className="text-gray-900 dark:text-white font-mono text-sm">{state.user?.id || "N/A"}</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Account Status</label>
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${state.user?.isActive ? "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300" : "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300"}`}>{state.user?.isActive ? "Active" : "Inactive"}</span>
+                  </div>
+
+                  {state.user?.createdAt && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Member Since</label>
+                      <p className="text-gray-900 dark:text-white text-sm">
+                        {new Date(state.user.createdAt).toLocaleDateString("en-US", {
+                          year: "numeric",
+                          month: "long",
+                          day: "numeric"
+                        })}
+                      </p>
+                    </div>
+                  )}
+
+                  {state.user?.updatedAt && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Last Updated</label>
+                      <p className="text-gray-900 dark:text-white text-sm">
+                        {new Date(state.user.updatedAt).toLocaleDateString("en-US", {
+                          year: "numeric",
+                          month: "long",
+                          day: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit"
+                        })}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Save Button */}
+              <div className="flex justify-end">
                 <Button onClick={handleSaveProfile} leftIcon={<Save className="w-4 h-4" />}>
-                  Save Profile
+                  Save Profile Changes
                 </Button>
               </div>
             </div>
@@ -150,7 +225,6 @@ const SettingsPage = () => {
             </div>
           </div>
         );
-
       case "system":
         return (
           <div className="space-y-6">
@@ -283,7 +357,7 @@ const SettingsPage = () => {
           {/* Sidebar */}
           <div className="lg:col-span-1 border-b lg:border-b-0 lg:border-r border-gray-200 dark:border-gray-700">
             <nav className="space-y-1 p-6">
-              {tabs.map(tab => {
+              {visibleTabs.map(tab => {
                 const IconComponent = tab.icon;
                 return (
                   <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg text-left ${activeTab === tab.id ? "bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300" : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white"}`}>

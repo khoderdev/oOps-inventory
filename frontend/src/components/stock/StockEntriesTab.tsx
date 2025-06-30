@@ -1,5 +1,6 @@
 import { Calendar, Edit, Package, Search, Trash2, Truck } from "lucide-react";
 import { useMemo, useState } from "react";
+import { useApp } from "../../hooks/useApp";
 import { useRawMaterials } from "../../hooks/useRawMaterials";
 import { useDeleteStockEntry, useStockEntries } from "../../hooks/useStock";
 import type { SortConfig, StockEntry } from "../../types";
@@ -12,6 +13,7 @@ import Table from "../ui/Table";
 import StockEntryForm from "./StockEntryForm";
 
 const StockEntriesTab = () => {
+  const { state } = useApp();
   const [searchTerm, setSearchTerm] = useState("");
   const [supplierFilter, setSupplierFilter] = useState("");
   const [materialFilter, setMaterialFilter] = useState("");
@@ -265,20 +267,24 @@ const StockEntriesTab = () => {
         return `User #${item.receivedBy}`;
       }
     },
-    {
-      key: "actions",
-      title: "Actions",
-      render: (item: StockEntry) => (
-        <div className="flex space-x-2">
-          <Button size="sm" variant="ghost" onClick={() => setEditingEntry(item)} leftIcon={<Edit className="w-3 h-3" />}>
-            Edit
-          </Button>
-          <Button size="sm" variant="ghost" onClick={() => handleDelete(item)} leftIcon={<Trash2 className="w-3 h-3" />} className="text-red-600 hover:text-red-700">
-            Delete
-          </Button>
-        </div>
-      )
-    }
+    ...(state.user?.role === "MANAGER" || state.user?.role === "ADMIN"
+      ? [
+          {
+            key: "actions",
+            title: "Actions",
+            render: (item: StockEntry) => (
+              <div className="flex space-x-2">
+                <Button size="sm" variant="ghost" onClick={() => setEditingEntry(item)} leftIcon={<Edit className="w-3 h-3" />}>
+                  Edit
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => handleDelete(item)} leftIcon={<Trash2 className="w-3 h-3" />} className="text-red-600 hover:text-red-700">
+                  Delete
+                </Button>
+              </div>
+            )
+          }
+        ]
+      : [])
   ];
 
   return (

@@ -1,8 +1,9 @@
 import { AlertTriangle, Edit, Filter, Package, Plus, Search, Trash2 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useContext, useMemo, useState } from "react";
+import { AppContext } from "../../contexts/AppContext";
 import { useDeleteRawMaterial, useRawMaterials } from "../../hooks/useRawMaterials";
 import { useStockLevels } from "../../hooks/useStock";
-import { MaterialCategory, type RawMaterial, type SortConfig } from "../../types";
+import { MaterialCategory, type RawMaterial, type SortConfig, type User } from "../../types";
 import Button from "../ui/Button";
 import Input from "../ui/Input";
 import Modal from "../ui/Modal";
@@ -17,7 +18,9 @@ const RawMaterialsPage = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingMaterial, setEditingMaterial] = useState<RawMaterial | null>(null);
   const [sortConfig, setSortConfig] = useState<SortConfig>({ field: "name", order: "asc" });
-
+  const {
+    state: { user }
+  } = useContext(AppContext) as { state: { user: User } };
   const { data: rawMaterials = [], isLoading } = useRawMaterials();
   const { data: stockLevels = [] } = useStockLevels();
   const deleteMutation = useDeleteRawMaterial();
@@ -169,20 +172,27 @@ const RawMaterialsPage = () => {
       title: "Status",
       render: (item: RawMaterial) => <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${item.isActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>{item.isActive ? "Active" : "Inactive"}</span>
     },
-    {
-      key: "actions",
-      title: "Actions",
-      render: (item: RawMaterial) => (
-        <div className="flex space-x-2">
-          <Button size="sm" variant="ghost" onClick={() => setEditingMaterial(item)} leftIcon={<Edit className="w-3 h-3" />}>
-            Edit
-          </Button>
-          <Button size="sm" variant="ghost" onClick={() => handleDelete(item)} leftIcon={<Trash2 className="w-3 h-3" />} className="text-red-600 hover:text-red-700">
-            Delete
-          </Button>
-        </div>
-      )
-    }
+    ...(user?.role === "MANAGER" || user?.role === "ADMIN"
+      ? [
+          {
+            key: "actions",
+            title: "Actions",
+            render: (item: RawMaterial) => (
+              <div className="flex space-x-2">
+                <>
+                  <Button size="sm" variant="ghost" onClick={() => setEditingMaterial(item)} leftIcon={<Edit className="w-3 h-3" />}>
+                    Edit
+                  </Button>
+
+                  <Button size="sm" variant="ghost" onClick={() => handleDelete(item)} leftIcon={<Trash2 className="w-3 h-3" />} className="text-red-600 hover:text-red-700">
+                    Delete
+                  </Button>
+                </>
+              </div>
+            )
+          }
+        ]
+      : [])
   ];
 
   return (
@@ -193,9 +203,11 @@ const RawMaterialsPage = () => {
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Raw Materials</h1>
           <p className="text-gray-600 dark:text-gray-400">Manage your inventory materials and ingredients</p>
         </div>
-        <Button onClick={() => setShowCreateModal(true)} leftIcon={<Plus className="w-4 h-4" />}>
-          Add Material
-        </Button>
+        {user?.role === "MANAGER" && (
+          <Button onClick={() => setShowCreateModal(true)} leftIcon={<Plus className="w-4 h-4" />}>
+            Add Material
+          </Button>
+        )}
       </div>
 
       {/* Stats Cards */}
