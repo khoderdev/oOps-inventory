@@ -224,8 +224,6 @@ const SettingsPage = () => {
           <div className="space-y-6">
             <div>
               <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Profile Information</h3>
-
-              {/* Basic Information Section */}
               <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-6 mb-6">
                 <h4 className="text-base font-semibold text-gray-900 dark:text-white mb-4">Basic Information</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

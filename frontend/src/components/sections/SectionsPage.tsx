@@ -1,6 +1,7 @@
-import { Activity, Building2, Package, Plus } from "lucide-react";
+import { Activity, Building2, Package, Plus, PlusIcon } from "lucide-react";
 import { useContext, useState } from "react";
 import { AppContext } from "../../contexts/AppContext";
+import useFloatingButtonVisibility from "../../hooks/useFloatingButtonVisibility";
 import { useSections } from "../../hooks/useSections";
 import type { Section, User } from "../../types";
 import Button from "../ui/Button";
@@ -21,16 +22,20 @@ const SectionsPage = () => {
   const activeSections = sections.filter(section => section.isActive);
   const totalSections = activeSections.length;
 
+  const floating = true;
+
+  const { visible: isVisible } = useFloatingButtonVisibility({
+    minScrollDistance: 200,
+    showOnTop: true
+  });
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-end items-center">
-        {user?.role === "MANAGER" || user?.role === "ADMIN" ? (
-          <Button onClick={() => setShowCreateModal(true)} leftIcon={<Plus className="w-4 h-4" />}>
-            Create Section
-          </Button>
-        ) : null}
-      </div>
+      {(user?.role === "MANAGER" || user?.role === "ADMIN") && (!floating || isVisible) && (
+        <Button floating={floating} animationType="scale" threshold={15} autoHideDelay={500} minScrollDistance={200} variant="primary" leftIcon={<PlusIcon />} onClick={() => setShowCreateModal(true)}>
+          Add Section
+        </Button>
+      )}
 
       {/* Overview Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">

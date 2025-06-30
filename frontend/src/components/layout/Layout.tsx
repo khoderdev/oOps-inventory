@@ -190,7 +190,7 @@ const Layout = () => {
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-900">
+        <main className={clsx("flex-1 bg-gray-50 dark:bg-gray-900", isMobile && sidebarOpen ? "overflow-hidden" : "overflow-y-auto")}>
           <div className="mx-auto max-w-screen p-4 lg:p-8">
             <Outlet />
           </div>

@@ -55,7 +55,7 @@ const SectionForm = ({ initialData, onSuccess, onCancel }: SectionFormProps) => 
   // Transform users data for the Select component
   const userOptions = users.map(user => ({
     value: user.id,
-    label: `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email || user.name || `User ${user.id}`
+    label: `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.username || user.email || `User ${user.id}`
   }));
 
   const validateForm = () => {

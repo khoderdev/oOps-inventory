@@ -59,11 +59,11 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(({ variant = "primary"
   };
 
   const positionClasses = {
-    "bottom-right": "fixed bottom-6 right-6 z-40",
-    "bottom-left": "fixed bottom-6 left-6 z-40",
-    "top-right": "fixed top-6 right-6 z-40",
-    "top-left": "fixed top-6 left-6 z-40",
-    "bottom-center": "fixed bottom-6 left-1/2 transform -translate-x-1/2 z-40"
+    "bottom-right": "fixed bottom-6 right-6 z-20",
+    "bottom-left": "fixed bottom-6 left-6 z-20",
+    "top-right": "fixed top-6 right-6 z-20",
+    "top-left": "fixed top-6 left-6 z-20",
+    "bottom-center": "fixed bottom-6 left-1/2 transform -translate-x-1/2 z-20"
   };
 
   const getAnimationClasses = () => {

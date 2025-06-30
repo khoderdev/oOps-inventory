@@ -1,6 +1,7 @@
-import { Edit, Plus, Search, Shield, Trash2, UserCheck, UserX, Users } from "lucide-react";
+import { Edit, PlusIcon, Search, Shield, Trash2, UserCheck, UserX, Users } from "lucide-react";
 import { useContext, useMemo, useState } from "react";
 import { AppContext } from "../../contexts/AppContext";
+import useFloatingButtonVisibility from "../../hooks/useFloatingButtonVisibility";
 import { useDeleteUser, useToggleUserStatus, useUsers } from "../../hooks/useUsers";
 import type { SortConfig, User } from "../../types";
 import type { UserTableData } from "../../types/users.types";
@@ -18,9 +19,13 @@ const UsersPage = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [sortConfig, setSortConfig] = useState<SortConfig>({ field: "username", order: "asc" });
-
+  const floating = true;
+  const { visible: isVisible } = useFloatingButtonVisibility({
+    minScrollDistance: 200,
+    showOnTop: true
+  });
   const {
-    state: { user: currentUser }
+    state: { user }
   } = useContext(AppContext) as { state: { user: User } };
 
   const {
@@ -29,7 +34,7 @@ const UsersPage = () => {
     refetch
   } = useUsers({
     limit: 100,
-    enabled: currentUser?.role === "ADMIN"
+    enabled: user?.role === "ADMIN"
   });
 
   const users = useMemo(() => usersResponse?.users || [], [usersResponse?.users]);
@@ -78,7 +83,7 @@ const UsersPage = () => {
   }, [users, searchTerm, roleFilter, statusFilter, sortConfig]);
 
   // Redirect if not admin
-  if (currentUser?.role !== "ADMIN") {
+  if (user?.role !== "ADMIN") {
     return (
       <div className="flex items-center justify-center h-96">
         <div className="text-center">
@@ -112,7 +117,7 @@ const UsersPage = () => {
 
   const handleToggleStatus = async (user: User) => {
     // Prevent users from deactivating themselves
-    if (user.id === currentUser.id) {
+    if (user.id === user.id) {
       alert("You cannot deactivate your own account");
       return;
     }
@@ -137,7 +142,7 @@ const UsersPage = () => {
 
   const handleDeleteUser = async (user: User) => {
     // Prevent users from deleting themselves
-    if (user.id === currentUser.id) {
+    if (user.id === user.id) {
       alert("You cannot delete your own account");
       return;
     }
@@ -234,11 +239,11 @@ const UsersPage = () => {
               Edit
             </Button>
 
-            <Button size="sm" variant="ghost" onClick={() => handleToggleStatus(user)} leftIcon={user.isActive ? <UserX className="w-3 h-3" /> : <UserCheck className="w-3 h-3" />} className={user.isActive ? "text-orange-600 hover:text-orange-700" : "text-green-600 hover:text-green-700"} disabled={user.id === currentUser.id}>
+            <Button size="sm" variant="ghost" onClick={() => handleToggleStatus(user)} leftIcon={user.isActive ? <UserX className="w-3 h-3" /> : <UserCheck className="w-3 h-3" />} className={user.isActive ? "text-orange-600 hover:text-orange-700" : "text-green-600 hover:text-green-700"} disabled={user.id === user.id}>
               {user.isActive ? "Deactivate" : "Activate"}
             </Button>
 
-            <Button size="sm" variant="ghost" onClick={() => handleDeleteUser(user)} leftIcon={<Trash2 className="w-3 h-3" />} className="text-red-600 hover:text-red-700" disabled={user.id === currentUser.id}>
+            <Button size="sm" variant="ghost" onClick={() => handleDeleteUser(user)} leftIcon={<Trash2 className="w-3 h-3" />} className="text-red-600 hover:text-red-700" disabled={user.id === user.id}>
               Delete
             </Button>
           </div>
@@ -250,15 +255,11 @@ const UsersPage = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">User Management</h1>
-          <p className="text-gray-600 dark:text-gray-400">Manage system users and their permissions</p>
-        </div>
-        <Button onClick={() => setShowCreateModal(true)} leftIcon={<Plus className="w-4 h-4" />}>
-          Create User
+      {(user?.role === "ADMIN" || user?.role === "MANAGER") && (!floating || isVisible) && (
+        <Button floating={floating} animationType="scale" threshold={15} autoHideDelay={500} minScrollDistance={200} variant="primary" leftIcon={<PlusIcon />} onClick={() => setShowCreateModal(true)}>
+          Add User
         </Button>
-      </div>
+      )}
 
       {/* Overview Stats */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-6">

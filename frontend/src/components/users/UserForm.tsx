@@ -216,7 +216,6 @@ const UserForm = ({ initialData, onSuccess, onCancel }: UserFormProps) => {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Basic Information */}
       <Input label="Username" value={formData.username} onChange={e => handleInputChange("username", e.target.value)} error={errors.username} required placeholder="Enter username" />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

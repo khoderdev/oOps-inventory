@@ -1,6 +1,7 @@
-import { AlertTriangle, Edit, Filter, Package, Plus, Search, Trash2 } from "lucide-react";
+import { AlertTriangle, Edit, Filter, Package, PlusIcon, Search, Trash2 } from "lucide-react";
 import { useContext, useMemo, useState } from "react";
 import { AppContext } from "../../contexts/AppContext";
+import useFloatingButtonVisibility from "../../hooks/useFloatingButtonVisibility";
 import { useDeleteRawMaterial, useRawMaterials } from "../../hooks/useRawMaterials";
 import { useStockLevels } from "../../hooks/useStock";
 import { MaterialCategory, type RawMaterial, type SortConfig, type User } from "../../types";
@@ -195,12 +196,19 @@ const RawMaterialsPage = () => {
       : [])
   ];
 
+  const floating = true;
+
+  const { visible: isVisible } = useFloatingButtonVisibility({
+    minScrollDistance: 200,
+    showOnTop: true
+  });
+
   return (
     <div className="space-y-6">
       {/* Header */}
       {user?.role === "MANAGER" ||
-        (user?.role === "ADMIN" && (
-          <Button className="fixed bottom-5 right-5 z-10 !rounded-full !p-4" onClick={() => setShowCreateModal(true)} leftIcon={<Plus className="w-4 h-4" />}>
+        (user?.role === "ADMIN" && (!floating || isVisible) && (
+          <Button floating={floating} animationType="scale" threshold={15} autoHideDelay={500} minScrollDistance={200} variant="primary" leftIcon={<PlusIcon />} onClick={() => setShowCreateModal(true)}>
             Add Material
           </Button>
         ))}
