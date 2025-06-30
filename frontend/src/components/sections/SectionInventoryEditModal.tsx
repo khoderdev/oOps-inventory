@@ -1,3 +1,4 @@
+import { Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useApp } from "../../hooks/useApp";
 import { useRemoveSectionInventory, useSectionInventory, useUpdateSectionInventory } from "../../hooks/useSections";
@@ -6,7 +7,6 @@ import { MeasurementUnit } from "../../types";
 import Button from "../ui/Button";
 import Input from "../ui/Input";
 import Modal from "../ui/Modal";
-import { Trash2 } from "lucide-react";
 
 interface SectionInventoryEditModalProps {
   inventoryItem: SectionInventory | null;
@@ -87,7 +87,7 @@ const SectionInventoryEditModal = ({ inventoryItem, isOpen, onClose, onSuccess }
       await updateMutation.mutateAsync({
         inventoryId: inventoryItem.id,
         quantity: finalQuantity,
-        updatedBy: state.user?.name || "Unknown",
+        updatedBy: state.user?.id || "1",
         notes: notes || `Updated inventory for ${inventoryItem.rawMaterial?.name}`
       });
 
@@ -104,7 +104,7 @@ const SectionInventoryEditModal = ({ inventoryItem, isOpen, onClose, onSuccess }
     try {
       await removeMutation.mutateAsync({
         inventoryId: inventoryItem.id,
-        removedBy: state.user?.name || "Unknown",
+        removedBy: state.user?.id || "1",
         notes: `Removed ${inventoryItem.rawMaterial?.name} from ${inventoryItem?.section?.name}`
       });
 

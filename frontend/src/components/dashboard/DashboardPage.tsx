@@ -5,26 +5,12 @@ import { AppContext } from "../../contexts/AppContext";
 import { useRawMaterials } from "../../hooks/useRawMaterials";
 import { useSections } from "../../hooks/useSections";
 import { useStockLevels } from "../../hooks/useStock";
-import { MeasurementUnit, type User } from "../../types";
+import type { User } from "../../types";
+import { formatQuantityDisplay } from "../../utils/quantity";
 import RawMaterialForm from "../rawMaterials/RawMaterialForm";
 import SectionForm from "../sections/SectionForm";
 import StockEntryForm from "../stock/StockEntryForm";
 import Modal from "../ui/Modal";
-
-// Helper function to format quantity display for pack/box materials
-const formatQuantityDisplay = (quantity: number, material: { unit: string; unitsPerPack?: number; baseUnit?: string } | undefined) => {
-  if (!material) return `${quantity}`;
-
-  const isPackOrBox = material.unit === MeasurementUnit.PACKS || material.unit === MeasurementUnit.BOXES;
-  if (isPackOrBox) {
-    const unitsPerPack = material.unitsPerPack || 1;
-    const baseUnit = material.baseUnit || "pieces";
-    const packQuantity = quantity / unitsPerPack;
-    return `${packQuantity.toFixed(1)} ${material.unit} (${quantity} ${baseUnit})`;
-  }
-
-  return `${quantity} ${material.unit}`;
-};
 
 const DashboardPage = () => {
   const navigate = useNavigate();
@@ -97,7 +83,6 @@ const DashboardPage = () => {
 
   return (
     <div className="space-y-6">
-      {/* Quick Actions */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Quick Actions</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -139,7 +124,7 @@ const DashboardPage = () => {
         })}
       </div>
 
-      {/* Quick Actions & Alerts */}
+      {/*  Alerts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Low Stock Alerts */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">

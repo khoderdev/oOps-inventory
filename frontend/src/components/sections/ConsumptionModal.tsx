@@ -3,8 +3,8 @@ import { useApp } from "../../hooks/useApp";
 import { useRecordConsumption } from "../../hooks/useSections";
 import type { ConsumptionModalProps } from "../../types";
 import { MeasurementUnit } from "../../types";
-import { getStepValue } from "../../utils/units";
 import { generateNextOrderId } from "../../utils/orderId";
+import { getStepValue } from "../../utils/units";
 import Button from "../ui/Button";
 import Input from "../ui/Input";
 import Modal from "../ui/Modal";
@@ -31,16 +31,18 @@ const ConsumptionModal = ({ section, inventoryItem, isOpen, onClose, onSuccess }
       setNotes("");
       setUsageUnit(inventoryItem?.rawMaterial?.unit === MeasurementUnit.PACKS || inventoryItem?.rawMaterial?.unit === MeasurementUnit.BOXES ? "individual" : "individual");
       setErrors({});
-      
+
       // Generate order ID when modal opens
-      generateNextOrderId().then(id => {
-        setGeneratedOrderId(id);
-        setOrderId(id);
-      }).catch(error => {
-        console.error("Failed to generate order ID:", error);
-        setGeneratedOrderId("");
-        setOrderId("");
-      });
+      generateNextOrderId()
+        .then(id => {
+          setGeneratedOrderId(id);
+          setOrderId(id);
+        })
+        .catch(error => {
+          console.error("Failed to generate order ID:", error);
+          setGeneratedOrderId("");
+          setOrderId("");
+        });
     }
   }, [isOpen, inventoryItem]);
 
@@ -182,7 +184,7 @@ const ConsumptionModal = ({ section, inventoryItem, isOpen, onClose, onSuccess }
         sectionId: section.id,
         rawMaterialId: inventoryItem.rawMaterialId,
         quantity: baseQuantity,
-        consumedBy: state.user?.name || "Unknown",
+        consumedBy: state.user?.id || "1",
         reason,
         orderId: orderId,
         notes: notes || undefined

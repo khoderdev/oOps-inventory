@@ -131,7 +131,7 @@ export const createSection = async sectionData => {
       name: sectionData.name,
       description: sectionData.description,
       type: sectionData.type,
-      manager_id: sectionData.managerId,
+      manager_id: parseInt(sectionData.managerId, 10),
       is_active: true
     };
 
@@ -253,7 +253,7 @@ export const updateSection = async updateData => {
     if (data.name !== undefined) dbData.name = data.name;
     if (data.description !== undefined) dbData.description = data.description;
     if (data.type !== undefined) dbData.type = data.type;
-    if (data.managerId !== undefined) dbData.manager_id = data.managerId;
+    if (data.managerId !== undefined) dbData.manager_id = parseInt(data.managerId, 10);
     if (data.isActive !== undefined) dbData.is_active = data.isActive;
 
     const section = await prisma().section.update({
@@ -325,7 +325,7 @@ export const assignStockToSection = async assignmentData => {
 
     // Get raw material info for pack conversion
     const rawMaterial = await prisma().rawMaterial.findUnique({
-      where: { id: rawMaterialId }
+      where: { id: parseInt(rawMaterialId, 10) }
     });
 
     if (!rawMaterial) {
@@ -336,7 +336,7 @@ export const assignStockToSection = async assignmentData => {
     const baseQuantityToAssign = convertPackToBase(quantity, rawMaterial);
 
     // Check if we have enough stock available
-    const stockLevel = await stockService.getStockLevel(rawMaterialId);
+    const stockLevel = await stockService.getStockLevel(parseInt(rawMaterialId, 10));
     if (!stockLevel.success || !stockLevel.data) {
       throw new Error("Unable to check stock availability");
     }
@@ -351,7 +351,7 @@ export const assignStockToSection = async assignmentData => {
 
     // Find an available stock entry to reference for the movement
     const stockEntries = await prisma().stockEntry.findMany({
-      where: { raw_material_id: rawMaterialId }
+      where: { raw_material_id: parseInt(rawMaterialId, 10) }
     });
 
     let stockEntryId = "";
@@ -374,7 +374,7 @@ export const assignStockToSection = async assignmentData => {
 
     // Check if section inventory entry exists
     const existingInventory = await prisma().sectionInventory.findFirst({
-      where: { section_id: sectionId, raw_material_id: rawMaterialId }
+      where: { section_id: parseInt(sectionId, 10), raw_material_id: parseInt(rawMaterialId, 10) }
     });
 
     if (existingInventory) {
@@ -390,8 +390,8 @@ export const assignStockToSection = async assignmentData => {
       // Create new inventory entry (store in base units)
       await prisma().sectionInventory.create({
         data: {
-          section_id: sectionId,
-          raw_material_id: rawMaterialId,
+          section_id: parseInt(sectionId, 10),
+          raw_material_id: parseInt(rawMaterialId, 10),
           quantity: new Decimal(baseQuantityToAssign),
           reserved_quantity: new Decimal(0),
           last_updated: new Date()
@@ -407,9 +407,9 @@ export const assignStockToSection = async assignmentData => {
       stockEntryId,
       type: "TRANSFER",
       quantity: baseQuantityToAssign,
-      toSectionId: sectionId,
+      toSectionId: parseInt(sectionId, 10),
       reason: movementNotes,
-      performedBy: assignedBy
+      performedBy: parseInt(assignedBy, 10)
     });
 
     return {
@@ -478,11 +478,11 @@ export const recordSectionConsumption = async consumptionData => {
 
     // Get section and raw material
     const section = await prisma().section.findUnique({
-      where: { id: sectionId }
+      where: { id: parseInt(sectionId, 10) }
     });
 
     const rawMaterial = await prisma().rawMaterial.findUnique({
-      where: { id: rawMaterialId }
+      where: { id: parseInt(rawMaterialId, 10) }
     });
 
     if (!section) {
@@ -495,7 +495,7 @@ export const recordSectionConsumption = async consumptionData => {
 
     // Get current inventory
     const inventory = await prisma().sectionInventory.findFirst({
-      where: { section_id: sectionId, raw_material_id: rawMaterialId }
+      where: { section_id: parseInt(sectionId, 10), raw_material_id: parseInt(rawMaterialId, 10) }
     });
 
     if (!inventory) {
@@ -526,10 +526,10 @@ export const recordSectionConsumption = async consumptionData => {
     // Create consumption record
     const consumption = await prisma().sectionConsumption.create({
       data: {
-        section_id: sectionId,
-        raw_material_id: rawMaterialId,
+        section_id: parseInt(sectionId, 10),
+        raw_material_id: parseInt(rawMaterialId, 10),
         quantity: new Decimal(baseQuantityToConsume),
-        consumed_by: consumedBy,
+        consumed_by: parseInt(consumedBy, 10),
         consumed_date: new Date(),
         reason: consumptionNotes,
         order_id: orderId || null,
@@ -544,7 +544,7 @@ export const recordSectionConsumption = async consumptionData => {
 
     // Create stock movement to track consumption for reports
     const stockEntries = await prisma().stockEntry.findMany({
-      where: { raw_material_id: rawMaterialId }
+      where: { raw_material_id: parseInt(rawMaterialId, 10) }
     });
 
     let stockEntryId = "";
@@ -567,9 +567,9 @@ export const recordSectionConsumption = async consumptionData => {
           stockEntryId,
           type: "OUT",
           quantity: baseQuantityToConsume,
-          fromSectionId: sectionId,
+          fromSectionId: parseInt(sectionId, 10),
           reason: consumptionNotes,
-          performedBy: consumedBy
+          performedBy: parseInt(consumedBy, 10)
         });
       } catch (error) {
         logger.error("Failed to create stock movement for consumption:", error);
@@ -736,7 +736,7 @@ export const updateSectionInventory = async (inventoryId, quantity, updatedBy, n
         quantity: Math.abs(additionalNeeded),
         toSectionId: currentInventory.section_id,
         reason: movementNotes,
-        performedBy: updatedBy
+        performedBy: parseInt(updatedBy, 10)
       });
     }
 
@@ -814,7 +814,7 @@ export const removeSectionInventory = async (inventoryId, removedBy, notes) => {
         quantity: currentQuantity,
         fromSectionId: currentInventory.section_id,
         reason: movementNotes,
-        performedBy: removedBy
+        performedBy: parseInt(removedBy, 10)
       });
     }
 

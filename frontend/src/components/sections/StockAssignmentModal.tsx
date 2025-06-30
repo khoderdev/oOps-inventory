@@ -128,7 +128,7 @@ const StockAssignmentModal = ({ section, isOpen, onClose, onSuccess }: StockAssi
         sectionId: section.id,
         rawMaterialId: selectedMaterialId,
         quantity: quantityToSend,
-        assignedBy: state.user?.name || "Unknown",
+        assignedBy: state.user?.id || "1",
         notes: `Assigned to ${section.name}`
       };
 

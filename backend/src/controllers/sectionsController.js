@@ -214,7 +214,7 @@ export const updateSectionInventory = asyncHandler(async (req, res) => {
   const { inventoryId } = req.params;
   const { quantity, updatedBy, notes } = req.body;
 
-  const result = await sectionsService.updateSectionInventory(inventoryId, quantity, updatedBy, notes);
+  const result = await sectionsService.updateSectionInventory(parseInt(inventoryId, 10), quantity, updatedBy, notes);
 
   if (!result.success) {
     return res.status(400).json({
@@ -237,7 +237,7 @@ export const removeSectionInventory = asyncHandler(async (req, res) => {
   const { inventoryId } = req.params;
   const { removedBy, notes } = req.body;
 
-  const result = await sectionsService.removeSectionInventory(inventoryId, removedBy, notes);
+  const result = await sectionsService.removeSectionInventory(parseInt(inventoryId, 10), removedBy, notes);
 
   if (!result.success) {
     return res.status(400).json({

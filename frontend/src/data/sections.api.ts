@@ -268,7 +268,10 @@ export class SectionsAPI {
    */
   static async removeSectionInventory(inventoryId: string, removedBy: string, notes?: string): Promise<ApiResponse<boolean>> {
     try {
-      const response = await apiClient.delete<{ success: boolean; message: string }>(`/sections/inventory/${inventoryId}?removedBy=${removedBy}&notes=${notes || ""}`);
+      const response = await apiClient.delete<{ success: boolean; message: string }>(`/sections/inventory/${inventoryId}`, {
+        removedBy,
+        notes
+      });
 
       return {
         data: response.success,
