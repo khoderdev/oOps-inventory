@@ -1,6 +1,6 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { SectionsAPI } from "../data/sections.api";
-import type { CreateSectionInput, UpdateSectionInput, CreateSectionAssignmentInput } from "../types";
+import type { CreateSectionAssignmentInput, CreateSectionInput, UpdateSectionInput } from "../types";
 
 const QUERY_KEYS = {
   sections: "sections",
@@ -51,7 +51,12 @@ export const useSectionConsumption = (
 ) => {
   return useQuery({
     queryKey: [QUERY_KEYS.sectionConsumption(sectionId), filters],
-    queryFn: () => SectionsAPI.getSectionConsumption(sectionId, filters),
+    queryFn: () =>
+      SectionsAPI.getSectionConsumption(sectionId, {
+        ...filters,
+        fromDate: filters?.fromDate?.toISOString(),
+        toDate: filters?.toDate?.toISOString()
+      }),
     select: response => response.data,
     enabled: !!sectionId,
     staleTime: 2 * 60 * 1000 // 2 minutes
@@ -152,7 +157,7 @@ export const useUpdateSectionInventory = () => {
 
   return useMutation({
     mutationFn: ({ inventoryId, quantity, updatedBy, notes }: { inventoryId: string; quantity: number; updatedBy: string; notes?: string }) => SectionsAPI.updateSectionInventory(inventoryId, quantity, updatedBy, notes),
-    onSuccess: (response) => {
+    onSuccess: response => {
       if (response.success) {
         // Invalidate section inventory queries
         queryClient.invalidateQueries({
@@ -173,7 +178,7 @@ export const useRemoveSectionInventory = () => {
 
   return useMutation({
     mutationFn: ({ inventoryId, removedBy, notes }: { inventoryId: string; removedBy: string; notes?: string }) => SectionsAPI.removeSectionInventory(inventoryId, removedBy, notes),
-    onSuccess: (response) => {
+    onSuccess: response => {
       if (response.success) {
         // Invalidate section inventory queries
         queryClient.invalidateQueries({

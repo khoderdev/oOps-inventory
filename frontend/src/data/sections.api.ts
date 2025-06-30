@@ -1,5 +1,5 @@
 import { apiClient } from "../lib/api";
-import { MeasurementUnit, type ApiResponse, type CreateSectionAssignmentInput, type CreateSectionInput, type RawMaterial, type Section, type SectionConsumption, type SectionInventory, type UpdateSectionInput } from "../types";
+import { type ApiResponse, type CreateSectionAssignmentInput, type CreateSectionInput, type RawMaterial, type Section, type SectionConsumption, type SectionInventory, type UpdateSectionInput } from "../types";
 
 // Sections API filters interfaces
 export interface SectionFilters {
@@ -32,45 +32,19 @@ export interface InventoryUpdateRequest {
 }
 
 export class SectionsAPI {
-  // Helper function to get pack information from raw material
-  private static getPackInfo(rawMaterial: RawMaterial) {
-    const isPackOrBox = rawMaterial.unit === MeasurementUnit.PACKS || rawMaterial.unit === MeasurementUnit.BOXES;
-    if (!isPackOrBox) return null;
-    const material = rawMaterial as unknown as {
-      unitsPerPack?: number;
-      baseUnit?: MeasurementUnit;
-    };
-
-    return {
-      unitsPerPack: material.unitsPerPack || 1,
-      baseUnit: material.baseUnit || MeasurementUnit.PIECES,
-      packUnit: rawMaterial.unit
-    };
-  }
-
-  // Helper function to convert pack quantity to base units
-  private static convertPackToBase(quantity: number, rawMaterial: RawMaterial): number {
-    const packInfo = this.getPackInfo(rawMaterial);
-    if (!packInfo) return quantity;
-
-    return quantity * packInfo.unitsPerPack;
-  }
-
-  // Helper function to convert base units to pack quantity
-  private static convertBaseToPack(baseQuantity: number, rawMaterial: RawMaterial): number {
-    const packInfo = this.getPackInfo(rawMaterial);
-    if (!packInfo) return baseQuantity;
-
-    return baseQuantity / packInfo.unitsPerPack;
-  }
-
   /**
    * Create a new section
    * POST /api/sections
    */
   static async create(data: CreateSectionInput): Promise<ApiResponse<Section>> {
     try {
-      return await apiClient.post<Section>("/sections", data);
+      // Transform data to match backend expectations
+      const transformedData = {
+        ...data,
+        type: data.type.toUpperCase() // Ensure type is uppercase for database enum
+      };
+
+      return await apiClient.post<Section>("/sections", transformedData);
     } catch (error) {
       return {
         data: {} as Section,
@@ -144,7 +118,14 @@ export class SectionsAPI {
   static async update(data: UpdateSectionInput): Promise<ApiResponse<Section>> {
     try {
       const { id, ...updateData } = data;
-      return await apiClient.put<Section>(`/sections/${id}`, updateData);
+
+      // Transform data to match backend expectations
+      const transformedData = {
+        ...updateData,
+        type: updateData.type ? updateData.type.toUpperCase() : updateData.type // Ensure type is uppercase for database enum
+      };
+
+      return await apiClient.put<Section>(`/sections/${id}`, transformedData);
     } catch (error) {
       return {
         data: {} as Section,
@@ -217,7 +198,7 @@ export class SectionsAPI {
 
   /**
    * Record consumption from section
-   * POST /api/sections/:id/consumption
+   * POST /api/sections/:id/consume
    */
   static async recordConsumption(sectionId: string, rawMaterialId: string, quantity: number, consumedBy: string, reason: string, orderId?: string, notes?: string): Promise<ApiResponse<boolean>> {
     try {
@@ -230,7 +211,7 @@ export class SectionsAPI {
         notes
       };
 
-      const response = await apiClient.post<{ success: boolean; message: string }>(`/sections/${sectionId}/consumption`, consumptionData);
+      const response = await apiClient.post<{ success: boolean; message: string }>(`/sections/${sectionId}/consume`, consumptionData);
 
       return {
         data: response.success,

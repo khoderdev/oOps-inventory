@@ -65,7 +65,7 @@ const SectionForm = ({ initialData, onSuccess, onCancel }: SectionFormProps) => 
       newErrors.name = "Section name is required";
     }
 
-    if (!formData.managerId.trim()) {
+    if (!formData.managerId || String(formData.managerId).trim() === "") {
       newErrors.managerId = "Manager is required";
     }
 

@@ -1,7 +1,7 @@
 import express from "express";
 import { changeCurrentUserPassword, changeUserPassword, deleteUserById, getUser, getUsers, updateCurrentUserProfile, updateProfile, updateRole, updateStatus } from "../controllers/userController.js";
 import { authenticate } from "../middleware/auth.js";
-import { requireAdmin, requireOwnershipOrRole } from "../middleware/rbac.js";
+import { requireAdmin, requireManager, requireOwnershipOrRole } from "../middleware/rbac.js";
 
 const router = express.Router();
 
@@ -10,7 +10,7 @@ const router = express.Router();
  * @desc    Get all users with pagination and filtering
  * @access  Private (Admin/Manager only)
  */
-router.get("/", authenticate, requireAdmin, getUsers);
+router.get("/", authenticate, requireManager, getUsers);
 
 /**
  * @route   GET /api/users/:id

@@ -8,6 +8,7 @@ import ReportsPage from "../components/reports/ReportsPage";
 import SectionsPage from "../components/sections/SectionsPage";
 import SettingsPage from "../components/settings/SettingsPage";
 import StockManagementPage from "../components/stock/StockManagementPage";
+import UsersPage from "../components/users/UsersPage";
 
 const router = createBrowserRouter([
   {
@@ -46,6 +47,10 @@ const router = createBrowserRouter([
       {
         path: "settings",
         element: <SettingsPage />
+      },
+      {
+        path: "users",
+        element: <UsersPage />
       }
     ]
   }

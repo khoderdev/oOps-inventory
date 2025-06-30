@@ -1,5 +1,5 @@
 import { clsx } from "clsx";
-import { BarChart3, Building2, Home, Menu, Package, Settings, Warehouse, X } from "lucide-react";
+import { BarChart3, Building2, Home, Menu, Package, Settings, Users, Warehouse, X } from "lucide-react";
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import { useApp } from "../../hooks/useApp";
 import Button from "../ui/Button";
@@ -13,10 +13,16 @@ const navigationItems = [
   { name: "Settings", to: "/settings", icon: Settings }
 ];
 
+// Admin-only navigation items
+const adminNavigationItems = [{ name: "User Management", to: "/users", icon: Users, adminOnly: true }];
+
 const Layout = () => {
   const { state, toggleSidebar, logout } = useApp();
   const { sidebarOpen, user } = state;
   const location = useLocation();
+
+  // Combine navigation items and filter admin-only items
+  const allNavigationItems = [...navigationItems, ...adminNavigationItems.filter(item => !item.adminOnly || user?.role === "ADMIN")];
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50 dark:bg-gray-900">
@@ -35,7 +41,7 @@ const Layout = () => {
 
           {/* Navigation */}
           <nav className="flex-1 overflow-y-auto px-4 py-6 space-y-2">
-            {navigationItems.map(({ name, to, icon: Icon }) => {
+            {allNavigationItems.map(({ name, to, icon: Icon }) => {
               const isActive = location.pathname === to || (to === "/dashboard" && location.pathname === "/");
               return (
                 <NavLink key={name} to={to} className={clsx("flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200", isActive ? "bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300" : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white")}>

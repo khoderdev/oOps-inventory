@@ -435,7 +435,7 @@ export const getSectionInventory = async sectionId => {
     logger.info("Fetching section inventory for:", sectionId);
 
     const inventory = await prisma().sectionInventory.findMany({
-      where: { section_id: sectionId },
+      where: { section_id: parseInt(sectionId) },
       include: {
         section: true,
         raw_material: true

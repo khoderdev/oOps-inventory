@@ -151,15 +151,14 @@ export class User {
   }
 
   /**
-   * Delete user (soft delete)
+   * Delete user (hard delete)
    * @param {number} id - User ID
    * @returns {Promise<boolean>} - True if user was deleted
    */
   static async delete(id) {
     try {
-      await prisma().user.update({
-        where: { id },
-        data: { is_active: false }
+      await prisma().user.delete({
+        where: { id }
       });
       return true;
     } catch (error) {
@@ -167,6 +166,11 @@ export class User {
 
       if (error.code === "P2025") {
         return false; // User not found
+      }
+
+      // Handle foreign key constraint errors
+      if (error.code === "P2003") {
+        throw new Error("Cannot delete user: user has associated records. Please remove related data first.");
       }
 
       throw error;
@@ -179,7 +183,7 @@ export class User {
    * @returns {Promise<Object>} - Users and pagination info
    */
   static async findAll(options = {}) {
-    const { page = 1, limit = 10, role, isActive = true, search } = options;
+    const { page = 1, limit = 10, role, isActive, search } = options;
 
     const skip = (page - 1) * limit;
 
