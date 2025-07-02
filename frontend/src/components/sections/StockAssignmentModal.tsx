@@ -121,13 +121,14 @@ const StockAssignmentModal = ({ section, isOpen, onClose, onSuccess }: StockAssi
 
     try {
       // Send the quantity as entered by user (pack quantity for pack/box materials)
-      // The backend will handle the conversion to base units
+      // For pack materials: user enters 13 packs -> send 13 to backend
+      // Backend should assign 13 packs, not convert to 78 pieces
       const quantityToSend = quantity;
 
       const assignmentData = {
         sectionId: section.id,
         rawMaterialId: selectedMaterialId,
-        quantity: quantityToSend,
+        quantity: quantityToSend, // This should be in the unit shown to user (packs for pack materials)
         assignedBy: state.user?.id || "1",
         notes: `Assigned to ${section.name}`
       };
@@ -181,7 +182,20 @@ const StockAssignmentModal = ({ section, isOpen, onClose, onSuccess }: StockAssi
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Quantity to Assign</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Quantity to Assign
+                {selectedStockLevel &&
+                  (() => {
+                    const material = selectedStockLevel.rawMaterial;
+                    if (material) {
+                      const isPackOrBox = material.unit === MeasurementUnit.PACKS || material.unit === MeasurementUnit.BOXES;
+                      if (isPackOrBox) {
+                        return <span className="text-xs text-blue-600 dark:text-blue-400 ml-1">(in {material.unit})</span>;
+                      }
+                    }
+                    return null;
+                  })()}
+              </label>
               {selectedStockLevel && (
                 <Button
                   type="button"
@@ -221,7 +235,10 @@ const StockAssignmentModal = ({ section, isOpen, onClose, onSuccess }: StockAssi
                         const isPackOrBox = material.unit === MeasurementUnit.PACKS || material.unit === MeasurementUnit.BOXES;
                         if (isPackOrBox) {
                           const maxPacks = selectedStockLevel.availableUnitsQuantity;
-                          return `Max: ${maxPacks} ${material.unit}`;
+                          const packInfo = material as unknown as { unitsPerPack?: number; baseUnit?: string };
+                          const unitsPerPack = packInfo.unitsPerPack || 1;
+                          const baseUnit = packInfo.baseUnit || "pieces";
+                          return `Enter quantity in ${material.unit} (Max: ${maxPacks} ${material.unit} = ${maxPacks * unitsPerPack} ${baseUnit})`;
                         } else {
                           return `Max: ${selectedStockLevel.availableUnitsQuantity} ${material.unit}`;
                         }
@@ -236,9 +253,34 @@ const StockAssignmentModal = ({ section, isOpen, onClose, onSuccess }: StockAssi
 
           {quantity > 0 && selectedStockLevel && (
             <div className="bg-gray-50 p-4 rounded-lg dark:bg-gray-900/10">
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Total Value:</span>
-                <span className="text-lg font-bold text-gray-900 dark:text-gray-300">${(quantity * (selectedStockLevel.rawMaterial?.unitCost || 0)).toFixed(2)}</span>
+              <div className="space-y-2">
+                {/* Assignment Preview */}
+                {(() => {
+                  const material = selectedStockLevel.rawMaterial;
+                  if (material) {
+                    const isPackOrBox = material.unit === MeasurementUnit.PACKS || material.unit === MeasurementUnit.BOXES;
+                    if (isPackOrBox) {
+                      const packInfo = material as unknown as { unitsPerPack?: number; baseUnit?: string };
+                      const unitsPerPack = packInfo.unitsPerPack || 1;
+                      const baseUnit = packInfo.baseUnit || "pieces";
+                      const totalPieces = quantity * unitsPerPack;
+                      return (
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="font-medium text-gray-700 dark:text-gray-300">Will Assign:</span>
+                          <span className="text-gray-900 dark:text-gray-300 font-bold">
+                            {quantity} {material.unit} = {totalPieces} {baseUnit}
+                          </span>
+                        </div>
+                      );
+                    }
+                  }
+                  return null;
+                })()}
+
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Total Value:</span>
+                  <span className="text-lg font-bold text-gray-900 dark:text-gray-300">${(quantity * (selectedStockLevel.rawMaterial?.unitCost || 0)).toFixed(2)}</span>
+                </div>
               </div>
             </div>
           )}

@@ -21,6 +21,7 @@ const StockEntryForm = ({ onSuccess, onCancel, initialData }: ExtendedStockEntry
     supplier: "",
     batchNumber: "",
     expiryDate: "",
+    productionDate: "",
     receivedDate: new Date().toISOString().split("T")[0],
     notes: ""
   });
@@ -48,6 +49,7 @@ const StockEntryForm = ({ onSuccess, onCancel, initialData }: ExtendedStockEntry
         supplier: initialData.supplier || "",
         batchNumber: initialData.batchNumber || "",
         expiryDate: initialData.expiryDate ? new Date(initialData.expiryDate).toISOString().split("T")[0] || "" : "",
+        productionDate: initialData.productionDate ? new Date(initialData.productionDate).toISOString().split("T")[0] || "" : "",
         receivedDate: receivedDateString,
         notes: initialData.notes || ""
       });
@@ -100,10 +102,6 @@ const StockEntryForm = ({ onSuccess, onCancel, initialData }: ExtendedStockEntry
       newErrors.quantity = "Quantity must be greater than 0";
     }
 
-    if (formData.unitCost <= 0) {
-      newErrors.unitCost = "Unit cost must be greater than 0";
-    }
-
     if (!formData.receivedDate) {
       newErrors.receivedDate = "Received date is required";
     }
@@ -129,6 +127,7 @@ const StockEntryForm = ({ onSuccess, onCancel, initialData }: ExtendedStockEntry
           supplier: formData.supplier || undefined,
           batchNumber: formData.batchNumber || undefined,
           expiryDate: formData.expiryDate ? new Date(formData.expiryDate) : undefined,
+          productionDate: formData.productionDate ? new Date(formData.productionDate) : undefined,
           receivedDate: new Date(formData.receivedDate!),
           receivedBy: state.user?.id || "1",
           notes: formData.notes || undefined
@@ -141,6 +140,7 @@ const StockEntryForm = ({ onSuccess, onCancel, initialData }: ExtendedStockEntry
           supplier: formData.supplier || undefined,
           batchNumber: formData.batchNumber || undefined,
           expiryDate: formData.expiryDate ? new Date(formData.expiryDate) : undefined,
+          productionDate: formData.productionDate ? new Date(formData.productionDate) : undefined,
           receivedDate: new Date(formData.receivedDate!),
           receivedBy: state.user?.id || "1",
           notes: formData.notes || undefined
@@ -168,8 +168,8 @@ const StockEntryForm = ({ onSuccess, onCancel, initialData }: ExtendedStockEntry
       rawMaterialId: materialId,
       // Auto-load default supplier from raw material
       supplier: material?.supplier || prev.supplier,
-      // Auto-load unit cost if not set
-      unitCost: prev.unitCost === 0 && material ? material.unitCost : prev.unitCost
+      // Auto-load unit cost from selected material
+      unitCost: material ? material.unitCost : prev.unitCost
     }));
 
     // Clear material error
@@ -208,7 +208,7 @@ const StockEntryForm = ({ onSuccess, onCancel, initialData }: ExtendedStockEntry
 
         <Input label="Quantity" type="number" min="0" step="0.01" value={formData.quantity} onChange={e => handleInputChange("quantity", parseFloat(e.target.value) || 0)} error={errors.quantity} required helperText={selectedMaterial ? `Unit: ${selectedMaterial.unit}` : undefined} />
 
-        <Input label="Unit Cost" type="number" step="0.01" min="0" value={formData.unitCost} onChange={e => handleInputChange("unitCost", parseFloat(e.target.value) || 0)} error={errors.unitCost} required placeholder="0.00" helperText={selectedMaterial && (selectedMaterial.unit === MeasurementUnit.PACKS || selectedMaterial.unit === MeasurementUnit.BOXES) ? `Cost per ${selectedMaterial.unit.toLowerCase()}` : undefined} />
+        <Input label="Unit Cost" type="number" step="0.01" min="0" value={formData.unitCost} onChange={e => handleInputChange("unitCost", parseFloat(e.target.value) || 0)} error={errors.unitCost} placeholder="0.00" helperText={selectedMaterial ? `Auto-filled from material (${selectedMaterial.unit === MeasurementUnit.PACKS || selectedMaterial.unit === MeasurementUnit.BOXES ? `Cost per ${selectedMaterial.unit.toLowerCase()}` : "Unit cost"})` : "Will be auto-filled when material is selected"} />
 
         {/* Enhanced Supplier Input */}
         <div className="space-y-2">
@@ -262,6 +262,8 @@ const StockEntryForm = ({ onSuccess, onCancel, initialData }: ExtendedStockEntry
         <Input label="Batch Number" value={formData.batchNumber} onChange={e => handleInputChange("batchNumber", e.target.value)} placeholder="Optional batch/lot number" />
 
         <Input label="Received Date" type="date" value={formData.receivedDate} onChange={e => handleInputChange("receivedDate", e.target.value)} error={errors.receivedDate} required />
+
+        <Input label="Production Date" type="date" value={formData.productionDate} onChange={e => handleInputChange("productionDate", e.target.value)} helperText="Optional production/manufacturing date" />
 
         <Input label="Expiry Date" type="date" value={formData.expiryDate} onChange={e => handleInputChange("expiryDate", e.target.value)} helperText="Optional expiry date" />
 

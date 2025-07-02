@@ -19,7 +19,7 @@ export enum MaterialCategory {
   VEGETABLES = "vegetables",
   DAIRY = "dairy",
   BEVERAGES = "beverages",
-  CONDIMENTS = "condiments",
+  BREAD = "bread",
   GRAINS = "grains",
   SPICES = "spices",
   PACKAGING = "packaging",

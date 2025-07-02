@@ -21,7 +21,7 @@ const StockEntriesTab = () => {
   const [editingEntry, setEditingEntry] = useState<StockEntry | null>(null);
 
   const { data: stockEntries = [], isLoading } = useStockEntries();
-  const { data: rawMaterials = [] } = useRawMaterials({ isActive: true });
+  const { data: rawMaterials = [] } = useRawMaterials(); // Remove isActive filter to include all materials
   const deleteMutation = useDeleteStockEntry();
 
   // Get unique suppliers
@@ -96,7 +96,8 @@ const StockEntriesTab = () => {
       key: "rawMaterialId",
       title: "Material",
       render: (item: StockEntry) => {
-        const material = rawMaterials.find(m => m.id === item.rawMaterialId);
+        // Use the nested rawMaterial data from the API response
+        const material = item.rawMaterial || rawMaterials.find(m => m.id == item.rawMaterialId);
         return (
           <div>
             <p className="font-medium text-gray-900 dark:text-white">{material?.name || "Unknown"}</p>
@@ -110,7 +111,7 @@ const StockEntriesTab = () => {
       title: "Quantity",
       sortable: true,
       render: (item: StockEntry) => {
-        const material = rawMaterials.find(m => m.id === item.rawMaterialId);
+        const material = item.rawMaterial || rawMaterials.find(m => m.id == item.rawMaterialId);
         if (!material) return `${item.quantity}`;
 
         // Check if this is a pack/box material
@@ -139,7 +140,7 @@ const StockEntriesTab = () => {
       title: "Unit Cost",
       sortable: true,
       render: (item: StockEntry) => {
-        const material = rawMaterials.find(m => m.id === item.rawMaterialId);
+        const material = item.rawMaterial || rawMaterials.find(m => m.id == item.rawMaterialId);
         if (!material) return `$${item.unitCost.toFixed(2)}`;
 
         // Check if this is a pack/box material
@@ -182,7 +183,7 @@ const StockEntriesTab = () => {
       title: "Total Cost",
       sortable: true,
       render: (item: StockEntry) => {
-        const material = rawMaterials.find(m => m.id === item.rawMaterialId);
+        const material = item.rawMaterial || rawMaterials.find(m => m.id == item.rawMaterialId);
         if (!material) return `$${item.totalCost.toFixed(2)}`;
 
         // Check if this is a pack/box material

@@ -10,6 +10,7 @@ export interface StockEntry extends BaseEntity {
   supplier?: string;
   batchNumber?: string;
   expiryDate?: Date;
+  productionDate?: Date;
   receivedDate: Date;
   receivedBy: string;
   user?: User;
@@ -58,6 +59,7 @@ export interface CreateStockEntryInput {
   supplier?: string;
   batchNumber?: string;
   expiryDate?: Date;
+  productionDate?: Date;
   receivedDate: Date;
   receivedBy: string;
   notes?: string;

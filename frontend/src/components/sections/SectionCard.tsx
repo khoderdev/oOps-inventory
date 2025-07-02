@@ -1,6 +1,7 @@
 import { Building2, Edit, Eye, Package, Users } from "lucide-react";
 import { useSectionInventory } from "../../hooks/useSections";
 import type { Section } from "../../types";
+import { MeasurementUnit } from "../../types";
 import Button from "../ui/Button";
 
 interface SectionCardProps {
@@ -56,7 +57,21 @@ const SectionCard = ({ section, onView, onEdit }: SectionCardProps) => {
   };
 
   const totalItems = inventory.length;
-  const totalQuantity = inventory.reduce((sum, item) => sum + item.quantity, 0);
+
+  // Calculate total quantity with proper pack/box handling
+  const totalQuantity = inventory.reduce((sum, item) => {
+    const material = item.rawMaterial;
+    if (material && (material.unit === MeasurementUnit.PACKS || material.unit === MeasurementUnit.BOXES)) {
+      // For pack materials, show pack quantity (convert from base units)
+      const packInfo = material as unknown as { unitsPerPack?: number };
+      const unitsPerPack = packInfo.unitsPerPack || 1;
+      const packQuantity = item.quantity / unitsPerPack;
+      return sum + packQuantity;
+    } else {
+      // For regular materials, use quantity directly
+      return sum + item.quantity;
+    }
+  }, 0);
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow">

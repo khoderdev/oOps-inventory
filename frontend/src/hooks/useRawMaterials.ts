@@ -11,9 +11,12 @@ const QUERY_KEYS = {
 
 // Get all raw materials
 export const useRawMaterials = (filters?: { category?: string; isActive?: boolean; search?: string }) => {
+  // Default to active materials only if isActive is not explicitly set
+  const effectiveFilters = filters?.isActive !== undefined ? filters : { ...filters, isActive: true };
+
   return useQuery({
-    queryKey: [QUERY_KEYS.rawMaterials, filters],
-    queryFn: () => RawMaterialsAPI.getAll(filters),
+    queryKey: [QUERY_KEYS.rawMaterials, effectiveFilters],
+    queryFn: () => RawMaterialsAPI.getAll(effectiveFilters),
     select: response => response.data,
     staleTime: 5 * 60 * 1000 // 5 minutes
   });
