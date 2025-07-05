@@ -1,11 +1,19 @@
-import React, { useState } from "react";
-import { useRawMaterials } from "../../../hooks/useRawMaterials";
+import type { ColumnDef } from "@tanstack/react-table";
+import React, { useMemo, useState } from "react";
 import { useCreateSupplier, useSupplierAnalytics, useSuppliers, useUpdateSupplier } from "../../../hooks/useSuppliers";
 import type { CreateSupplierRequest, SupplierFilters, SupplierType } from "../../../types";
 import { getSupplierGrade, SupplierGrades } from "../../../types/suppliers.types";
 import { formatCurrency } from "../../../utils/quantity";
 import { SupplierForm } from "../../forms/SupplierForm";
 import { Button, Modal, Table } from "../../ui";
+
+interface TopSupplierData {
+  name: string;
+  rating?: number;
+  orderCount: number;
+  totalValue: number;
+  avgOrderValue: number;
+}
 
 export const SuppliersTab: React.FC = () => {
   const [filters, setFilters] = useState<SupplierFilters>({});
@@ -16,12 +24,71 @@ export const SuppliersTab: React.FC = () => {
 
   const { data: suppliersData, isLoading } = useSuppliers(filters);
   const { data: analytics } = useSupplierAnalytics(30);
-  const { data: rawMaterialsData } = useRawMaterials({ category: "ALL", isActive: true, search: "" });
   const createSupplier = useCreateSupplier();
   const updateSupplier = useUpdateSupplier();
 
   const suppliers = suppliersData?.suppliers || [];
-  const rawMaterials = rawMaterialsData || [];
+
+  // Define columns for top suppliers table
+  const topSuppliersColumns = useMemo<ColumnDef<TopSupplierData>[]>(() => [
+    {
+      accessorKey: "name",
+      header: "Supplier",
+      size: 200,
+      minSize: 150,
+      maxSize: 300,
+      enableSorting: true,
+      meta: { align: "left" },
+    },
+    {
+      accessorKey: "rating",
+      header: "Rating",
+      size: 150,
+      minSize: 120,
+      maxSize: 200,
+      enableSorting: true,
+      meta: { align: "center" },
+      cell: ({ getValue }) => {
+        const rating = getValue() as number;
+        return rating ? renderSupplierGrade(rating) : "Not Rated";
+      },
+    },
+    {
+      accessorKey: "orderCount",
+      header: "Orders",
+      size: 100,
+      minSize: 80,
+      maxSize: 120,
+      enableSorting: true,
+      meta: { align: "center" },
+    },
+    {
+      accessorKey: "totalValue",
+      header: "Total Value",
+      size: 130,
+      minSize: 100,
+      maxSize: 160,
+      enableSorting: true,
+      meta: { align: "right" },
+      cell: ({ getValue }) => {
+        const value = getValue() as number;
+        return formatCurrency(value);
+      },
+    },
+    {
+      accessorKey: "avgOrderValue",
+      header: "Avg Order Value",
+      size: 140,
+      minSize: 120,
+      maxSize: 180,
+      enableSorting: true,
+      meta: { align: "right" },
+      cell: ({ getValue }) => {
+        const value = getValue() as number;
+        return formatCurrency(value);
+      },
+    },
+  ], []);
 
   const handleCreateSupplier = async (data: CreateSupplierRequest) => {
     try {
@@ -262,14 +329,11 @@ export const SuppliersTab: React.FC = () => {
             </div>
             <div className="p-6">
               <Table
-                columns={[
-                  { header: "Supplier", accessor: "name" },
-                  { header: "Rating", accessor: "rating", cell: (rating: number) => renderSupplierGrade(rating) },
-                  { header: "Orders", accessor: "orderCount" },
-                  { header: "Total Value", accessor: "totalValue", cell: (value: number) => formatCurrency(value) },
-                  { header: "Avg Order Value", accessor: "avgOrderValue", cell: (value: number) => formatCurrency(value) }
-                ]}
+                columns={topSuppliersColumns}
                 data={analytics.topSuppliers}
+                enableColumnResizing={true}
+                enableSorting={true}
+                maxHeight="400px"
               />
             </div>
           </div>

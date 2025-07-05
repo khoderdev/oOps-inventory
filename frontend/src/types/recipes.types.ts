@@ -93,6 +93,12 @@ export interface Sale {
 }
 
 export interface MenuEngineering {
+  matrix: {
+    stars: MenuItemAnalysis[];
+    plowhorses: MenuItemAnalysis[];
+    puzzles: MenuItemAnalysis[];
+    dogs: MenuItemAnalysis[];
+  };
   menuItems: MenuItemAnalysis[];
   analysis: {
     stars: MenuItemAnalysis[];

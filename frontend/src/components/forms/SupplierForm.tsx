@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import type { CreateSupplierRequest, SupplierType as Supplier } from "../../types";
-import { Button } from "../ui";
+import { Button, Input } from "../ui";
 
 interface SupplierFormProps {
   supplier?: Supplier | null;
@@ -87,39 +87,39 @@ export const SupplierForm: React.FC<SupplierFormProps> = ({ supplier, onSubmit, 
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Supplier Name *</label>
-          <input type="text" value={formData.name} onChange={e => handleInputChange("name", e.target.value)} className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" required />
+          <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-200">Supplier Name *</label>
+          <Input type="text" value={formData.name} onChange={e => handleInputChange("name", e.target.value)} required />
           {errors.name && <p className="text-sm text-red-600 mt-1">{errors.name}</p>}
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Contact Person</label>
-          <input type="text" value={formData.contact_person || ""} onChange={e => handleInputChange("contact_person", e.target.value)} className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" />
+          <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-200">Contact Person</label>
+          <Input type="text" value={formData.contact_person || ""} onChange={e => handleInputChange("contact_person", e.target.value)} />
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-          <input type="email" value={formData.email || ""} onChange={e => handleInputChange("email", e.target.value)} className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" />
+          <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-200">Email</label>
+          <Input type="email" value={formData.email || ""} onChange={e => handleInputChange("email", e.target.value)} />
           {errors.email && <p className="text-sm text-red-600 mt-1">{errors.email}</p>}
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-          <input type="tel" value={formData.phone || ""} onChange={e => handleInputChange("phone", e.target.value)} className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" />
+          <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-200">Phone</label>
+          <Input type="tel" value={formData.phone || ""} onChange={e => handleInputChange("phone", e.target.value)} />
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Payment Terms (days)</label>
-          <input type="number" value={formData.payment_terms || ""} onChange={e => handleInputChange("payment_terms", parseInt(e.target.value) || undefined)} min="0" className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" />
+          <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-200">Payment Terms (days)</label>
+          <Input type="number" value={formData.payment_terms || ""} onChange={e => handleInputChange("payment_terms", parseInt(e.target.value) || undefined)} min="0" />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Lead Time (days)</label>
-          <input type="number" value={formData.lead_time_days || ""} onChange={e => handleInputChange("lead_time_days", parseInt(e.target.value) || undefined)} min="0" className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" />
+          <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-200">Lead Time (days)</label>
+          <Input type="number" value={formData.lead_time_days || ""} onChange={e => handleInputChange("lead_time_days", parseInt(e.target.value) || undefined)} min="0" />
         </div>
       </div>
 

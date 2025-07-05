@@ -1,7 +1,9 @@
-import React, { useState } from "react";
+import type { ColumnDef } from "@tanstack/react-table";
+import React, { useMemo, useState } from "react";
 import { useRawMaterials } from "../../../hooks/useRawMaterials";
 import { useCreateRecipe, useMenuEngineering, useRecipeCost, useRecipes, useUpdateRecipe } from "../../../hooks/useRecipes";
 import { MenuCategoryLabels, type CreateRecipeRequest, type MenuCategory, type Recipe, type RecipeFilters } from "../../../types";
+import type { MenuItemAnalysis } from "../../../types/recipes.types";
 import { formatCurrency } from "../../../utils/quantity";
 import { RecipeForm } from "../../forms/RecipeForm";
 import { Button, Modal, Table } from "../../ui";
@@ -21,6 +23,143 @@ export const RecipesTab: React.FC = () => {
 
   const recipes = recipesData?.recipes || [];
   const rawMaterials = rawMaterialsData?.materials || [];
+
+  // Define table columns with proper TanStack Table ColumnDef types
+  const recipeColumns = useMemo<ColumnDef<Recipe>[]>(
+    () => [
+      {
+        id: "name",
+        header: "Recipe Name",
+        accessorKey: "name",
+        size: 250,
+        minSize: 200,
+        maxSize: 400,
+        enableSorting: true,
+        cell: ({ row, getValue }) => {
+          const name = getValue() as string;
+          const description = row.original.description;
+          return (
+            <div className="min-w-0">
+              <div className="font-medium text-gray-900 dark:text-gray-100 truncate" title={name}>
+                {name}
+              </div>
+              {description && (
+                <div className="text-sm text-gray-500 dark:text-gray-400 truncate max-w-xs" title={description}>
+                  {description}
+                </div>
+              )}
+            </div>
+          );
+        }
+      },
+      {
+        id: "category",
+        header: "Category",
+        accessorKey: "category",
+        size: 140,
+        minSize: 120,
+        maxSize: 180,
+        enableSorting: true,
+        meta: { align: "center" },
+        cell: ({ getValue }) => {
+          const category = getValue() as MenuCategory;
+          return renderCategoryBadge(category);
+        }
+      },
+      {
+        id: "serving_size",
+        header: "Servings",
+        accessorKey: "serving_size",
+        size: 100,
+        minSize: 80,
+        maxSize: 120,
+        enableSorting: true,
+        meta: { align: "center" },
+        cell: ({ getValue }) => {
+          const size = getValue() as number;
+          return <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{size} portions</span>;
+        }
+      },
+      {
+        id: "prep_time",
+        header: "Prep Time",
+        accessorKey: "prep_time",
+        size: 100,
+        minSize: 80,
+        maxSize: 120,
+        enableSorting: true,
+        meta: { align: "center" },
+        cell: ({ getValue }) => {
+          const time = getValue() as number;
+          return <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{time} min</span>;
+        }
+      },
+      {
+        id: "ingredients",
+        header: "Ingredients",
+        accessorKey: "ingredients",
+        size: 120,
+        minSize: 100,
+        maxSize: 150,
+        enableSorting: false,
+        meta: { align: "center" },
+        cell: ({ getValue }) => {
+          const ingredients = getValue() as unknown[];
+          const count = ingredients?.length || 0;
+          return (
+            <span className="text-sm text-gray-600 dark:text-gray-400">
+              {count} {count === 1 ? "item" : "items"}
+            </span>
+          );
+        }
+      },
+      {
+        id: "cost",
+        header: "Recipe Cost",
+        accessorKey: "id",
+        size: 140,
+        minSize: 120,
+        maxSize: 180,
+        enableSorting: false,
+        meta: { align: "right" },
+        cell: ({ getValue }) => {
+          const id = getValue() as number;
+          return <RecipeCostCell recipeId={id} />;
+        }
+      },
+      {
+        id: "actions",
+        header: "Actions",
+        accessorKey: "id",
+        size: 140,
+        minSize: 120,
+        maxSize: 160,
+        enableSorting: false,
+        meta: { align: "center" },
+        cell: ({ row }) => {
+          return (
+            <div className="flex items-center justify-center space-x-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setSelectedRecipe(row.original);
+                  setShowEditModal(true);
+                }}
+                className="text-xs"
+              >
+                Edit
+              </Button>
+              <Button size="sm" variant="ghost" className="text-xs">
+                View
+              </Button>
+            </div>
+          );
+        }
+      }
+    ],
+    []
+  );
 
   const handleCreateRecipe = async (data: CreateRecipeRequest) => {
     try {
@@ -78,11 +217,11 @@ export const RecipesTab: React.FC = () => {
       </div>
 
       {/* Filters */}
-      <div className="bg-white p-4 rounded-lg border border-gray-200">
+      <div className="bg-white p-4 rounded-lg border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-            <select value={filters.category || ""} onChange={e => setFilters({ ...filters, category: (e.target.value as MenuCategory) || undefined })} className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+            <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-400">Category</label>
+            <select value={filters.category || ""} onChange={e => setFilters({ ...filters, category: (e.target.value as MenuCategory) || undefined })} className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-700 dark:text-gray-400">
               <option value="">All Categories</option>
               {Object.entries(MenuCategoryLabels).map(([value, label]) => (
                 <option key={value} value={value}>
@@ -104,73 +243,13 @@ export const RecipesTab: React.FC = () => {
       </div>
 
       {/* Recipes Table */}
-      <div className="bg-white rounded-lg shadow">
+      <div className="bg-white rounded-lg shadow dark:bg-gray-800 dark:border-gray-700">
         {isLoading ? (
           <div className="flex items-center justify-center h-64">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 dark:border-blue-400"></div>
           </div>
         ) : (
-          <Table
-            columns={[
-              {
-                header: "Recipe Name",
-                accessor: "name",
-                cell: (value: string, row: Recipe) => (
-                  <div>
-                    <div className="font-medium text-gray-900">{value}</div>
-                    {row.description && <div className="text-sm text-gray-500 truncate max-w-xs">{row.description}</div>}
-                  </div>
-                )
-              },
-              {
-                header: "Category",
-                accessor: "category",
-                cell: (category: MenuCategory) => renderCategoryBadge(category)
-              },
-              {
-                header: "Servings",
-                accessor: "serving_size",
-                cell: (size: number) => `${size} portions`
-              },
-              {
-                header: "Prep Time",
-                accessor: "prep_time",
-                cell: (time: number) => `${time} min`
-              },
-              {
-                header: "Ingredients",
-                accessor: "ingredients",
-                cell: (ingredients: any[]) => `${ingredients?.length || 0} items`
-              },
-              {
-                header: "Recipe Cost",
-                accessor: "id",
-                cell: (id: number) => <RecipeCostCell recipeId={id} />
-              },
-              {
-                header: "Actions",
-                accessor: "id",
-                cell: (id: number, row: Recipe) => (
-                  <div className="flex space-x-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        setSelectedRecipe(row);
-                        setShowEditModal(true);
-                      }}
-                    >
-                      Edit
-                    </Button>
-                    <Button size="sm" variant="ghost">
-                      View
-                    </Button>
-                  </div>
-                )
-              }
-            ]}
-            data={recipes}
-          />
+          <Table data={recipes} columns={recipeColumns} enableColumnResizing={true} enableSorting={true} maxHeight="600px" stickyHeader={true} emptyMessage="No recipes found. Create your first recipe to get started." />
         )}
       </div>
     </div>
@@ -204,10 +283,10 @@ export const RecipesTab: React.FC = () => {
                   </div>
                   <p className="text-sm text-green-700 mb-3">High popularity, high profitability</p>
                   <div className="space-y-2">
-                    {menuEngineering.matrix.stars.slice(0, 3).map((item: any) => (
+                    {menuEngineering.matrix.stars.slice(0, 3).map((item: MenuItemAnalysis) => (
                       <div key={item.id} className="flex justify-between text-sm">
                         <span className="text-green-800">{item.name}</span>
-                        <span className="text-green-600">{formatCurrency(item.profitMargin)}</span>
+                        <span className="text-green-600">{formatCurrency(item.marginAmount)}</span>
                       </div>
                     ))}
                   </div>
@@ -222,10 +301,10 @@ export const RecipesTab: React.FC = () => {
                   </div>
                   <p className="text-sm text-yellow-700 mb-3">High popularity, low profitability</p>
                   <div className="space-y-2">
-                    {menuEngineering.matrix.plowhorses.slice(0, 3).map((item: any) => (
+                    {menuEngineering.matrix.plowhorses.slice(0, 3).map((item: MenuItemAnalysis) => (
                       <div key={item.id} className="flex justify-between text-sm">
                         <span className="text-yellow-800">{item.name}</span>
-                        <span className="text-yellow-600">{formatCurrency(item.profitMargin)}</span>
+                        <span className="text-yellow-600">{formatCurrency(item.marginAmount)}</span>
                       </div>
                     ))}
                   </div>
@@ -240,10 +319,10 @@ export const RecipesTab: React.FC = () => {
                   </div>
                   <p className="text-sm text-blue-700 mb-3">Low popularity, high profitability</p>
                   <div className="space-y-2">
-                    {menuEngineering.matrix.puzzles.slice(0, 3).map((item: any) => (
+                    {menuEngineering.matrix.puzzles.slice(0, 3).map((item: MenuItemAnalysis) => (
                       <div key={item.id} className="flex justify-between text-sm">
                         <span className="text-blue-800">{item.name}</span>
-                        <span className="text-blue-600">{formatCurrency(item.profitMargin)}</span>
+                        <span className="text-blue-600">{formatCurrency(item.marginAmount)}</span>
                       </div>
                     ))}
                   </div>
@@ -258,10 +337,10 @@ export const RecipesTab: React.FC = () => {
                   </div>
                   <p className="text-sm text-red-700 mb-3">Low popularity, low profitability</p>
                   <div className="space-y-2">
-                    {menuEngineering.matrix.dogs.slice(0, 3).map((item: any) => (
+                    {menuEngineering.matrix.dogs.slice(0, 3).map((item: MenuItemAnalysis) => (
                       <div key={item.id} className="flex justify-between text-sm">
                         <span className="text-red-800">{item.name}</span>
-                        <span className="text-red-600">{formatCurrency(item.profitMargin)}</span>
+                        <span className="text-red-600">{formatCurrency(item.marginAmount)}</span>
                       </div>
                     ))}
                   </div>
@@ -277,12 +356,12 @@ export const RecipesTab: React.FC = () => {
             </div>
             <div className="p-6">
               <div className="space-y-4">
-                {menuEngineering.recommendations.map((rec: any, index: number) => (
+                {menuEngineering.summary.recommendations.map((rec, index: number) => (
                   <div key={index} className="border border-gray-200 rounded-lg p-4">
                     <div className="flex items-start justify-between">
                       <div>
-                        <h5 className="font-medium text-gray-900">{rec.item}</h5>
-                        <p className="text-sm text-gray-600 mt-1">{rec.recommendation}</p>
+                        <h5 className="font-medium text-gray-900">{rec.category}</h5>
+                        <p className="text-sm text-gray-600 mt-1">{rec.description}</p>
                       </div>
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${rec.priority === "HIGH" ? "bg-red-100 text-red-800" : rec.priority === "MEDIUM" ? "bg-yellow-100 text-yellow-800" : "bg-green-100 text-green-800"}`}>{rec.priority}</span>
                     </div>
@@ -346,7 +425,7 @@ export const RecipesTab: React.FC = () => {
       {renderContent()}
 
       {/* Create Recipe Modal */}
-      <Modal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)} title="Create New Recipe" size="large">
+      <Modal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)} title="Create New Recipe" size="lg">
         <div className="p-6">
           <RecipeForm onSubmit={handleCreateRecipe} onCancel={() => setShowCreateModal(false)} isLoading={createRecipe.isPending} rawMaterials={rawMaterials} />
         </div>

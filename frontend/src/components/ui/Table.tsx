@@ -16,11 +16,24 @@ interface TableProps<T extends object> {
   stickyHeader?: boolean;
 }
 
-function Table<T extends object>({ data, columns, loading = false, emptyMessage = "No data available", className, enableColumnResizing = true, enableSorting = true, maxHeight = "500px", stickyHeader = true }: TableProps<T>) {
+function Table<T extends object>({
+  data,
+  columns,
+  loading = false,
+  emptyMessage = "No data available",
+  className,
+  enableColumnResizing = true,
+  enableSorting = true,
+  maxHeight = "500px",
+  stickyHeader = true
+}: TableProps<T>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [isResizing, setIsResizing] = React.useState(false);
+  const [resizingColumnId, setResizingColumnId] = React.useState<string | null>(null);
+  const [hoveredColumnId, setHoveredColumnId] = React.useState<string | null>(null);
   const tableRef = useRef<HTMLTableElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const resizeHandleRef = useRef<HTMLDivElement>(null);
 
   const table = useReactTable({
     data,
@@ -42,25 +55,63 @@ function Table<T extends object>({ data, columns, loading = false, emptyMessage 
   });
 
   // Handle resize start/end for smooth UX
-  const handleResizeStart = useCallback(() => {
+  const handleResizeStart = useCallback((columnId: string) => {
     setIsResizing(true);
-    document.body.style.cursor = "col-resize";
-    document.body.style.userSelect = "none";
+    setResizingColumnId(columnId);
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    document.body.style.pointerEvents = 'none';
   }, []);
 
   const handleResizeEnd = useCallback(() => {
     setIsResizing(false);
-    document.body.style.cursor = "";
-    document.body.style.userSelect = "";
+    setResizingColumnId(null);
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+    document.body.style.pointerEvents = '';
   }, []);
 
-  // Cleanup on unmount
+  // Handle mouse events for resize handles
+  const handleMouseEnterResize = useCallback((columnId: string) => {
+    if (!isResizing) {
+      setHoveredColumnId(columnId);
+    }
+  }, [isResizing]);
+
+  const handleMouseLeaveResize = useCallback(() => {
+    if (!isResizing) {
+      setHoveredColumnId(null);
+    }
+  }, [isResizing]);
+
+  // Cleanup on unmount and handle global mouse events
   useEffect(() => {
-    return () => {
-      document.body.style.cursor = "";
-      document.body.style.userSelect = "";
+    const handleGlobalMouseUp = () => {
+      if (isResizing) {
+        handleResizeEnd();
+      }
     };
-  }, []);
+
+    const handleGlobalMouseMove = (e: MouseEvent) => {
+      if (isResizing) {
+        // Prevent text selection during resize
+        e.preventDefault();
+      }
+    };
+
+    if (isResizing) {
+      document.addEventListener('mouseup', handleGlobalMouseUp);
+      document.addEventListener('mousemove', handleGlobalMouseMove);
+    }
+
+    return () => {
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      document.body.style.pointerEvents = '';
+      document.removeEventListener('mouseup', handleGlobalMouseUp);
+      document.removeEventListener('mousemove', handleGlobalMouseMove);
+    };
+  }, [isResizing, handleResizeEnd]);
 
   // Auto-fit columns on data change
   useEffect(() => {
@@ -141,25 +192,52 @@ function Table<T extends object>({ data, columns, loading = false, emptyMessage 
                       {/* Enhanced Resize Handle */}
                       {canResize && (
                         <div
-                          onMouseDown={e => {
-                            handleResizeStart();
+                          ref={header.id === resizingColumnId ? resizeHandleRef : null}
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleResizeStart(header.id);
                             header.getResizeHandler()(e);
                           }}
-                          onMouseUp={handleResizeEnd}
-                          onTouchStart={e => {
-                            handleResizeStart();
+                          onMouseEnter={() => handleMouseEnterResize(header.id)}
+                          onMouseLeave={handleMouseLeaveResize}
+                          onTouchStart={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleResizeStart(header.id);
                             header.getResizeHandler()(e);
                           }}
-                          onTouchEnd={handleResizeEnd}
-                          className={clsx("absolute right-0 top-0 h-full w-2 cursor-col-resize", "flex items-center justify-center", "opacity-0 group-hover:opacity-100 transition-opacity duration-200", "hover:bg-blue-500 hover:w-1", isResizing && "opacity-100 bg-blue-500 w-1")}
+                          className={clsx(
+                            "absolute right-0 top-0 h-full cursor-col-resize z-20",
+                            "flex items-center justify-center transition-all duration-200",
+                            // Width and visibility based on state
+                            {
+                              "w-1 bg-blue-500 opacity-100": resizingColumnId === header.id,
+                              "w-2 opacity-100": hoveredColumnId === header.id && !isResizing,
+                              "w-1 opacity-0 group-hover:opacity-60": hoveredColumnId !== header.id && resizingColumnId !== header.id
+                            },
+                            // Hover effects
+                            "hover:bg-blue-400 hover:opacity-100"
+                          )}
                           title="Drag to resize column"
                         >
-                          <GripVertical className="w-3 h-3 text-gray-400 hover:text-white transition-colors" />
+                          {(hoveredColumnId === header.id || resizingColumnId === header.id) && (
+                            <GripVertical 
+                              className={clsx(
+                                "w-3 h-3 transition-colors duration-200",
+                                resizingColumnId === header.id 
+                                  ? "text-white" 
+                                  : "text-gray-400 hover:text-white"
+                              )} 
+                            />
+                          )}
                         </div>
                       )}
 
-                      {/* Resize indicator */}
-                      {canResize && isResizing && <div className="absolute right-0 top-0 h-full w-1 bg-blue-500 shadow-lg" />}
+                      {/* Active resize indicator line */}
+                      {canResize && resizingColumnId === header.id && (
+                        <div className="absolute right-0 top-0 h-full w-0.5 bg-blue-500 shadow-lg z-30 animate-pulse" />
+                      )}
                     </th>
                   );
                 })}
