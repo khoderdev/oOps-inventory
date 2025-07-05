@@ -12,11 +12,11 @@ interface SelectProps extends Omit<SelectHTMLAttributes<HTMLSelectElement>, "chi
   label?: string;
   error?: string;
   helperText?: string;
-  options: SelectOption[];
+  options?: SelectOption[];
   placeholder?: string;
 }
 
-const Select = forwardRef<HTMLSelectElement, SelectProps>(({ label, error, helperText, options, placeholder, className, ...props }, ref) => {
+const Select = forwardRef<HTMLSelectElement, SelectProps>(({ label, error, helperText, options = [], placeholder, className, ...props }, ref) => {
   return (
     <div className="w-full">
       {label && (
@@ -46,7 +46,7 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(({ label, error, helpe
               {placeholder}
             </option>
           )}
-          {options.map(option => (
+          {options?.map(option => (
             <option key={option.value} value={option.value} disabled={option.disabled}>
               {option.label}
             </option>

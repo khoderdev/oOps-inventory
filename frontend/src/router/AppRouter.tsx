@@ -1,10 +1,12 @@
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { ProtectedRoute } from "../components/auth/ProtectedRoute";
 import ErrorPage from "../components/common/ErrorPage";
+import CostControlPage from "../components/costControl/CostControlPage";
 import DashboardPage from "../components/dashboard/DashboardPage";
 import Layout from "../components/layout/Layout";
 import RawMaterialsPage from "../components/rawMaterials/RawMaterialsPage";
 import ReportsPage from "../components/reports/ReportsPage";
+import { RestaurantManagementPage } from "../components/restaurant/RestaurantManagementPage";
 import SectionsPage from "../components/sections/SectionsPage";
 import SettingsPage from "../components/settings/SettingsPage";
 import StockManagementPage from "../components/stock/StockManagementPage";
@@ -43,6 +45,14 @@ const router = createBrowserRouter([
       {
         path: "reports",
         element: <ReportsPage />
+      },
+      {
+        path: "restaurant-management",
+        element: <RestaurantManagementPage />
+      },
+      {
+        path: "cost-control",
+        element: <CostControlPage />
       },
       {
         path: "settings",

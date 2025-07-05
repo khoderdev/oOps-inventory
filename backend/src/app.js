@@ -4,10 +4,16 @@ import rateLimit from "express-rate-limit";
 import helmet from "helmet";
 import { errorHandler } from "./middleware/errorHandler.js";
 import authRoutes from "./routes/auth.js";
+import costControlRoutes from "./routes/costControl.js";
 import rawMaterialRoutes from "./routes/rawMaterials.js";
 import sectionsRoutes from "./routes/sections.js";
 import stockRoutes from "./routes/stock.js";
 import userRoutes from "./routes/users.js";
+// New comprehensive restaurant management routes
+import budgetRoutes from "./routes/budgets.js";
+import purchaseOrderRoutes from "./routes/purchaseOrders.js";
+import recipeRoutes from "./routes/recipes.js";
+import supplierRoutes from "./routes/suppliers.js";
 import logger from "./utils/logger.js";
 
 const app = express();
@@ -15,7 +21,7 @@ const app = express();
 app.use(helmet());
 app.use(
   cors({
-    origin: ["http://localhost:5173", "http://192.168.88.86:5173", process.env.FRONTEND_URL].filter(Boolean),
+    origin: ["http://localhost:5173", "http://192.168.88.86:5173", "http://localhost:5174", "http://192.168.88.86:5174", process.env.FRONTEND_URL].filter(Boolean),
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
     allowedHeaders: ["Content-Type", "Authorization"]
@@ -24,7 +30,7 @@ app.use(
 
 // Rate limiting
 const limiter = rateLimit({
-  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutes
+  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 600 * 1000, // 15 minutes
   max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100, // limit each IP to 100 requests per windowMs
   message: {
     error: "Too many requests from this IP, please try again later."
@@ -60,6 +66,13 @@ app.use("/api/users", userRoutes);
 app.use("/api/raw-materials", rawMaterialRoutes);
 app.use("/api/stock", stockRoutes);
 app.use("/api/sections", sectionsRoutes);
+app.use("/api/cost-control", costControlRoutes);
+
+// New comprehensive restaurant management routes
+app.use("/api/purchase-orders", purchaseOrderRoutes);
+app.use("/api/suppliers", supplierRoutes);
+app.use("/api/recipes", recipeRoutes);
+app.use("/api/budgets", budgetRoutes);
 
 // 404 handler - catch all unmatched routes
 app.use((req, res) => {

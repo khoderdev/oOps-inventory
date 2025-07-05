@@ -14,3 +14,13 @@ export const formatQuantityDisplay = (quantity: number, material: { unit: string
 
   return `${quantity} ${material.unit}`;
 };
+
+// Helper function to format currency values
+export const formatCurrency = (value: number): string => {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(value);
+};

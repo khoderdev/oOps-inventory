@@ -1,5 +1,5 @@
 import { clsx } from "clsx";
-import { BarChart3, Building2, ChevronLeft, ChevronRight, Home, Menu, Package, Settings, Users, Warehouse, X } from "lucide-react";
+import { BarChart3, Building2, ChefHat, ChevronLeft, ChevronRight, DollarSign, Home, Menu, Package, Settings, Users, Warehouse, X } from "lucide-react";
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import { useApp } from "../../hooks/useApp";
 import Button from "../ui/Button";
@@ -14,7 +14,11 @@ const navigationItems = [
 ];
 
 // Admin-only navigation items
-const adminNavigationItems = [{ name: "User Management", to: "/users", icon: Users, adminOnly: true }];
+const adminNavigationItems = [
+  { name: "Restaurant Management", to: "/restaurant-management", icon: ChefHat, adminOnly: true },
+  { name: "Cost Control", to: "/cost-control", icon: DollarSign, adminOnly: true },
+  { name: "User Management", to: "/users", icon: Users, adminOnly: true }
+];
 
 const Layout = () => {
   const { state, toggleSidebar, setSidebar, collapseSidebar, logout } = useApp();
