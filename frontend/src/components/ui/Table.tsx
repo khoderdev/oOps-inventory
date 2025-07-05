@@ -1,40 +1,85 @@
+import { type ColumnDef, flexRender, getCoreRowModel, getSortedRowModel, type SortingState, useReactTable } from "@tanstack/react-table";
 import { clsx } from "clsx";
-import { ChevronDown, ChevronUp } from "lucide-react";
-import { type ReactNode } from "react";
-import type { SortConfig } from "../../types";
+import { ChevronDown, ChevronUp, GripVertical } from "lucide-react";
+import React, { useCallback, useEffect, useRef } from "react";
+import "../../styles/table.css";
 
-interface Column<T> {
-  key: string;
-  title: string;
-  render?: (item: T, index: number) => ReactNode;
-  sortable?: boolean;
-  width?: string;
-  align?: "left" | "center" | "right";
-}
-
-interface TableProps<T> {
+interface TableProps<T extends object> {
   data: T[];
-  columns: Column<T>[];
+  columns: ColumnDef<T, unknown>[];
   loading?: boolean;
   emptyMessage?: string;
-  sortConfig?: SortConfig;
-  onSort?: (field: string) => void;
   className?: string;
+  enableColumnResizing?: boolean;
+  enableSorting?: boolean;
+  maxHeight?: string;
+  stickyHeader?: boolean;
 }
 
-function Table<T extends Record<string, unknown>>({ data, columns, loading = false, emptyMessage = "No data available", sortConfig, onSort, className }: TableProps<T>) {
-  const handleSort = (field: string) => {
-    if (onSort) {
-      onSort(field);
-    }
-  };
+function Table<T extends object>({ data, columns, loading = false, emptyMessage = "No data available", className, enableColumnResizing = true, enableSorting = true, maxHeight = "500px", stickyHeader = true }: TableProps<T>) {
+  const [sorting, setSorting] = React.useState<SortingState>([]);
+  const [isResizing, setIsResizing] = React.useState(false);
+  const tableRef = useRef<HTMLTableElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
-  const getSortIcon = (field: string) => {
-    if (!sortConfig || sortConfig.field !== field) {
-      return null;
+  const table = useReactTable({
+    data,
+    columns,
+    state: {
+      sorting
+    },
+    onSortingChange: setSorting,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    columnResizeMode: "onChange",
+    enableColumnResizing,
+    enableSorting,
+    defaultColumn: {
+      minSize: 60,
+      maxSize: 800,
+      size: 150
     }
-    return sortConfig.order === "asc" ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />;
-  };
+  });
+
+  // Handle resize start/end for smooth UX
+  const handleResizeStart = useCallback(() => {
+    setIsResizing(true);
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+  }, []);
+
+  const handleResizeEnd = useCallback(() => {
+    setIsResizing(false);
+    document.body.style.cursor = "";
+    document.body.style.userSelect = "";
+  }, []);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+  }, []);
+
+  // Auto-fit columns on data change
+  useEffect(() => {
+    if (data.length > 0 && tableRef.current) {
+      // Auto-adjust column widths based on content
+      const timer = setTimeout(() => {
+        table.getAllColumns().forEach(column => {
+          if (column.getCanResize()) {
+            const headerElement = tableRef.current?.querySelector(`[data-column-id="${column.id}"]`);
+            if (headerElement) {
+              // Auto-adjust column width based on content
+              column.resetSize();
+            }
+          }
+        });
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [data, table]);
 
   if (loading) {
     return (
@@ -45,36 +90,111 @@ function Table<T extends Record<string, unknown>>({ data, columns, loading = fal
   }
 
   return (
-    <div className={clsx("overflow-hidden border border-gray-200 dark:border-gray-700 rounded-lg", className)}>
-      <div className="overflow-x-auto max-h-96 overflow-y-auto">
-        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-          <thead className="bg-gray-50 dark:bg-gray-700 sticky top-0 z-10">
-            <tr>
-              {columns.map(column => (
-                <th key={column.key} className={clsx("px-6 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-200 dark:border-gray-700", column.align === "center" && "text-center", column.align === "right" && "text-right", column.sortable && "cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700")} style={{ width: column.width }} onClick={column.sortable ? () => handleSort(column.key) : undefined}>
-                  <div className="flex items-center space-x-1">
-                    <span>{column.title}</span>
-                    {column.sortable && getSortIcon(column.key)}
-                  </div>
-                </th>
-              ))}
-            </tr>
+    <div ref={containerRef} className={clsx("overflow-hidden border border-gray-200 dark:border-gray-700 rounded-lg", "transition-all duration-200 ease-in-out", isResizing && "select-none", className)}>
+      <div className="overflow-x-auto overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent" style={{ maxHeight }}>
+        <table
+          ref={tableRef}
+          className="min-w-full divide-y divide-gray-200 dark:divide-gray-700"
+          style={{
+            width: table.getCenterTotalSize(),
+            transition: isResizing ? "none" : "width 0.2s ease-in-out"
+          }}
+        >
+          <thead className={clsx("bg-gray-50 dark:bg-gray-700 z-10", stickyHeader && "sticky top-0", "shadow-sm")}>
+            {table.getHeaderGroups().map(headerGroup => (
+              <tr key={headerGroup.id}>
+                {headerGroup.headers.map(header => {
+                  const canSort = header.column.getCanSort();
+                  const sorted = header.column.getIsSorted();
+                  const canResize = header.column.getCanResize();
+
+                  return (
+                    <th
+                      key={header.id}
+                      data-column-id={header.id}
+                      style={{
+                        width: header.getSize(),
+                        minWidth: header.column.columnDef.minSize || 60,
+                        maxWidth: header.column.columnDef.maxSize || 800
+                      }}
+                      className={clsx("px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider", "border-b border-gray-200 dark:border-gray-700", "relative group transition-colors duration-150", canSort && "cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600", sorted && "bg-gray-100 dark:bg-gray-600")}
+                      onClick={canSort ? header.column.getToggleSortingHandler() : undefined}
+                    >
+                      <div className="flex items-center justify-between gap-2 min-h-[20px]">
+                        <div className="flex items-center gap-2 truncate">{flexRender(header.column.columnDef.header, header.getContext())}</div>
+
+                        {canSort && (
+                          <div className="flex items-center gap-1 flex-shrink-0">
+                            {sorted === "asc" ? (
+                              <ChevronUp className="w-4 h-4 text-blue-500" />
+                            ) : sorted === "desc" ? (
+                              <ChevronDown className="w-4 h-4 text-blue-500" />
+                            ) : (
+                              <div className="w-4 h-4 opacity-0 group-hover:opacity-50 transition-opacity">
+                                <ChevronUp className="w-4 h-4" />
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Enhanced Resize Handle */}
+                      {canResize && (
+                        <div
+                          onMouseDown={e => {
+                            handleResizeStart();
+                            header.getResizeHandler()(e);
+                          }}
+                          onMouseUp={handleResizeEnd}
+                          onTouchStart={e => {
+                            handleResizeStart();
+                            header.getResizeHandler()(e);
+                          }}
+                          onTouchEnd={handleResizeEnd}
+                          className={clsx("absolute right-0 top-0 h-full w-2 cursor-col-resize", "flex items-center justify-center", "opacity-0 group-hover:opacity-100 transition-opacity duration-200", "hover:bg-blue-500 hover:w-1", isResizing && "opacity-100 bg-blue-500 w-1")}
+                          title="Drag to resize column"
+                        >
+                          <GripVertical className="w-3 h-3 text-gray-400 hover:text-white transition-colors" />
+                        </div>
+                      )}
+
+                      {/* Resize indicator */}
+                      {canResize && isResizing && <div className="absolute right-0 top-0 h-full w-1 bg-blue-500 shadow-lg" />}
+                    </th>
+                  );
+                })}
+              </tr>
+            ))}
           </thead>
           <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-            {data.length === 0 ? (
+            {table.getRowModel().rows.length === 0 ? (
               <tr>
                 <td colSpan={columns.length} className="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
                   {emptyMessage}
                 </td>
               </tr>
             ) : (
-              data.map((item, index) => (
-                <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                  {columns.map(column => (
-                    <td key={column.key} className={clsx("px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100", column.align === "center" && "text-center", column.align === "right" && "text-right")}>
-                      {column.render ? column.render(item, index) : item[column.key]?.toString() || "-"}
-                    </td>
-                  ))}
+              table.getRowModel().rows.map((row, index) => (
+                <tr key={row.id} className={clsx("transition-colors duration-150 ease-in-out", "hover:bg-gray-50 dark:hover:bg-gray-700", "border-b border-gray-100 dark:border-gray-700 last:border-b-0", index % 2 === 0 ? "bg-white dark:bg-gray-800" : "bg-gray-50/30 dark:bg-gray-800/50")}>
+                  {row.getVisibleCells().map(cell => {
+                    const columnMeta = cell.column.columnDef.meta as { align?: "left" | "center" | "right" } | undefined;
+
+                    return (
+                      <td
+                        key={cell.id}
+                        style={{
+                          width: cell.column.getSize(),
+                          minWidth: cell.column.columnDef.minSize || 60,
+                          maxWidth: cell.column.columnDef.maxSize || 800
+                        }}
+                        className={clsx("px-4 py-3 text-sm text-gray-900 dark:text-gray-100", "transition-all duration-150 ease-in-out", "border-r border-gray-100 dark:border-gray-700 last:border-r-0", columnMeta?.align === "center" && "text-center", columnMeta?.align === "right" && "text-right", "overflow-hidden")}
+                      >
+                        <div className="truncate" title={typeof cell.getValue() === "string" ? (cell.getValue() as string) : undefined}>
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </div>
+                      </td>
+                    );
+                  })}
                 </tr>
               ))
             )}

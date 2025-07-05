@@ -10,11 +10,10 @@ interface ModalProps {
   children: ReactNode;
   size?: "sm" | "md" | "lg" | "xl" | "full";
   showCloseButton?: boolean;
-  closeOnOverlayClick?: boolean;
   className?: string;
 }
 
-const Modal = ({ isOpen, onClose, title, children, size = "md", showCloseButton = true, closeOnOverlayClick = true, className }: ModalProps) => {
+const Modal = ({ isOpen, onClose, title, children, size = "md", showCloseButton = true, className }: ModalProps) => {
   const modalRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
 
@@ -51,13 +50,6 @@ const Modal = ({ isOpen, onClose, title, children, size = "md", showCloseButton 
     };
   }, [isOpen, onClose]);
 
-  // Handle overlay click
-  const handleOverlayClick = (e: React.MouseEvent) => {
-    if (closeOnOverlayClick && e.target === e.currentTarget) {
-      onClose();
-    }
-  };
-
   if (!isOpen) return null;
 
   // Responsive sizes - mobile first approach
@@ -73,7 +65,7 @@ const Modal = ({ isOpen, onClose, title, children, size = "md", showCloseButton 
   const mobileClasses = size === "full" || size === "xl" ? "mx-2 sm:mx-4 max-h-[95vh] sm:max-h-[90vh]" : "mx-4 sm:mx-6 max-h-[90vh] sm:max-h-[85vh]";
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm transition-all duration-300 ease-out" onClick={handleOverlayClick} role="dialog" aria-modal="true" aria-labelledby={title ? "modal-title" : undefined}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm transition-all duration-300 ease-out" role="dialog" aria-modal="true" aria-labelledby={title ? "modal-title" : undefined}>
       <div
         ref={modalRef}
         className={clsx(

@@ -11,6 +11,7 @@ export interface RawMaterial extends BaseEntity {
   maxStockLevel: number;
   isActive: boolean;
   unitsPerPack?: number;
+  unitsPerBox?: number;
   baseUnit?: MeasurementUnit; // The unit of the individual items (e.g., "pieces", "bottles")
 }
 
@@ -47,6 +48,7 @@ export interface CreateRawMaterialInput {
   minStockLevel: number;
   maxStockLevel: number;
   unitsPerPack?: number;
+  unitsPerBox?: number;
   baseUnit?: MeasurementUnit;
 }
 
