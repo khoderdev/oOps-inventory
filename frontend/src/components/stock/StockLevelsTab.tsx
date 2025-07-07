@@ -1,3 +1,4 @@
+import type { ColumnDef } from "@tanstack/react-table";
 import { AlertTriangle, Filter, Package, Search } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useRawMaterials } from "../../hooks/useRawMaterials";
@@ -117,58 +118,75 @@ const StockLevelsTab = () => {
     }, 0);
   };
 
-  const columns = [
+  const columns: ColumnDef<StockLevel>[] = [
     {
-      key: "rawMaterial.name",
-      title: "Material",
-      sortable: true,
-      render: (item: StockLevel) => (
+      id: "rawMaterial.name",
+      accessorFn: row => row.rawMaterial?.name,
+      header: "Material",
+      cell: info => (
         <div>
-          <p className="font-medium text-gray-900 dark:text-white">{item.rawMaterial?.name}</p>
-          <p className="text-sm text-gray-500 dark:text-gray-400">{item.rawMaterial?.category}</p>
+          <p className="font-medium text-gray-900 dark:text-white">{info.getValue() as string}</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{info.row.original.rawMaterial?.category}</p>
         </div>
       )
     },
     {
-      key: "availableUnitsQuantity",
-      title: "Available",
-      sortable: true,
-      render: (item: StockLevel) => (
-        <div className="flex items-center space-x-2">
-          <span className={`font-medium ${item.isLowStock ? "text-red-600 dark:text-red-400" : "text-green-600 dark:text-green-400"}`}>{formatQuantityDisplay(item.availableUnitsQuantity, item.rawMaterial)}</span>
-          {item.isLowStock && <AlertTriangle className="w-4 h-4 text-red-500 dark:text-red-400" />}
-        </div>
-      )
+      id: "availableUnitsQuantity",
+      accessorKey: "availableUnitsQuantity",
+      header: "Available",
+      cell: info => {
+        const item = info.row.original;
+        return (
+          <div className="flex items-center space-x-2">
+            <span className={`font-medium ${item.isLowStock ? "text-red-600 dark:text-red-400" : "text-green-600 dark:text-green-400"}`}>{formatQuantityDisplay(item.availableUnitsQuantity, item.rawMaterial)}</span>
+            {item.isLowStock && <AlertTriangle className="w-4 h-4 text-red-500 dark:text-red-400" />}
+          </div>
+        );
+      }
     },
     {
-      key: "totalUnitsQuantity",
-      title: "Total Received",
-      sortable: true,
-      render: (item: StockLevel) => formatQuantityDisplay(item.totalUnitsQuantity, item.rawMaterial)
+      id: "totalUnitsQuantity",
+      accessorKey: "totalUnitsQuantity",
+      header: "Total Received",
+      cell: info => {
+        const item = info.row.original;
+        return formatQuantityDisplay(item.totalUnitsQuantity, item.rawMaterial);
+      }
     },
     {
-      key: "minLevel",
-      title: "Min Level",
-      sortable: true,
-      render: (item: StockLevel) => formatQuantityDisplay(item.minLevel, item.rawMaterial)
+      id: "minLevel",
+      accessorKey: "minLevel",
+      header: "Min Level",
+      cell: info => {
+        const item = info.row.original;
+        return formatQuantityDisplay(item.minLevel, item.rawMaterial);
+      }
     },
     {
-      key: "maxLevel",
-      title: "Max Level",
-      sortable: true,
-      render: (item: StockLevel) => formatQuantityDisplay(item.maxLevel, item.rawMaterial)
+      id: "maxLevel",
+      accessorKey: "maxLevel",
+      header: "Max Level",
+      cell: info => {
+        const item = info.row.original;
+        return formatQuantityDisplay(item.maxLevel, item.rawMaterial);
+      }
     },
     {
-      key: "status",
-      title: "Status",
-      render: (item: StockLevel) => (
-        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${item.isLowStock ? "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300" : item.availableUnitsQuantity > item.maxLevel ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300" : "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300"}`}>{item.isLowStock ? "Low Stock" : item.availableUnitsQuantity > item.maxLevel ? "Overstocked" : "Normal"}</span>
-      )
+      id: "status",
+      header: "Status",
+      cell: info => {
+        const item = info.row.original;
+        const statusText = item.isLowStock ? "Low Stock" : item.availableUnitsQuantity > item.maxLevel ? "Overstocked" : "Normal";
+        const statusClass = item.isLowStock ? "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300" : item.availableUnitsQuantity > item.maxLevel ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300" : "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300";
+
+        return <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusClass}`}>{statusText}</span>;
+      }
     },
     {
-      key: "lastUpdated",
-      title: "Last Updated",
-      render: (item: StockLevel) => new Date(item.lastUpdated).toLocaleDateString()
+      id: "lastUpdated",
+      accessorKey: "lastUpdated",
+      header: "Last Updated",
+      cell: info => new Date(info.getValue() as string).toLocaleDateString()
     }
   ];
 

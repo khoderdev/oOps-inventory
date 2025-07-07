@@ -1,3 +1,4 @@
+import type { ColumnDef, Row } from "@tanstack/react-table";
 import { Calendar, Edit, Package, Search, Trash2, Truck } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useApp } from "../../hooks/useApp";
@@ -91,13 +92,12 @@ const StockEntriesTab = () => {
     }
   };
 
-  const columns = [
+  const columns: ColumnDef<StockEntry>[] = [
     {
-      key: "rawMaterialId",
-      title: "Material",
-      render: (item: StockEntry) => {
-        // Use the nested rawMaterial data from the API response
-        const material = item.rawMaterial || rawMaterials.find(m => m.id == item.rawMaterialId);
+      accessorKey: "rawMaterialId",
+      header: "Material",
+      cell: ({ row }) => {
+        const material = row.original.rawMaterial;
         return (
           <div>
             <p className="font-medium text-gray-900 dark:text-white">{material?.name || "Unknown"}</p>
@@ -107,12 +107,11 @@ const StockEntriesTab = () => {
       }
     },
     {
-      key: "quantity",
-      title: "Quantity",
-      sortable: true,
-      render: (item: StockEntry) => {
-        const material = item.rawMaterial || rawMaterials.find(m => m.id == item.rawMaterialId);
-        if (!material) return `${item.quantity}`;
+      accessorKey: "quantity",
+      header: "Quantity",
+      cell: ({ row }) => {
+        const material = row.original.rawMaterial;
+        if (!material) return `${row.original.quantity}`;
 
         // Check if this is a pack/box material
         const isPackOrBox = material.unit.toUpperCase() === MeasurementUnit.PACKS.toUpperCase() || material.unit.toUpperCase() === MeasurementUnit.BOXES.toUpperCase();
@@ -124,24 +123,23 @@ const StockEntriesTab = () => {
 
           // Only convert if we have valid pack info, otherwise show base quantity
           if (packInfo.unitsPerPack && packInfo.unitsPerPack > 1) {
-            const packQuantity = item.quantity / unitsPerPack;
-            return `${packQuantity} ${material.unit} (${item.quantity} ${baseUnit})`;
+            const packQuantity = row.original.quantity / unitsPerPack;
+            return `${packQuantity} ${material.unit} (${row.original.quantity} ${baseUnit})`;
           } else {
             // Fallback: show base quantity with unit
-            return `${item.quantity} ${baseUnit} (Pack info not set)`;
+            return `${row.original.quantity} ${baseUnit} (Pack info not set)`;
           }
         }
 
-        return `${item.quantity} ${material.unit || ""}`;
+        return `${row.original.quantity} ${material.unit || ""}`;
       }
     },
     {
-      key: "unitCost",
-      title: "Unit Cost",
-      sortable: true,
-      render: (item: StockEntry) => {
-        const material = item.rawMaterial || rawMaterials.find(m => m.id == item.rawMaterialId);
-        if (!material) return `$${item.unitCost.toFixed(2)}`;
+      accessorKey: "unitCost",
+      header: "Unit Cost",
+      cell: ({ row }) => {
+        const material = row.original.rawMaterial;
+        if (!material) return `$${row.original.unitCost.toFixed(2)}`;
 
         // Check if this is a pack/box material
         const isPackOrBox = material.unit.toUpperCase() === MeasurementUnit.PACKS.toUpperCase() || material.unit.toUpperCase() === MeasurementUnit.BOXES.toUpperCase();
@@ -153,11 +151,11 @@ const StockEntriesTab = () => {
 
           // Only show detailed breakdown if we have valid pack info
           if (packInfo.unitsPerPack && packInfo.unitsPerPack > 1) {
-            const individualCost = item.unitCost / unitsPerPack;
+            const individualCost = row.original.unitCost / unitsPerPack;
             return (
               <div>
                 <div className="font-medium">
-                  ${item.unitCost.toFixed(2)} per {material.unit.toLowerCase()}
+                  ${row.original.unitCost.toFixed(2)} per {material.unit.toLowerCase()}
                 </div>
                 <div className="text-xs text-gray-500">
                   ${individualCost.toFixed(4)} per {baseUnit.toLowerCase()}
@@ -168,23 +166,22 @@ const StockEntriesTab = () => {
             // Fallback: show basic cost with note
             return (
               <div>
-                <div className="font-medium">${item.unitCost.toFixed(2)}</div>
+                <div className="font-medium">${row.original.unitCost.toFixed(2)}</div>
                 <div className="text-xs text-gray-500">Pack info not set</div>
               </div>
             );
           }
         }
 
-        return `$${item.unitCost.toFixed(2)}`;
+        return `$${row.original.unitCost.toFixed(2)}`;
       }
     },
     {
-      key: "totalCost",
-      title: "Total Cost",
-      sortable: true,
-      render: (item: StockEntry) => {
-        const material = item.rawMaterial || rawMaterials.find(m => m.id == item.rawMaterialId);
-        if (!material) return `$${item.totalCost.toFixed(2)}`;
+      accessorKey: "totalCost",
+      header: "Total Cost",
+      cell: ({ row }) => {
+        const material = row.original.rawMaterial;
+        if (!material) return `$${row.original.totalCost.toFixed(2)}`;
 
         // Check if this is a pack/box material
         const isPackOrBox = material.unit.toUpperCase() === MeasurementUnit.PACKS.toUpperCase() || material.unit.toUpperCase() === MeasurementUnit.BOXES.toUpperCase();
@@ -196,18 +193,18 @@ const StockEntriesTab = () => {
 
           // Only show detailed breakdown if we have valid pack info
           if (packInfo.unitsPerPack && packInfo.unitsPerPack > 1) {
-            const individualCost = item.unitCost / unitsPerPack;
-            const totalIndividualCost = item.quantity * individualCost;
-            const packQuantity = item.quantity / unitsPerPack;
+            const individualCost = row.original.unitCost / unitsPerPack;
+            const totalIndividualCost = row.original.quantity * individualCost;
+            const packQuantity = row.original.quantity / unitsPerPack;
 
             return (
               <div>
-                <div className="font-medium">${item.totalCost.toFixed(2)}</div>
+                <div className="font-medium">${row.original.totalCost.toFixed(2)}</div>
                 <div className="text-xs text-gray-500">
-                  {packQuantity.toFixed(1)} {material.unit.toLowerCase()} × ${item.unitCost.toFixed(2)} = ${item.totalCost.toFixed(2)}
+                  {packQuantity.toFixed(1)} {material.unit.toLowerCase()} × ${row.original.unitCost.toFixed(2)} = ${row.original.totalCost.toFixed(2)}
                 </div>
                 <div className="text-xs text-gray-500">
-                  {item.quantity} {baseUnit.toLowerCase()} × ${individualCost.toFixed(4)} = ${totalIndividualCost.toFixed(2)}
+                  {row.original.quantity} {baseUnit.toLowerCase()} × ${individualCost.toFixed(4)} = ${totalIndividualCost.toFixed(2)}
                 </div>
               </div>
             );
@@ -215,43 +212,42 @@ const StockEntriesTab = () => {
             // Fallback: show basic total with note
             return (
               <div>
-                <div className="font-medium">${item.totalCost.toFixed(2)}</div>
+                <div className="font-medium">${row.original.totalCost.toFixed(2)}</div>
                 <div className="text-xs text-gray-500">Pack info not set</div>
               </div>
             );
           }
         }
 
-        return `$${item.totalCost.toFixed(2)}`;
+        return `$${row.original.totalCost.toFixed(2)}`;
       }
     },
     {
-      key: "supplier",
-      title: "Supplier",
-      render: (item: StockEntry) => (
+      accessorKey: "supplier",
+      header: "Supplier",
+      cell: ({ row }) => (
         <div className="flex items-center space-x-2">
           <Truck className="w-4 h-4 text-gray-400 dark:text-gray-400" />
-          <span>{item.supplier || "-"}</span>
+          <span>{row.original.supplier || "-"}</span>
         </div>
       )
     },
     {
-      key: "batchNumber",
-      title: "Batch",
-      render: (item: StockEntry) => item.batchNumber || "-"
+      accessorKey: "batchNumber",
+      header: "Batch",
+      cell: ({ row }) => row.original.batchNumber || "-"
     },
     {
-      key: "receivedDate",
-      title: "Received Date",
-      sortable: true,
-      render: (item: StockEntry) => new Date(item.receivedDate).toLocaleDateString()
+      accessorKey: "receivedDate",
+      header: "Received Date",
+      cell: ({ row }) => new Date(row.original.receivedDate).toLocaleDateString()
     },
     {
-      key: "expiryDate",
-      title: "Expiry Date",
-      render: (item: StockEntry) => {
-        if (!item.expiryDate) return "-";
-        const expiry = new Date(item.expiryDate);
+      accessorKey: "expiryDate",
+      header: "Expiry Date",
+      cell: ({ row }) => {
+        if (!row.original.expiryDate) return "-";
+        const expiry = new Date(row.original.expiryDate);
         const isExpired = expiry < new Date();
         const isExpiringSoon = expiry < new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
@@ -259,27 +255,27 @@ const StockEntriesTab = () => {
       }
     },
     {
-      key: "receivedBy",
-      title: "Received By",
-      render: (item: StockEntry) => {
-        if (item.user) {
-          const fullName = `${item.user.firstName || ""} ${item.user.lastName || ""}`.trim();
-          return fullName || item.user.username || item.user.email || `User #${item.receivedBy}`;
+      accessorKey: "receivedBy",
+      header: "Received By",
+      cell: ({ row }) => {
+        if (row.original.user) {
+          const fullName = `${row.original.user.firstName || ""} ${row.original.user.lastName || ""}`.trim();
+          return fullName || row.original.user.username || row.original.user.email || `User #${row.original.receivedBy}`;
         }
-        return `User #${item.receivedBy}`;
+        return `User #${row.original.receivedBy}`;
       }
     },
     ...(state.user?.role === "MANAGER" || state.user?.role === "ADMIN"
       ? [
           {
-            key: "actions",
-            title: "Actions",
-            render: (item: StockEntry) => (
+            accessorKey: "actions",
+            header: "Actions",
+            cell: ({ row }: { row: Row<StockEntry> }) => (
               <div className="flex space-x-2">
-                <Button size="sm" variant="ghost" onClick={() => setEditingEntry(item)} leftIcon={<Edit className="w-3 h-3" />}>
+                <Button size="sm" variant="ghost" onClick={() => setEditingEntry(row.original)} leftIcon={<Edit className="w-3 h-3" />}>
                   Edit
                 </Button>
-                <Button size="sm" variant="ghost" onClick={() => handleDelete(item)} leftIcon={<Trash2 className="w-3 h-3" />} className="text-red-600 hover:text-red-700">
+                <Button size="sm" variant="ghost" onClick={() => handleDelete(row.original)} leftIcon={<Trash2 className="w-3 h-3" />} className="text-red-600 hover:text-red-700">
                   Delete
                 </Button>
               </div>
@@ -363,7 +359,7 @@ const StockEntriesTab = () => {
       </div>
 
       {/* Table */}
-      <Table data={filteredData as unknown as Record<string, unknown>[]} columns={columns as unknown as Array<{ key: string; title: string; sortable?: boolean; render: (item: Record<string, unknown>, index: number) => React.ReactNode }>} loading={isLoading} emptyMessage="No stock entries found." sortConfig={sortConfig} onSort={handleSort} />
+      <Table data={filteredData as unknown as Record<string, unknown>[]} columns={columns} loading={isLoading} emptyMessage="No stock entries found." sortConfig={sortConfig} onSort={handleSort} />
 
       {/* Edit Modal */}
       <Modal isOpen={!!editingEntry} onClose={() => setEditingEntry(null)} title="Edit Stock Entry" size="lg">

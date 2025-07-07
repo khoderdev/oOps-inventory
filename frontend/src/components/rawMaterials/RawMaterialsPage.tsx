@@ -76,27 +76,33 @@ const RawMaterialsPage = () => {
     return filtered;
   }, [rawMaterials, searchTerm, categoryFilter, statusFilter, sortConfig]);
 
-  const handleDelete = useCallback(async (material: RawMaterial) => {
-    if (window.confirm(`Are you sure you want to delete "${material.name}"? This action cannot be undone.`)) {
-      try {
-        await deleteMutation.mutateAsync(material.id);
-      } catch (error) {
-        console.error("Error deleting material:", error);
+  const handleDelete = useCallback(
+    async (material: RawMaterial) => {
+      if (window.confirm(`Are you sure you want to delete "${material.name}"? This action cannot be undone.`)) {
+        try {
+          await deleteMutation.mutateAsync(material.id);
+        } catch (error) {
+          console.error("Error deleting material:", error);
+        }
       }
-    }
-  }, [deleteMutation]);
+    },
+    [deleteMutation]
+  );
 
-  const getStockStatus = useCallback((materialId: string) => {
-    const stockLevel = stockLevels.find(level => level.rawMaterial?.id === materialId);
-    if (!stockLevel) return { status: "no-stock", quantity: 0, unit: "" };
+  const getStockStatus = useCallback(
+    (materialId: string) => {
+      const stockLevel = stockLevels.find(level => level.rawMaterial?.id === materialId);
+      if (!stockLevel) return { status: "no-stock", quantity: 0, unit: "" };
 
-    return {
-      status: stockLevel.isLowStock ? "low" : "normal",
-      quantity: stockLevel.availableUnitsQuantity,
-      unit: stockLevel.rawMaterial?.unit || "",
-      isLowStock: stockLevel.isLowStock
-    };
-  }, [stockLevels]);
+      return {
+        status: stockLevel.isLowStock ? "low" : "normal",
+        quantity: stockLevel.availableUnitsQuantity,
+        unit: stockLevel.rawMaterial?.unit || "",
+        isLowStock: stockLevel.isLowStock
+      };
+    },
+    [stockLevels]
+  );
 
   // Calculate stats
   const activeCount = rawMaterials.filter(m => m.isActive).length;
@@ -117,6 +123,7 @@ const RawMaterialsPage = () => {
   const columns: ColumnDef<RawMaterial>[] = useMemo(() => {
     const baseColumns: ColumnDef<RawMaterial>[] = [
       {
+        id: "name",
         accessorKey: "name",
         header: "Material",
         size: 250,
@@ -140,52 +147,46 @@ const RawMaterialsPage = () => {
         }
       },
       {
+        id: "category",
         accessorKey: "category",
         header: "Category",
         size: 140,
         minSize: 120,
         maxSize: 180,
         enableSorting: true,
-        cell: ({ row }) => (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 capitalize whitespace-nowrap">
-            {row.original.category.replace("_", " ")}
-          </span>
-        ),
+        cell: ({ row }) => <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 capitalize whitespace-nowrap">{row.original.category.replace("_", " ")}</span>,
         meta: {
-          align: 'center'
+          align: "center"
         }
       },
       {
+        id: "unit",
         accessorKey: "unit",
         header: "Unit",
         size: 80,
         minSize: 60,
         maxSize: 120,
         enableSorting: true,
-        cell: ({ getValue }) => (
-          <span className="font-mono text-sm">{getValue() as string}</span>
-        ),
+        cell: ({ getValue }) => <span className="font-mono text-sm">{getValue() as string}</span>,
         meta: {
-          align: 'center'
+          align: "center"
         }
       },
       {
+        id: "unitCost",
         accessorKey: "unitCost",
         header: "Unit Cost",
         size: 110,
         minSize: 90,
         maxSize: 140,
         enableSorting: true,
-        cell: ({ getValue }) => (
-          <span className="font-mono text-sm font-medium text-green-600 dark:text-green-400">
-            ${(getValue() as number).toFixed(2)}
-          </span>
-        ),
+        cell: ({ getValue }) => <span className="font-mono text-sm font-medium text-green-600 dark:text-green-400">${(getValue() as number).toFixed(2)}</span>,
         meta: {
-          align: 'right'
+          align: "right"
         }
       },
       {
+        id: "supplier",
         accessorKey: "supplier",
         header: "Supplier",
         size: 150,
@@ -195,13 +196,14 @@ const RawMaterialsPage = () => {
         cell: ({ getValue }) => {
           const supplier = getValue() as string;
           return (
-            <span className="truncate" title={supplier || 'No supplier'}>
+            <span className="truncate" title={supplier || "No supplier"}>
               {supplier || "-"}
             </span>
           );
         }
       },
       {
+        id: "stock",
         accessorKey: "stock",
         header: "Current Stock",
         size: 140,
@@ -231,10 +233,11 @@ const RawMaterialsPage = () => {
           );
         },
         meta: {
-          align: 'center'
+          align: "center"
         }
       },
       {
+        id: "isActive",
         accessorKey: "isActive",
         header: "Status",
         size: 90,
@@ -243,21 +246,10 @@ const RawMaterialsPage = () => {
         enableSorting: true,
         cell: ({ row }) => {
           const item = row.original;
-          return (
-            <span 
-              className={clsx(
-                "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium whitespace-nowrap",
-                item.isActive 
-                  ? "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400" 
-                  : "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400"
-              )}
-            >
-              {item.isActive ? "Active" : "Inactive"}
-            </span>
-          );
+          return <span className={clsx("inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium whitespace-nowrap", item.isActive ? "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400" : "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400")}>{item.isActive ? "Active" : "Inactive"}</span>;
         },
         meta: {
-          align: 'center'
+          align: "center"
         }
       }
     ];
@@ -274,22 +266,10 @@ const RawMaterialsPage = () => {
         const item = row.original;
         return (
           <div className="flex items-center justify-end space-x-1">
-            <Button 
-              size="sm" 
-              variant="ghost" 
-              onClick={() => setEditingMaterial(item)} 
-              leftIcon={<Edit className="w-3 h-3" />}
-              className="hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-900/20 dark:hover:text-blue-400 transition-colors"
-            >
+            <Button size="sm" variant="ghost" onClick={() => setEditingMaterial(item)} leftIcon={<Edit className="w-3 h-3" />} className="hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-900/20 dark:hover:text-blue-400 transition-colors">
               Edit
             </Button>
-            <Button 
-              size="sm" 
-              variant="ghost" 
-              onClick={() => handleDelete(item)} 
-              leftIcon={<Trash2 className="w-3 h-3" />}
-              className="text-red-600 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-900/20 dark:hover:text-red-300 transition-colors"
-            >
+            <Button size="sm" variant="ghost" onClick={() => handleDelete(item)} leftIcon={<Trash2 className="w-3 h-3" />} className="text-red-600 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-900/20 dark:hover:text-red-300 transition-colors">
               Delete
             </Button>
           </div>
@@ -380,17 +360,7 @@ const RawMaterialsPage = () => {
 
       {/* Materials Table */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
-        <Table 
-          data={filteredData} 
-          columns={columns} 
-          loading={isLoading} 
-          emptyMessage="No raw materials found. Add your first material to get started."
-          enableColumnResizing={true}
-          enableSorting={true}
-          maxHeight="600px"
-          stickyHeader={true}
-          className="rounded-lg"
-        />
+        <Table data={filteredData} columns={columns} loading={isLoading} emptyMessage="No raw materials found. Add your first material to get started." enableColumnResizing={true} enableSorting={true} maxHeight="600px" stickyHeader={true} className="rounded-lg" />
       </div>
 
       {/* Create Material Modal */}

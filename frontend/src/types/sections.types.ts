@@ -24,6 +24,7 @@ export interface SectionInventory extends BaseEntity {
   rawMaterialId: string;
   rawMaterial?: RawMaterial;
   quantity: number;
+  baseQuantity?: number; // For pack/box materials, this is the quantity in base units (pieces)
   reservedQuantity: number;
   lastUpdated: Date;
   minLevel?: number;

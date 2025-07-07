@@ -32,6 +32,7 @@ export const SuppliersTab: React.FC = () => {
   // Define columns for top suppliers table
   const topSuppliersColumns = useMemo<ColumnDef<TopSupplierData>[]>(() => [
     {
+      id: "name",
       accessorKey: "name",
       header: "Supplier",
       size: 200,
@@ -41,6 +42,7 @@ export const SuppliersTab: React.FC = () => {
       meta: { align: "left" },
     },
     {
+      id: "rating",
       accessorKey: "rating",
       header: "Rating",
       size: 150,
@@ -54,6 +56,7 @@ export const SuppliersTab: React.FC = () => {
       },
     },
     {
+      id: "orderCount",
       accessorKey: "orderCount",
       header: "Orders",
       size: 100,
@@ -63,6 +66,7 @@ export const SuppliersTab: React.FC = () => {
       meta: { align: "center" },
     },
     {
+      id: "totalValue",
       accessorKey: "totalValue",
       header: "Total Value",
       size: 130,
@@ -76,6 +80,7 @@ export const SuppliersTab: React.FC = () => {
       },
     },
     {
+      id: "avgOrderValue",
       accessorKey: "avgOrderValue",
       header: "Avg Order Value",
       size: 140,
