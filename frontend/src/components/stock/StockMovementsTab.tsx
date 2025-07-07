@@ -1,3 +1,4 @@
+import type { ColumnDef } from "@tanstack/react-table";
 import { Activity, ArrowRight, Search } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useStockMovements } from "../../hooks/useStock";
@@ -23,7 +24,10 @@ const StockMovementsTab = () => {
       // Search filter
       if (searchTerm) {
         const searchLower = searchTerm.toLowerCase();
-        if (!movement.reason?.toLowerCase().includes(searchLower) && !movement.performedBy?.toLowerCase().includes(searchLower)) {
+        const reason = movement.reason ? String(movement.reason).toLowerCase() : "";
+        const performedBy = movement.performedBy ? String(movement.performedBy).toLowerCase() : "";
+
+        if (!reason.includes(searchLower) && !performedBy.includes(searchLower)) {
           return false;
         }
       }
@@ -94,22 +98,28 @@ const StockMovementsTab = () => {
     }
   };
 
-  const columns = [
+  const columns: ColumnDef<StockMovement>[] = [
     {
-      key: "type",
-      title: "Type",
-      render: (item: StockMovement) => <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getTypeColor(item.type)}`}>{item.type.charAt(0).toUpperCase() + item.type.slice(1)}</span>
+      accessorKey: "type",
+      header: "Type",
+      cell: info => {
+        const item = info.row.original;
+        return <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getTypeColor(item.type)}`}>{item.type.charAt(0).toUpperCase() + item.type.slice(1)}</span>;
+      }
     },
     {
-      key: "quantity",
-      title: "Quantity",
-      sortable: true,
-      render: (item: StockMovement) => `${item.quantity}`
+      accessorKey: "quantity",
+      header: "Quantity",
+      cell: info => {
+        const item = info.row.original;
+        return `${item.quantity}`;
+      }
     },
     {
-      key: "direction",
-      title: "Direction",
-      render: (item: StockMovement) => {
+      accessorKey: "direction",
+      header: "Direction",
+      cell: info => {
+        const item = info.row.original;
         if (item.type === MovementType.TRANSFER) {
           return (
             <div className="flex items-center space-x-2">
@@ -123,14 +133,18 @@ const StockMovementsTab = () => {
       }
     },
     {
-      key: "reason",
-      title: "Reason",
-      render: (item: StockMovement) => item.reason
+      accessorKey: "reason",
+      header: "Reason",
+      cell: info => {
+        const item = info.row.original;
+        return item.reason;
+      }
     },
     {
-      key: "performedBy",
-      title: "Performed By",
-      render: (item: StockMovement) => {
+      accessorKey: "performedBy",
+      header: "Performed By",
+      cell: info => {
+        const item = info.row.original;
         if (item.user) {
           const fullName = `${item.user.firstName || ""} ${item.user.lastName || ""}`.trim();
           return fullName || item.user.username || item.user.email || `User #${item.performedBy}`;
@@ -139,10 +153,12 @@ const StockMovementsTab = () => {
       }
     },
     {
-      key: "createdAt",
-      title: "Date",
-      sortable: true,
-      render: (item: StockMovement) => new Date(item.createdAt).toLocaleString()
+      accessorKey: "createdAt",
+      header: "Date",
+      cell: info => {
+        const item = info.row.original;
+        return new Date(item.createdAt).toLocaleString();
+      }
     }
   ];
 
@@ -163,7 +179,7 @@ const StockMovementsTab = () => {
                   <p className="text-xl font-bold text-gray-900 dark:text-white">{count}</p>
                   <p className="text-xs text-gray-500 dark:text-gray-400">Total: {totalQuantity}</p>
                 </div>
-              </div>
+              </div>{" "}
             </div>
           );
         })}
@@ -173,27 +189,15 @@ const StockMovementsTab = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Input placeholder="Search movements..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} leftIcon={<Search className="w-4 h-4" />} />
 
-        <Select placeholder="Filter by type" options={[{ value: "", label: "All Types" }, ...typeOptions]} value={typeFilter} onChange={e => setTypeFilter(e.target.value as MovementType | "")} />
+        <Select placeholder="Filter by type" options={[{ value: "", label: "All Types" }, ...typeOptions]} value={typeFilter} onChange={value => setTypeFilter(value as MovementType | "")} />
 
         <div></div>
       </div>
 
       {/* Table */}
-      <Table
-        data={filteredData as unknown as Record<string, unknown>[]}
-        columns={
-          columns as unknown as Array<{
-            key: string;
-            title: string;
-            sortable?: boolean;
-            render: (item: Record<string, unknown>, index: number) => React.ReactNode;
-          }>
-        }
-        loading={isLoading}
-        emptyMessage="No stock movements found."
-        sortConfig={sortConfig}
-        onSort={handleSort}
-      />
+      <Table data={filteredData} columns={columns} loading={isLoading} emptyMessage="No stock movements found." sortConfig={sortConfig} onSort={handleSort} />
+
+      {/* <Table data={filteredData as unknown as Record<string, unknown>[]} columns={columns} loading={isLoading} emptyMessage="No stock movements found." sortConfig={sortConfig} onSort={handleSort} /> */}
     </div>
   );
 };

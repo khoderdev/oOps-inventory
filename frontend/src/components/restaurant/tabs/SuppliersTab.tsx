@@ -133,8 +133,8 @@ export const SuppliersTab: React.FC = () => {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h3 className="text-lg font-medium text-gray-900">Suppliers</h3>
-          <p className="text-sm text-gray-500">Manage suppliers and track performance</p>
+          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Suppliers</h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Manage suppliers and track performance</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" size="sm" onClick={() => setViewMode("analytics")}>
@@ -150,10 +150,10 @@ export const SuppliersTab: React.FC = () => {
       </div>
 
       {/* Filters */}
-      <div className="bg-white p-4 rounded-lg border border-gray-200">
+      <div className="bg-white p-4 rounded-lg border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-400 mb-1">Status</label>
             <select
               value={filters.is_active === undefined ? "" : filters.is_active.toString()}
               onChange={e =>
@@ -162,7 +162,7 @@ export const SuppliersTab: React.FC = () => {
                   is_active: e.target.value === "" ? undefined : e.target.value === "true"
                 })
               }
-              className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              className="w-full rounded-md border-gray-300 dark:border-gray-700 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:focus:border-blue-500 dark:focus:ring-blue-500"
             >
               <option value="">All Suppliers</option>
               <option value="true">Active Only</option>
@@ -170,8 +170,8 @@ export const SuppliersTab: React.FC = () => {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Search</label>
-            <input type="text" value={filters.search || ""} onChange={e => setFilters({ ...filters, search: e.target.value || undefined })} placeholder="Search suppliers..." className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" />
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-400 mb-1">Search</label>
+            <input type="text" value={filters.search || ""} onChange={e => setFilters({ ...filters, search: e.target.value || undefined })} placeholder="Search suppliers..." className="w-full rounded-md border-gray-300 dark:border-gray-700 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:focus:border-blue-500 dark:focus:ring-blue-500" />
           </div>
           <div className="flex items-end">
             <Button variant="outline" onClick={() => setFilters({})} className="w-full">
@@ -182,15 +182,15 @@ export const SuppliersTab: React.FC = () => {
       </div>
 
       {/* Suppliers Table */}
-      <div className="bg-white rounded-lg shadow">
+      <div className="bg-white rounded-lg shadow dark:bg-gray-800 dark:shadow-gray-700">
         {isLoading ? (
           <div className="flex items-center justify-center h-64">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 dark:border-blue-400"></div>
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <thead className="bg-gray-50 dark:bg-gray-700">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Supplier Name</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th>
@@ -202,34 +202,34 @@ export const SuppliersTab: React.FC = () => {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white divide-y divide-gray-200 dark:bg-gray-800 dark:divide-gray-700">
                 {suppliers.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="px-6 py-12 text-center text-gray-500">
+                    <td colSpan={8} className="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
                       No suppliers found
                     </td>
                   </tr>
                 ) : (
                   suppliers.map(supplier => (
-                    <tr key={supplier.id} className="hover:bg-gray-50">
+                    <tr key={supplier.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div>
-                          <div className="font-medium text-gray-900">{supplier.name}</div>
-                          {supplier.contact_person && <div className="text-sm text-gray-500">{supplier.contact_person}</div>}
+                          <div className="font-medium text-gray-900 dark:text-gray-100">{supplier.name}</div>
+                          {supplier.contact_person && <div className="text-sm text-gray-500 dark:text-gray-400">{supplier.contact_person}</div>}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div>
-                          {supplier.email && <div className="text-sm text-gray-900">{supplier.email}</div>}
-                          {supplier.phone && <div className="text-sm text-gray-500">{supplier.phone}</div>}
+                          {supplier.email && <div className="text-sm text-gray-900 dark:text-gray-100">{supplier.email}</div>}
+                          {supplier.phone && <div className="text-sm text-gray-500 dark:text-gray-400">{supplier.phone}</div>}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">{supplier.rating ? renderSupplierGrade(supplier.rating) : "Not Rated"}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{supplier.payment_terms} days</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{supplier.lead_time_days} days</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{supplier.credit_limit ? formatCurrency(supplier.credit_limit) : "Not Set"}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{supplier.payment_terms} days</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{supplier.lead_time_days} days</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{supplier.credit_limit ? formatCurrency(supplier.credit_limit) : "Not Set"}</td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${supplier.is_active ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>{supplier.is_active ? "Active" : "Inactive"}</span>
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${supplier.is_active ? "bg-green-100 text-green-800 dark:text-green-200" : "bg-red-100 text-red-800 dark:text-red-200"}`}>{supplier.is_active ? "Active" : "Inactive"}</span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <div className="flex space-x-2">
@@ -262,7 +262,7 @@ export const SuppliersTab: React.FC = () => {
   const renderAnalyticsView = () => (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h3 className="text-lg font-medium text-gray-900">Supplier Analytics</h3>
+        <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Supplier Analytics</h3>
         <Button variant="outline" onClick={() => setViewMode("list")}>
           ← Back to List
         </Button>
@@ -272,67 +272,67 @@ export const SuppliersTab: React.FC = () => {
         <>
           {/* Summary Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="bg-white p-6 rounded-lg border border-gray-200">
+            <div className="bg-white p-6 rounded-lg border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
               <div className="flex items-center">
                 <div className="flex-shrink-0">
-                  <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
+                  <div className="w-8 h-8 bg-blue-500 rounded-lg dark:bg-blue-600 flex items-center justify-center">
                     <span className="text-white text-sm">🏭</span>
                   </div>
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-500">Total Suppliers</p>
-                  <p className="text-2xl font-semibold text-gray-900">{analytics.summary.totalSuppliers}</p>
+                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Suppliers</p>
+                  <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">{analytics.summary.totalSuppliers}</p>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white p-6 rounded-lg border border-gray-200">
+            <div className="bg-white p-6 rounded-lg border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
               <div className="flex items-center">
                 <div className="flex-shrink-0">
-                  <div className="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center">
+                  <div className="w-8 h-8 bg-green-500 dark:bg-green-600 rounded-lg flex items-center justify-center">
                     <span className="text-white text-sm">✅</span>
                   </div>
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-500">Active Suppliers</p>
-                  <p className="text-2xl font-semibold text-gray-900">{analytics.summary.activeSuppliers}</p>
+                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Active Suppliers</p>
+                  <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">{analytics.summary.activeSuppliers}</p>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white p-6 rounded-lg border border-gray-200">
+            <div className="bg-white p-6 rounded-lg border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
               <div className="flex items-center">
                 <div className="flex-shrink-0">
-                  <div className="w-8 h-8 bg-purple-500 rounded-lg flex items-center justify-center">
+                  <div className="w-8 h-8 bg-purple-500 dark:bg-purple-600 rounded-lg flex items-center justify-center">
                     <span className="text-white text-sm">💰</span>
                   </div>
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-500">Total Spent</p>
-                  <p className="text-2xl font-semibold text-gray-900">{formatCurrency(analytics.summary.totalSpent)}</p>
+                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Spent</p>
+                  <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">{formatCurrency(analytics.summary.totalSpent)}</p>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white p-6 rounded-lg border border-gray-200">
+            <div className="bg-white p-6 rounded-lg border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
               <div className="flex items-center">
                 <div className="flex-shrink-0">
-                  <div className="w-8 h-8 bg-yellow-500 rounded-lg flex items-center justify-center">
+                  <div className="w-8 h-8 bg-yellow-500 dark:bg-yellow-600 rounded-lg flex items-center justify-center">
                     <span className="text-white text-sm">⭐</span>
                   </div>
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-500">Avg Rating</p>
-                  <p className="text-2xl font-semibold text-gray-900">{analytics.summary.averageRating.toFixed(1)}</p>
+                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Avg Rating</p>
+                  <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">{analytics.summary.averageRating.toFixed(1)}</p>
                 </div>
               </div>
             </div>
           </div>
 
           {/* Top Suppliers */}
-          <div className="bg-white rounded-lg shadow">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h4 className="text-lg font-medium text-gray-900">Top Performing Suppliers</h4>
+          <div className="bg-white rounded-lg shadow dark:bg-gray-800 dark:border-gray-700">
+            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+              <h4 className="text-lg font-medium text-gray-900 dark:text-gray-100">Top Performing Suppliers</h4>
             </div>
             <div className="p-6">
               <Table columns={topSuppliersColumns} data={analytics.topSuppliers} enableColumnResizing={true} enableSorting={true} maxHeight="400px" />
@@ -346,13 +346,13 @@ export const SuppliersTab: React.FC = () => {
   const renderPerformanceView = () => (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h3 className="text-lg font-medium text-gray-900">Supplier Performance</h3>
+        <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Supplier Performance</h3>
         <Button variant="outline" onClick={() => setViewMode("list")}>
           ← Back to List
         </Button>
       </div>
 
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 dark:bg-gray-800 dark:border-gray-700">
         <div className="flex">
           <div className="flex-shrink-0">
             <svg className="h-5 w-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
@@ -360,8 +360,8 @@ export const SuppliersTab: React.FC = () => {
             </svg>
           </div>
           <div className="ml-3">
-            <h3 className="text-sm font-medium text-blue-800">Performance Tracking</h3>
-            <div className="mt-2 text-sm text-blue-700">
+            <h3 className="text-sm font-medium text-blue-800 dark:text-blue-200">Performance Tracking</h3>
+            <div className="mt-2 text-sm text-blue-700 dark:text-blue-200">
               <p>Monitor supplier performance including delivery times, quality scores, and reliability metrics. Use this data to optimize your supplier relationships and negotiate better terms.</p>
             </div>
           </div>
@@ -371,32 +371,32 @@ export const SuppliersTab: React.FC = () => {
       {/* Performance Scorecards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {suppliers.slice(0, 6).map(supplier => (
-          <div key={supplier.id} className="bg-white rounded-lg border border-gray-200 p-6">
+          <div key={supplier.id} className="bg-white rounded-lg border border-gray-200 p-6 dark:bg-gray-800 dark:border-gray-700">
             <div className="flex items-center justify-between mb-4">
-              <h4 className="text-lg font-medium text-gray-900">{supplier.name}</h4>
+              <h4 className="text-lg font-medium text-gray-900 dark:text-gray-100">{supplier.name}</h4>
               {supplier.rating && renderSupplierGrade(supplier.rating)}
             </div>
 
             <div className="space-y-3">
               <div className="flex justify-between">
-                <span className="text-sm text-gray-500">Payment Terms</span>
-                <span className="text-sm font-medium text-gray-900">{supplier.payment_terms} days</span>
+                <span className="text-sm text-gray-500 dark:text-gray-400">Payment Terms</span>
+                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{supplier.payment_terms} days</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm text-gray-500">Lead Time</span>
-                <span className="text-sm font-medium text-gray-900">{supplier.lead_time_days} days</span>
+                <span className="text-sm text-gray-500 dark:text-gray-400">Lead Time</span>
+                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{supplier.lead_time_days} days</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm text-gray-500">Credit Limit</span>
-                <span className="text-sm font-medium text-gray-900">{supplier.credit_limit ? formatCurrency(supplier.credit_limit) : "Not Set"}</span>
+                <span className="text-sm text-gray-500 dark:text-gray-400">Credit Limit</span>
+                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{supplier.credit_limit ? formatCurrency(supplier.credit_limit) : "Not Set"}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm text-gray-500">Discount Rate</span>
-                <span className="text-sm font-medium text-gray-900">{supplier.discount_rate ? `${supplier.discount_rate}%` : "None"}</span>
+                <span className="text-sm text-gray-500 dark:text-gray-400">Discount Rate</span>
+                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{supplier.discount_rate ? `${supplier.discount_rate}%` : "None"}</span>
               </div>
             </div>
 
-            <div className="mt-4 pt-4 border-t border-gray-200">
+            <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
               <Button size="sm" variant="outline" className="w-full">
                 View Details
               </Button>

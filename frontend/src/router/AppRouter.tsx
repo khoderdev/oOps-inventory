@@ -10,6 +10,7 @@ import { RestaurantManagementPage } from "../components/restaurant/RestaurantMan
 import SectionsPage from "../components/sections/SectionsPage";
 import SettingsPage from "../components/settings/SettingsPage";
 import StockManagementPage from "../components/stock/StockManagementPage";
+import { UserProfile } from "../components/users/UserProfile";
 import UsersPage from "../components/users/UsersPage";
 
 const router = createBrowserRouter([
@@ -61,6 +62,10 @@ const router = createBrowserRouter([
       {
         path: "users",
         element: <UsersPage />
+      },
+      {
+        path: "users/:id",
+        element: <UserProfile />
       }
     ]
   }

@@ -16,17 +16,7 @@ interface TableProps<T extends object> {
   stickyHeader?: boolean;
 }
 
-function Table<T extends object>({
-  data,
-  columns,
-  loading = false,
-  emptyMessage = "No data available",
-  className,
-  enableColumnResizing = true,
-  enableSorting = true,
-  maxHeight = "500px",
-  stickyHeader = true
-}: TableProps<T>) {
+function Table<T extends object>({ data, columns, loading = false, emptyMessage = "No data available", className, enableColumnResizing = true, enableSorting = true, maxHeight = "500px", stickyHeader = true }: TableProps<T>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [isResizing, setIsResizing] = React.useState(false);
   const [resizingColumnId, setResizingColumnId] = React.useState<string | null>(null);
@@ -58,25 +48,28 @@ function Table<T extends object>({
   const handleResizeStart = useCallback((columnId: string) => {
     setIsResizing(true);
     setResizingColumnId(columnId);
-    document.body.style.cursor = 'col-resize';
-    document.body.style.userSelect = 'none';
-    document.body.style.pointerEvents = 'none';
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+    document.body.style.pointerEvents = "none";
   }, []);
 
   const handleResizeEnd = useCallback(() => {
     setIsResizing(false);
     setResizingColumnId(null);
-    document.body.style.cursor = '';
-    document.body.style.userSelect = '';
-    document.body.style.pointerEvents = '';
+    document.body.style.cursor = "";
+    document.body.style.userSelect = "";
+    document.body.style.pointerEvents = "";
   }, []);
 
   // Handle mouse events for resize handles
-  const handleMouseEnterResize = useCallback((columnId: string) => {
-    if (!isResizing) {
-      setHoveredColumnId(columnId);
-    }
-  }, [isResizing]);
+  const handleMouseEnterResize = useCallback(
+    (columnId: string) => {
+      if (!isResizing) {
+        setHoveredColumnId(columnId);
+      }
+    },
+    [isResizing]
+  );
 
   const handleMouseLeaveResize = useCallback(() => {
     if (!isResizing) {
@@ -100,37 +93,18 @@ function Table<T extends object>({
     };
 
     if (isResizing) {
-      document.addEventListener('mouseup', handleGlobalMouseUp);
-      document.addEventListener('mousemove', handleGlobalMouseMove);
+      document.addEventListener("mouseup", handleGlobalMouseUp);
+      document.addEventListener("mousemove", handleGlobalMouseMove);
     }
 
     return () => {
-      document.body.style.cursor = '';
-      document.body.style.userSelect = '';
-      document.body.style.pointerEvents = '';
-      document.removeEventListener('mouseup', handleGlobalMouseUp);
-      document.removeEventListener('mousemove', handleGlobalMouseMove);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+      document.body.style.pointerEvents = "";
+      document.removeEventListener("mouseup", handleGlobalMouseUp);
+      document.removeEventListener("mousemove", handleGlobalMouseMove);
     };
   }, [isResizing, handleResizeEnd]);
-
-  // Auto-fit columns on data change
-  useEffect(() => {
-    if (data.length > 0 && tableRef.current) {
-      // Auto-adjust column widths based on content
-      const timer = setTimeout(() => {
-        table.getAllColumns().forEach(column => {
-          if (column.getCanResize()) {
-            const headerElement = tableRef.current?.querySelector(`[data-column-id="${column.id}"]`);
-            if (headerElement) {
-              // Auto-adjust column width based on content
-              column.resetSize();
-            }
-          }
-        });
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [data, table]);
 
   if (loading) {
     return (
@@ -153,7 +127,12 @@ function Table<T extends object>({
         >
           <thead className={clsx("bg-gray-50 dark:bg-gray-700 z-10", stickyHeader && "sticky top-0", "shadow-sm")}>
             {table.getHeaderGroups().map(headerGroup => (
-              <tr key={headerGroup.id}>
+              <tr
+                {...{
+                  key: headerGroup.id,
+                  className: "tr"
+                }}
+              >
                 {headerGroup.headers.map(header => {
                   const canSort = header.column.getCanSort();
                   const sorted = header.column.getIsSorted();
@@ -161,18 +140,19 @@ function Table<T extends object>({
 
                   return (
                     <th
-                      key={header.id}
-                      data-column-id={header.id}
-                      style={{
-                        width: header.getSize(),
-                        minWidth: header.column.columnDef.minSize || 60,
-                        maxWidth: header.column.columnDef.maxSize || 800
+                      {...{
+                        key: header.id,
+                        className: clsx("th px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider", "border border-gray-200 dark:border-gray-700", "relative group transition-colors duration-150", canSort && "cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600", sorted && "bg-gray-100 dark:bg-gray-600"),
+                        style: {
+                          width: `calc(var(--header-${header?.id}-size) * 1px)`,
+                          minWidth: header.column.columnDef.minSize || 60,
+                          maxWidth: header.column.columnDef.maxSize || 800
+                        },
+                        onClick: canSort ? header.column.getToggleSortingHandler() : undefined
                       }}
-                      className={clsx("px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider", "border-b border-gray-200 dark:border-gray-700", "relative group transition-colors duration-150", canSort && "cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600", sorted && "bg-gray-100 dark:bg-gray-600")}
-                      onClick={canSort ? header.column.getToggleSortingHandler() : undefined}
                     >
                       <div className="flex items-center justify-between gap-2 min-h-[20px]">
-                        <div className="flex items-center gap-2 truncate">{flexRender(header.column.columnDef.header, header.getContext())}</div>
+                        <div className="flex items-center gap-2 truncate">{header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}</div>
 
                         {canSort && (
                           <div className="flex items-center gap-1 flex-shrink-0">
@@ -189,55 +169,44 @@ function Table<T extends object>({
                         )}
                       </div>
 
-                      {/* Enhanced Resize Handle */}
                       {canResize && (
                         <div
                           ref={header.id === resizingColumnId ? resizeHandleRef : null}
-                          onMouseDown={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            handleResizeStart(header.id);
-                            header.getResizeHandler()(e);
-                          }}
-                          onMouseEnter={() => handleMouseEnterResize(header.id)}
-                          onMouseLeave={handleMouseLeaveResize}
-                          onTouchStart={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            handleResizeStart(header.id);
-                            header.getResizeHandler()(e);
-                          }}
-                          className={clsx(
-                            "absolute right-0 top-0 h-full cursor-col-resize z-20",
-                            "flex items-center justify-center transition-all duration-200",
-                            // Width and visibility based on state
-                            {
-                              "w-1 bg-blue-500 opacity-100": resizingColumnId === header.id,
-                              "w-2 opacity-100": hoveredColumnId === header.id && !isResizing,
-                              "w-1 opacity-0 group-hover:opacity-60": hoveredColumnId !== header.id && resizingColumnId !== header.id
+                          {...{
+                            onMouseDown: e => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleResizeStart(header.id);
+                              header.getResizeHandler()(e);
                             },
-                            // Hover effects
-                            "hover:bg-blue-400 hover:opacity-100"
-                          )}
-                          title="Drag to resize column"
+                            onDoubleClick: () => header.column.resetSize(),
+                            onMouseEnter: () => handleMouseEnterResize(header.id),
+                            onMouseLeave: handleMouseLeaveResize,
+                            onTouchStart: e => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleResizeStart(header.id);
+                              header.getResizeHandler()(e);
+                            },
+                            className: clsx(
+                              "resizer absolute right-0 top-0 h-full cursor-col-resize z-20",
+                              "flex items-center justify-center transition-all duration-200",
+                              {
+                                "w-1 bg-blue-500 opacity-100": resizingColumnId === header.id,
+                                "w-2 opacity-100": hoveredColumnId === header.id && !isResizing,
+                                "w-1 opacity-0 group-hover:opacity-60": hoveredColumnId !== header.id && resizingColumnId !== header.id,
+                                isResizing: header.column.getIsResizing()
+                              },
+                              "hover:bg-blue-400 hover:opacity-100"
+                            ),
+                            title: "Drag to resize column or double-click to auto-fit"
+                          }}
                         >
-                          {(hoveredColumnId === header.id || resizingColumnId === header.id) && (
-                            <GripVertical 
-                              className={clsx(
-                                "w-3 h-3 transition-colors duration-200",
-                                resizingColumnId === header.id 
-                                  ? "text-white" 
-                                  : "text-gray-400 hover:text-white"
-                              )} 
-                            />
-                          )}
+                          {(hoveredColumnId === header.id || resizingColumnId === header.id) && <GripVertical className={clsx("w-3 h-3 transition-colors duration-200", resizingColumnId === header.id ? "text-white" : "text-gray-400 hover:text-white")} />}
                         </div>
                       )}
 
-                      {/* Active resize indicator line */}
-                      {canResize && resizingColumnId === header.id && (
-                        <div className="absolute right-0 top-0 h-full w-0.5 bg-blue-500 shadow-lg z-30 animate-pulse" />
-                      )}
+                      {canResize && resizingColumnId === header.id && <div className="absolute right-0 top-0 h-full w-0.5 bg-blue-500 shadow-lg z-30 animate-pulse" />}
                     </th>
                   );
                 })}
@@ -260,6 +229,7 @@ function Table<T extends object>({
                     return (
                       <td
                         key={cell.id}
+                        data-column-id={cell.column.id}
                         style={{
                           width: cell.column.getSize(),
                           minWidth: cell.column.columnDef.minSize || 60,

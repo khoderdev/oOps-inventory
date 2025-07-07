@@ -1,3 +1,4 @@
+import type { CellContext } from "@tanstack/react-table";
 import { Edit, PlusIcon, Search, Shield, Trash2, UserCheck, UserX, Users } from "lucide-react";
 import { useContext, useMemo, useState } from "react";
 import { AppContext } from "../../contexts/AppContext";
@@ -38,6 +39,7 @@ const UsersPage = () => {
   });
 
   const users = useMemo(() => usersResponse?.users || [], [usersResponse?.users]);
+  console.log("usersResponse:", usersResponse);
 
   // Mutations
   const deleteUserMutation = useDeleteUser();
@@ -107,13 +109,6 @@ const UsersPage = () => {
     { value: "active", label: "Active Only" },
     { value: "inactive", label: "Inactive Only" }
   ];
-
-  const handleSort = (field: string) => {
-    setSortConfig(prev => ({
-      field,
-      order: prev.field === field && prev.order === "asc" ? "desc" : "asc"
-    }));
-  };
 
   const handleToggleStatus = async (user: User) => {
     // Prevent users from deactivating themselves
@@ -185,56 +180,54 @@ const UsersPage = () => {
 
   const columns = [
     {
-      key: "username",
-      title: "User",
+      accessorKey: "username",
+      header: "User",
       sortable: true,
-      render: (item: UserTableData) => {
-        const user = item as User;
+      cell: (info: CellContext<User, unknown>) => {
+        const user = info.row.original;
         const initials = user.username?.[0]?.toUpperCase() || "U";
 
         return (
           <div className="flex items-center space-x-3">
             <div className="flex items-center justify-center w-10 h-10 bg-blue-600 dark:bg-blue-500 rounded-full text-white text-sm font-semibold">{initials}</div>
-            {/* <div> */}
             <p className="font-medium text-gray-900 dark:text-white">{user.username}</p>
-            {/* </div> */}
           </div>
         );
       }
     },
     {
-      key: "role",
-      title: "Role",
+      accessorKey: "role",
+      header: "Role",
       sortable: true,
-      render: (item: UserTableData) => {
-        const user = item as User;
+      cell: (info: CellContext<User, unknown>) => {
+        const user = info.row.original;
         return <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getRoleBadgeColor(user.role)}`}>{user.role}</span>;
       }
     },
     {
-      key: "isActive",
-      title: "Status",
-      render: (item: UserTableData) => {
-        const user = item as User;
+      accessorKey: "isActive",
+      header: "Status",
+      cell: (info: CellContext<User, unknown>) => {
+        const user = info.row.original;
         return <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${user.isActive ? "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400" : "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400"}`}>{user.isActive ? "Active" : "Inactive"}</span>;
       }
     },
     {
-      key: "createdAt",
-      title: "Created",
+      accessorKey: "createdAt",
+      header: "Created Date",
       sortable: true,
-      render: (item: UserTableData) => {
-        const user = item as User;
-        return user.createdAt ? new Date(user.createdAt).toLocaleDateString() : "-";
+      cell: (info: CellContext<User, unknown>) => {
+        const date = info.getValue();
+        return date ? new Date(date instanceof Date ? date : String(date)).toLocaleDateString() : "-";
       }
     },
     {
-      key: "actions",
-      title: "Actions",
-      render: (item: UserTableData) => {
-        const user = item as User;
+      accessorKey: "actions",
+      header: "Actions",
+      cell: (info: CellContext<User, unknown>) => {
+        const user = info.row.original;
         return (
-          <div className="flex space-x-2">
+          <div className="flex space-x-2 w-40">
             <Button size="sm" variant="ghost" onClick={() => setEditingUser(user)} leftIcon={<Edit className="w-3 h-3" />}>
               Edit
             </Button>
@@ -322,9 +315,9 @@ const UsersPage = () => {
             <Input placeholder="Search by username or email..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10" />
           </div>
 
-          <Select options={roleOptions} value={roleFilter} onChange={e => setRoleFilter(e.target.value as "" | "ADMIN" | "MANAGER" | "STAFF")} placeholder="Filter by role" />
+          <Select options={roleOptions} value={roleFilter} onChange={(value: string | null) => setRoleFilter(value as "" | "ADMIN" | "MANAGER" | "STAFF")} placeholder="Filter by role" />
 
-          <Select options={statusOptions} value={statusFilter} onChange={e => setStatusFilter(e.target.value as "all" | "active" | "inactive")} placeholder="Filter by status" />
+          <Select options={statusOptions} value={statusFilter} onChange={(value: string | null) => setStatusFilter(value as "all" | "active" | "inactive")} placeholder="Filter by status" />
 
           <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
             Showing {filteredData.length} of {totalUsers} users
@@ -334,7 +327,7 @@ const UsersPage = () => {
 
       {/* Users Table */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
-        <Table data={filteredData as UserTableData[]} columns={columns} loading={isLoading} emptyMessage="No users found" sortConfig={sortConfig} onSort={handleSort} />
+        <Table data={filteredData as UserTableData[]} columns={columns} loading={isLoading} emptyMessage="No users found" />
       </div>
 
       {/* Create User Modal */}

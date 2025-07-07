@@ -2,10 +2,6 @@ import { asyncHandler } from "../middleware/errorHandler.js";
 import { changePassword, deleteUser, getAllUsers, getUserById, updateUser, updateUserRole, updateUserStatus } from "../services/userService.js";
 import { changePasswordSchema, updateProfileSchema, updateRoleSchema, validateData } from "../utils/validation.js";
 
-/**
- * Get all users with pagination and filtering
- * GET /api/users
- */
 export const getUsers = asyncHandler(async (req, res) => {
   const { page = 1, limit = 10, role, search, isActive } = req.query;
   const options = {
@@ -22,10 +18,6 @@ export const getUsers = asyncHandler(async (req, res) => {
   });
 });
 
-/**
- * Get user by ID
- * GET /api/users/:id
- */
 export const getUser = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const userId = parseInt(id);
@@ -52,10 +44,6 @@ export const getUser = asyncHandler(async (req, res) => {
   });
 });
 
-/**
- * Update user profile
- * PUT /api/users/:id
- */
 export const updateProfile = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const userId = parseInt(id);
@@ -102,10 +90,6 @@ export const updateProfile = asyncHandler(async (req, res) => {
   });
 });
 
-/**
- * Update user role (admin only)
- * PUT /api/users/:id/role
- */
 export const updateRole = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const userId = parseInt(id);
@@ -161,10 +145,6 @@ export const updateRole = asyncHandler(async (req, res) => {
   });
 });
 
-/**
- * Delete user (admin only)
- * DELETE /api/users/:id
- */
 export const deleteUserById = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const userId = parseInt(id);
@@ -208,10 +188,6 @@ export const deleteUserById = asyncHandler(async (req, res) => {
   });
 });
 
-/**
- * Change user password
- * POST /api/users/:id/change-password
- */
 export const changeUserPassword = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const userId = parseInt(id);
@@ -287,10 +263,6 @@ export const changeUserPassword = asyncHandler(async (req, res) => {
   }
 });
 
-/**
- * Update user status (activate/deactivate)
- * PUT /api/users/:id/status
- */
 export const updateStatus = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const userId = parseInt(id);
@@ -343,10 +315,6 @@ export const updateStatus = asyncHandler(async (req, res) => {
   });
 });
 
-/**
- * Change current user's password
- * POST /api/users/change-password
- */
 export const changeCurrentUserPassword = asyncHandler(async (req, res) => {
   // Use the authenticated user's ID from the middleware
   const userId = req.user.id;
@@ -409,21 +377,12 @@ export const changeCurrentUserPassword = asyncHandler(async (req, res) => {
         error: "User not found"
       });
     }
-
-    // Re-throw other errors to be handled by the error handler
     throw error;
   }
 });
 
-/**
- * Update current user's profile
- * PUT /api/users/profile
- */
 export const updateCurrentUserProfile = asyncHandler(async (req, res) => {
-  // Use the authenticated user's ID from the middleware
   const userId = req.user.id;
-
-  // Check if the current user is active
   if (!req.user.is_active) {
     return res.status(403).json({
       success: false,
@@ -432,15 +391,11 @@ export const updateCurrentUserProfile = asyncHandler(async (req, res) => {
     });
   }
 
-  // Remove role from request body for regular users (only admins can change roles)
   const { role, ...allowedData } = req.body;
 
-  // Only allow role updates for admins, and only if they're not changing their own role
   if (role && req.user.role === "ADMIN" && req.body.targetUserId && req.body.targetUserId !== userId) {
-    // This would be for admin functionality - not implemented in this endpoint
   }
 
-  // Validate request data (without role)
   const validation = validateData(updateProfileSchema, allowedData);
   if (!validation.isValid) {
     return res.status(400).json({
@@ -459,8 +414,6 @@ export const updateCurrentUserProfile = asyncHandler(async (req, res) => {
         error: "User not found"
       });
     }
-
-    // Format user data for frontend (camelCase)
     const formattedUser = {
       id: updatedUser.id,
       username: updatedUser.username,
@@ -479,7 +432,6 @@ export const updateCurrentUserProfile = asyncHandler(async (req, res) => {
       user: formattedUser
     });
   } catch (error) {
-    // Handle specific profile update errors
     if (error.message === "Email already in use") {
       return res.status(400).json({
         success: false,
@@ -500,8 +452,6 @@ export const updateCurrentUserProfile = asyncHandler(async (req, res) => {
         error: "User not found"
       });
     }
-
-    // Re-throw other errors to be handled by the error handler
     throw error;
   }
 });

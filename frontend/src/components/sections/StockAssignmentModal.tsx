@@ -61,18 +61,18 @@ const StockAssignmentModal = ({ section, isOpen, onClose, onSuccess }: StockAssi
     if (isPackOrBox) {
       const packQuantity = level.availableUnitsQuantity;
       return {
-        value: material.id,
+        value: String(material.id),
         label: `${material.name} (${packQuantity} ${material.unit} available)`
       };
     }
 
     return {
-      value: material.id,
+      value: String(material.id),
       label: `${material.name} (${level.availableUnitsQuantity} ${material.unit} available)`
     };
   });
 
-  const selectedStockLevel = availableStock.find(level => level.rawMaterial?.id === selectedMaterialId);
+  const selectedStockLevel = availableStock.find(level => level.rawMaterial?.id === Number(selectedMaterialId));
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -120,16 +120,12 @@ const StockAssignmentModal = ({ section, isOpen, onClose, onSuccess }: StockAssi
     }
 
     try {
-      // Send the quantity as entered by user (pack quantity for pack/box materials)
-      // For pack materials: user enters 13 packs -> send 13 to backend
-      // Backend should assign 13 packs, not convert to 78 pieces
       const quantityToSend = quantity;
-
       const assignmentData = {
         sectionId: section.id,
-        rawMaterialId: selectedMaterialId,
-        quantity: quantityToSend, // This should be in the unit shown to user (packs for pack materials)
-        assignedBy: state.user?.id || "1",
+        rawMaterialId: Number(selectedMaterialId),
+        quantity: quantityToSend,
+        assignedBy: Number(state.user?.id || "1"),
         notes: `Assigned to ${section.name}`
       };
 
@@ -163,7 +159,18 @@ const StockAssignmentModal = ({ section, isOpen, onClose, onSuccess }: StockAssi
     <Modal isOpen={isOpen} onClose={onClose} title={`Assign Stock to ${section.name}`} size="md">
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="space-y-4">
-          <Select label="Select Material" options={[{ value: "", label: "Choose a material..." }, ...materialOptions]} value={selectedMaterialId} onChange={e => handleInputChange("selectedMaterialId", e.target.value)} error={errors.selectedMaterialId} required />
+          <Select
+            label="Select Material"
+            options={[{ value: "", label: "Choose a material..." }, ...materialOptions]}
+            value={selectedMaterialId}
+            onChange={value => {
+              if (value !== null) {
+                handleInputChange("selectedMaterialId", value);
+              }
+            }}
+            error={errors.selectedMaterialId}
+            required
+          />
 
           {selectedStockLevel && (
             <div className="bg-blue-50 p-4 rounded-lg dark:bg-blue-900/10">

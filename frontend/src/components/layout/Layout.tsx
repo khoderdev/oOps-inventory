@@ -1,6 +1,6 @@
 import { clsx } from "clsx";
 import { BarChart3, Building2, ChefHat, ChevronLeft, ChevronRight, DollarSign, Home, Menu, Package, Settings, Users, Warehouse, X } from "lucide-react";
-import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
+import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useApp } from "../../hooks/useApp";
 import Button from "../ui/Button";
 
@@ -69,6 +69,7 @@ const Layout = () => {
   };
 
   const userInfo = getUserDisplayInfo();
+  const navigate = useNavigate();
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50 dark:bg-gray-900" onKeyDown={handleKeyDown}>
@@ -135,8 +136,8 @@ const Layout = () => {
           </nav>
 
           {/* User Info */}
-          <div className={clsx("px-3 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50", sidebarCollapsed && !isMobile ? "text-center" : "")}>
-            <div className={clsx("flex items-center", sidebarCollapsed && !isMobile ? "justify-center" : "gap-3")}>
+          <div className={clsx("px-3 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50", sidebarCollapsed && !isMobile ? "text-center" : "")} onClick={() => navigate("/settings")}>
+            <div className={clsx("flex items-center hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer", sidebarCollapsed && !isMobile ? "justify-center" : "gap-3")}>
               <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full text-white text-sm font-bold shadow-md">{userInfo.initials}</div>
 
               {(!sidebarCollapsed || isMobile) && (

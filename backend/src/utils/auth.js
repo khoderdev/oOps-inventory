@@ -1,17 +1,7 @@
-/**
- * Authentication utilities
- * Handles password hashing and JWT token operations
- */
-
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import logger from "./logger.js";
 
-/**
- * Hash a password using bcrypt
- * @param {string} password - Plain text password
- * @returns {Promise<string>} - Hashed password
- */
 export const hashPassword = async password => {
   try {
     const saltRounds = parseInt(process.env.BCRYPT_ROUNDS) || 12;
@@ -23,12 +13,6 @@ export const hashPassword = async password => {
   }
 };
 
-/**
- * Compare a password with its hash
- * @param {string} password - Plain text password
- * @param {string} hashedPassword - Hashed password
- * @returns {Promise<boolean>} - True if passwords match
- */
 export const comparePassword = async (password, hashedPassword) => {
   try {
     const isMatch = await bcrypt.compare(password, hashedPassword);
@@ -39,11 +23,6 @@ export const comparePassword = async (password, hashedPassword) => {
   }
 };
 
-/**
- * Extract token from Authorization header
- * @param {string} authHeader - Authorization header
- * @returns {string|null} - Extracted token or null
- */
 export const extractToken = authHeader => {
   if (!authHeader) return null;
 
@@ -55,11 +34,6 @@ export const extractToken = authHeader => {
   return parts[1];
 };
 
-/**
- * Generate JWT token
- * @param {Object} payload - Token payload
- * @returns {string} - JWT token
- */
 export const generateToken = payload => {
   try {
     const token = jwt.sign(payload, process.env.JWT_SECRET || "your-secret-key", {
@@ -74,11 +48,6 @@ export const generateToken = payload => {
   }
 };
 
-/**
- * Verify JWT token
- * @param {string} token - JWT token
- * @returns {Object} - Decoded token payload
- */
 export const verifyToken = token => {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET || "your-secret-key", {

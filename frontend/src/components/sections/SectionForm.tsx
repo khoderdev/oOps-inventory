@@ -132,9 +132,9 @@ const SectionForm = ({ initialData, onSuccess, onCancel }: SectionFormProps) => 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Input label="Section Name" value={formData.name} onChange={e => handleInputChange("name", e.target.value)} error={errors.name} required placeholder="e.g., Main Kitchen, Bar Station" />
 
-        <Select label="Section Type" options={sectionTypeOptions} value={formData.type} onChange={e => handleInputChange("type", e.target.value)} required />
+        <Select label="Section Type" options={sectionTypeOptions} value={formData.type} onChange={value => handleInputChange("type", value)} required />
 
-        <Select label="Manager" options={userOptions} value={formData.managerId} onChange={e => handleInputChange("managerId", e.target.value)} error={errors.managerId} required placeholder={usersLoading ? "Loading users..." : "Select a manager"} disabled={usersLoading} />
+        <Select label="Manager" options={userOptions} value={formData.managerId} onChange={value => handleInputChange("managerId", value)} error={errors.managerId} required placeholder={usersLoading ? "Loading users..." : "Select a manager"} disabled={usersLoading} />
 
         <div></div>
       </div>

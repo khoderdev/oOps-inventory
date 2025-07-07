@@ -251,11 +251,11 @@ const ConsumptionModal = ({ section, inventoryItem, isOpen, onClose, onSuccess }
             )}
           </div>
 
-          <Input autoFocus label={`Quantity Used (${getDisplayUnit()})`} type="number" min="0" max={maxQuantity} step={getStepValueForDisplay()} value={quantity} onChange={e => handleInputChange("quantity", e.target.value)} error={errors.quantity} required helperText={`Max: ${getFormattedQuantity(maxQuantity, getDisplayUnit())}`} />
+          <Input autoFocus label={`Quantity Used (${getDisplayUnit()})`} type="number" min="0" max={maxQuantity} step={getStepValueForDisplay()} value={quantity} onChange={value => handleInputChange("quantity", value)} error={errors.quantity} required helperText={`Max: ${getFormattedQuantity(maxQuantity, getDisplayUnit())}`} />
 
-          <Select label="Reason for Usage" options={[{ value: "", label: "Select a reason..." }, ...reasonOptions]} value={reason} onChange={e => handleInputChange("reason", e.target.value)} error={errors.reason} required />
+          <Select label="Reason for Usage" options={[{ value: "", label: "Select a reason..." }, ...reasonOptions]} value={reason} onChange={value => handleInputChange("reason", value ?? "")} error={errors.reason} required />
 
-          <Input label="Notes (Optional)" value={notes} onChange={e => handleInputChange("notes", e.target.value)} placeholder="Additional notes about this usage" />
+          <Input label="Notes (Optional)" value={notes} onChange={value => handleInputChange("notes", value)} placeholder="Additional notes about this usage" />
 
           {/* Usage Summary */}
           {getNumericQuantity() > 0 && inventoryItem.rawMaterial && (

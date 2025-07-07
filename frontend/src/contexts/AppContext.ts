@@ -16,7 +16,6 @@ export type AppAction = { type: "SET_USER"; payload: User | null } | { type: "SE
 export interface AppContextType {
   state: AppState;
   dispatch: React.Dispatch<AppAction>;
-  // Convenience methods
   setUser: (user: User | null) => void;
   setLoading: (loading: boolean) => void;
   setTheme: (theme: "light" | "dark") => void;

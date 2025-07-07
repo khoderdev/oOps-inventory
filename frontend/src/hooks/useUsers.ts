@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { UsersAPI } from "../data/users.api";
-import type { UserRole, UsersQueryOptions } from "../types/users.types";
+import type { UserRole } from "../types/common.types";
+import type { UsersQueryOptions } from "../types/users.types";
 
 const QUERY_KEYS = {
   users: "users",
@@ -46,7 +47,7 @@ export const useCreateUser = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (userData: { firstName: string; lastName: string; email: string; role: UserRole; password: string; isActive?: boolean }) => UsersAPI.create(userData),
+    mutationFn: (userData: { username: string; firstName?: string; lastName?: string; email?: string; role: UserRole; password: string; isActive?: boolean }) => UsersAPI.create(userData),
     onSuccess: () => {
       // Invalidate users queries to refetch the data
       queryClient.invalidateQueries({ queryKey: ["users"] });
@@ -65,9 +66,10 @@ export const useUpdateUser = () => {
     }: {
       id: string;
       userData: {
-        firstName: string;
-        lastName: string;
-        email: string;
+        username: string;
+        firstName?: string;
+        lastName?: string;
+        email?: string;
         role: UserRole;
         isActive: boolean;
         password?: string;
