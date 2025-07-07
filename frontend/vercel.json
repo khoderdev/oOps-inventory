@@ -1,0 +1,20 @@
+{
+  "version": 2,
+  "name": "oops-inventory-frontend",
+  "builds": [
+    {
+      "src": "vite.config.ts",
+      "use": "@vercel/static-build"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
+    }
+  ],
+  "env": {
+    "VITE_API_URL": "https://oops-inventory-server.vercel.app/api"
+  },
+  "outputDirectory": "dist"
+}
