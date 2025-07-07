@@ -77,22 +77,7 @@ const StockLevelsTab = () => {
     return filtered;
   }, [stockLevels, searchTerm, categoryFilter, stockFilter, sortConfig]);
 
-  // const formatQuantityDisplay = (subunitQty: number, material: StockLevel["rawMaterial"]) => {
-  //   if (!material) return `${subunitQty}`;
-
-  //   const unitsPerPack = material.unitsPerPack || 1;
-  //   const packQty = subunitQty / unitsPerPack;
-
-  //   const formattedPackQty = parseFloat(packQty.toFixed(1));
-  //   const baseUnit = material.baseUnit || "units";
-
-  //   return `${formattedPackQty} ${material.unit} (${subunitQty} ${baseUnit})`;
-  // };
-  const formatQuantityDisplay = (
-    inputQty: number,
-    material: StockLevel["rawMaterial"],
-    isPackInput = false // ✅ default is subunit input
-  ) => {
+  const formatQuantityDisplay = (inputQty: number, material: StockLevel["rawMaterial"], isPackInput = false) => {
     if (!material) return `${inputQty}`;
 
     const unitsPerPack = material.unitsPerPack || 1;
