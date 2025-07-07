@@ -180,6 +180,4 @@ const Select = forwardRef(<T extends string | number>({ label, error, helperText
   );
 }) as <T extends string | number>(props: SelectProps<T> & { ref?: React.Ref<HTMLSelectElement> }) => React.ReactElement;
 
-Select.displayName = "Select";
-
 export default Select;

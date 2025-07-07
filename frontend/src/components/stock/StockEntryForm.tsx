@@ -204,7 +204,8 @@ const StockEntryForm = ({ onSuccess, onCancel, initialData }: ExtendedStockEntry
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Select label="Raw Material" options={materialOptions} value={formData.rawMaterialId} onChange={e => handleMaterialChange(e.target.value)} error={errors.rawMaterialId} required placeholder="Select a material" />
+        {/* <Select label="Raw Material" options={materialOptions} value={formData.rawMaterialId} onChange={e => handleMaterialChange(e.target.value)} error={errors.rawMaterialId} required placeholder="Select a material" /> */}
+        <Select label="Raw Material" options={materialOptions} value={formData.rawMaterialId} onChange={handleMaterialChange} error={errors.rawMaterialId} required placeholder="Select a material" />
 
         <Input label="Quantity" type="number" min="0" step="0.01" value={formData.quantity} onChange={e => handleInputChange("quantity", parseFloat(e.target.value) || 0)} error={errors.quantity} required helperText={selectedMaterial ? `Unit: ${selectedMaterial.unit}` : undefined} />
 
@@ -220,7 +221,7 @@ const StockEntryForm = ({ onSuccess, onCancel, initialData }: ExtendedStockEntry
           {!showNewSupplierInput ? (
             <div className="flex space-x-2">
               <div className="flex-1">
-                <Select options={[{ value: "", label: "Select or type supplier..." }, ...supplierOptions]} value={formData.supplier} onChange={e => handleInputChange("supplier", e.target.value)} placeholder="Choose existing supplier" />
+                <Select options={[{ value: "", label: "Select or type supplier..." }, ...supplierOptions]} value={formData.supplier} onChange={value => handleInputChange("supplier", value ?? "")} placeholder="Choose existing supplier" />
               </div>
               <Button type="button" variant="outline" size="sm" onClick={() => setShowNewSupplierInput(true)} leftIcon={<Plus className="w-3 h-3" />} title="Add new supplier">
                 New
