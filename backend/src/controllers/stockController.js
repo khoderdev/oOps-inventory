@@ -10,7 +10,7 @@ export const createStockEntry = asyncHandler(async (req, res) => {
   const entryData = {
     ...req.body,
     rawMaterialId: parseInt(req.body.rawMaterialId),
-    receivedBy: parseInt(req.body.receivedBy)
+    receivedBy: parseInt(req.body.receivedById)
   };
 
   // Validate that the IDs are valid integers
@@ -118,9 +118,9 @@ export const updateStockEntry = asyncHandler(async (req, res) => {
 export const deleteStockEntry = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const entryId = parseInt(id);
-  
+
   // Read force parameter from query string and convert to boolean
-  const forceDelete = req.query.force === 'true';
+  const forceDelete = req.query.force === "true";
 
   if (isNaN(entryId)) {
     return res.status(400).json({

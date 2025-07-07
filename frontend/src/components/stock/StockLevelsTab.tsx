@@ -77,40 +77,41 @@ const StockLevelsTab = () => {
     return filtered;
   }, [stockLevels, searchTerm, categoryFilter, stockFilter, sortConfig]);
 
-  // const handleSort = (field: string) => {
-  //   setSortConfig(prev => ({
-  //     field,
-  //     order: prev.field === field && prev.order === "asc" ? "desc" : "asc"
-  //   }));
+  // const formatQuantityDisplay = (subunitQty: number, material: StockLevel["rawMaterial"]) => {
+  //   if (!material) return `${subunitQty}`;
+
+  //   const unitsPerPack = material.unitsPerPack || 1;
+  //   const packQty = subunitQty / unitsPerPack;
+
+  //   const formattedPackQty = parseFloat(packQty.toFixed(1));
+  //   const baseUnit = material.baseUnit || "units";
+
+  //   return `${formattedPackQty} ${material.unit} (${subunitQty} ${baseUnit})`;
   // };
+  const formatQuantityDisplay = (
+    inputQty: number,
+    material: StockLevel["rawMaterial"],
+    isPackInput = false // ✅ default is subunit input
+  ) => {
+    if (!material) return `${inputQty}`;
 
-  // Helper function to format quantity display for pack/box materials
-  const formatQuantityDisplay = (quantity: number, material: StockLevel["rawMaterial"], isMinMax = false) => {
-    if (!material) return `${quantity}`;
+    const unitsPerPack = material.unitsPerPack || 1;
+    const baseUnit = material.baseUnit || "units";
 
-    const isPackOrBox = material.unit === MeasurementUnit.PACKS || material.unit === MeasurementUnit.BOXES;
-    if (isPackOrBox) {
-      const unitsPerPack = material.unitsPerPack || 1;
-      const baseUnit = material.baseUnit || "pieces";
+    let packQty: number;
+    let subunitQty: number;
 
-      if (isMinMax) {
-        // For min/max levels, we show PACKS first then subunits in parentheses
-        const subunitQuantity = quantity * unitsPerPack;
-        return `${quantity} ${material.unit} (${subunitQuantity} ${baseUnit})`;
-      } else {
-        // For available/total quantities, we show subunits converted to PACKS
-        const fullPacks = Math.floor(quantity / unitsPerPack);
-        const remainingSubunits = quantity % unitsPerPack;
-
-        if (remainingSubunits > 0) {
-          return `${fullPacks + remainingSubunits / unitsPerPack} ${material.unit} (${quantity} ${baseUnit})`;
-        }
-        return `${fullPacks} ${material.unit} (${quantity} ${baseUnit})`;
-      }
+    if (isPackInput) {
+      packQty = inputQty;
+      subunitQty = packQty * unitsPerPack;
+    } else {
+      subunitQty = inputQty;
+      packQty = subunitQty / unitsPerPack;
     }
 
-    return `${quantity} ${material.unit}`;
+    return `${Math.round(packQty)} ${material.unit} (${subunitQty} ${baseUnit})`;
   };
+
   const calculateTotalValue = () => {
     return stockLevels.reduce((sum, level) => {
       const material = level.rawMaterial;
@@ -148,7 +149,7 @@ const StockLevelsTab = () => {
         const item = info.row.original;
         return (
           <div className="flex items-center space-x-2">
-            <span className={`font-medium ${item.isLowStock ? "text-red-600 dark:text-red-400" : "text-green-600 dark:text-green-400"}`}>{formatQuantityDisplay(item.availableUnitsQuantity, item.rawMaterial)}</span>
+            <span className="font-medium text-gray-900 dark:text-white">{formatQuantityDisplay(item.availableSubUnitsQuantity, item.rawMaterial)}</span>
             {item.isLowStock && <AlertTriangle className="w-4 h-4 text-red-500 dark:text-red-400" />}
           </div>
         );
@@ -160,7 +161,7 @@ const StockLevelsTab = () => {
       header: "Total Received",
       cell: info => {
         const item = info.row.original;
-        return formatQuantityDisplay(item.totalUnitsQuantity, item.rawMaterial);
+        return formatQuantityDisplay(item.totalSubUnitsQuantity, item.rawMaterial);
       }
     },
     {

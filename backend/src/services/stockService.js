@@ -157,7 +157,11 @@ export const createStockEntry = async entryData => {
 
     // Map frontend data to database format
     const dbData = {
-      raw_material_id: entryData.rawMaterialId,
+      // raw_material_id: entryData.rawMaterialId,
+      raw_material: {
+        connect: { id: entryData.rawMaterialId }
+      },
+
       quantity: new Decimal(baseQuantity),
       unit_cost: new Decimal(unitCost),
       total_cost: new Decimal(totalCost),
@@ -170,7 +174,22 @@ export const createStockEntry = async entryData => {
     };
 
     const stockEntry = await prisma().stockEntry.create({
-      data: dbData,
+      data: {
+        raw_material: {
+          connect: { id: entryData.rawMaterialId }
+        },
+        user: {
+          connect: { id: entryData.receivedBy } // ✅ this handles the relation
+        },
+        quantity: new Decimal(baseQuantity),
+        unit_cost: new Decimal(unitCost),
+        total_cost: new Decimal(totalCost),
+        supplier: entryData.supplier || undefined,
+        batch_number: entryData.batchNumber || undefined,
+        expiry_date: entryData.expiryDate || undefined,
+        received_date: entryData.receivedDate,
+        notes: enhancedNotes
+      },
       include: {
         raw_material: true,
         user: true
