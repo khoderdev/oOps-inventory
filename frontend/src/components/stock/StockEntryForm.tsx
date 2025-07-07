@@ -1,13 +1,22 @@
 import { Check, Plus, X } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useApp } from "../../hooks/useApp";
 import { useRawMaterials } from "../../hooks/useRawMaterials";
-import { useCreateStockEntry, useStockEntries, useUpdateStockEntry } from "../../hooks/useStock";
-import { MeasurementUnit } from "../../types";
-import type { StockEntry, StockEntryFormProps } from "../../types/stock.types";
+import { useCreateStockEntry, useUpdateStockEntry } from "../../hooks/useStock";
+import { useCreateSupplier, useSuppliers } from "../../hooks/useSuppliers";
+import { MeasurementUnit } from "../../types/rawMaterials.types";
+import type { StockEntry } from "../../types/stock.types";
+import type { CreateSupplierRequest } from "../../types/suppliers.types";
+import { SupplierForm } from "../forms/SupplierForm";
 import Button from "../ui/Button";
 import Input from "../ui/Input";
+import Modal from "../ui/Modal";
 import Select from "../ui/Select";
+
+interface StockEntryFormProps {
+  onSuccess: () => void;
+  onCancel: () => void;
+}
 
 interface ExtendedStockEntryFormProps extends StockEntryFormProps {
   initialData?: StockEntry;
@@ -15,10 +24,11 @@ interface ExtendedStockEntryFormProps extends StockEntryFormProps {
 
 const StockEntryForm = ({ onSuccess, onCancel, initialData }: ExtendedStockEntryFormProps) => {
   const [formData, setFormData] = useState({
-    rawMaterialId: "",
+    rawMaterialId: "", // Will be converted to number when submitting
     quantity: 0,
     unitCost: 0,
     supplier: "",
+    newSupplierName: "", // For storing the name of a new supplier
     batchNumber: "",
     expiryDate: "",
     productionDate: "",
@@ -28,25 +38,48 @@ const StockEntryForm = ({ onSuccess, onCancel, initialData }: ExtendedStockEntry
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [showNewSupplierInput, setShowNewSupplierInput] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const createSupplier = useCreateSupplier();
   const [newSupplierName, setNewSupplierName] = useState("");
-  const [supplierOptions, setSupplierOptions] = useState<Array<{ value: string; label: string }>>([]);
-
   const { data: rawMaterials = [] } = useRawMaterials({ isActive: true });
-  const { data: stockEntries = [] } = useStockEntries();
+  const { data: suppliersData } = useSuppliers();
   const { state } = useApp();
   const createMutation = useCreateStockEntry();
   const updateMutation = useUpdateStockEntry();
+
+  // Extract suppliers array from the API response using useMemo to avoid re-renders
+  const suppliers = useMemo(() => {
+    // The API returns a PaginatedSuppliers object with suppliers array inside
+    if (suppliersData && "suppliers" in suppliersData) {
+      return suppliersData.suppliers;
+    }
+    // Fallback for empty response
+    return [];
+  }, [suppliersData]);
+
+  // Helper function to get supplier name by ID
+  const getSupplierNameById = (supplierId: string): string | undefined => {
+    if (!supplierId) return undefined;
+    const supplier = suppliers.find(s => s.id.toString() === supplierId);
+    return supplier ? supplier.name : undefined;
+  };
 
   // Initialize form data when editing
   useEffect(() => {
     if (initialData) {
       const receivedDateString = initialData.receivedDate ? new Date(initialData.receivedDate).toISOString().split("T")[0] || new Date().toISOString().split("T")[0] || "" : new Date().toISOString().split("T")[0] || "";
 
+      // Find supplier ID by name
+      const supplierName = initialData.supplier || "";
+      const supplierMatch = suppliers.find(s => s.name === supplierName);
+      const supplierId = supplierMatch ? supplierMatch.id.toString() : "";
+
       setFormData({
-        rawMaterialId: initialData.rawMaterialId,
+        rawMaterialId: initialData.rawMaterialId.toString(), // Convert number to string for form
         quantity: initialData.quantity,
         unitCost: initialData.unitCost,
-        supplier: initialData.supplier || "",
+        supplier: supplierId,
+        newSupplierName: supplierMatch ? "" : supplierName, // If no match, treat as new supplier
         batchNumber: initialData.batchNumber || "",
         expiryDate: initialData.expiryDate ? new Date(initialData.expiryDate).toISOString().split("T")[0] || "" : "",
         productionDate: initialData.productionDate ? new Date(initialData.productionDate).toISOString().split("T")[0] || "" : "",
@@ -54,44 +87,24 @@ const StockEntryForm = ({ onSuccess, onCancel, initialData }: ExtendedStockEntry
         notes: initialData.notes || ""
       });
     }
-  }, [initialData]);
+  }, [initialData, suppliers]);
 
   const materialOptions = rawMaterials.map(material => ({
-    value: material.id,
+    value: material.id.toString(), // Convert to string for Select component
     label: `${material.name} (${material.unit})`
   }));
 
-  // Get unique suppliers from existing stock entries and raw materials
-  const existingSuppliers = useMemo(() => {
-    const suppliers = new Set<string>();
+  // Get supplier options from the suppliers data
+  const supplierOptions = useMemo(() => {
+    if (!suppliers || suppliers.length === 0) return [];
 
-    // Add suppliers from raw materials
-    rawMaterials.forEach(material => {
-      if (material.supplier) {
-        suppliers.add(material.supplier);
-      }
-    });
-
-    // Add suppliers from stock entries
-    stockEntries.forEach(entry => {
-      if (entry.supplier) {
-        suppliers.add(entry.supplier);
-      }
-    });
-
-    return Array.from(suppliers).sort();
-  }, [rawMaterials, stockEntries]);
-
-  // Update supplier options when existing suppliers change
-  useEffect(() => {
-    const options = existingSuppliers.map(supplier => ({
-      value: supplier,
-      label: supplier
+    return suppliers.map(supplier => ({
+      value: supplier.id.toString(),
+      label: supplier.name
     }));
-    setSupplierOptions(options);
-  }, [existingSuppliers]);
+  }, [suppliers]);
 
-  const validateForm = () => {
+  const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
 
     if (!formData.rawMaterialId) {
@@ -110,7 +123,7 @@ const StockEntryForm = ({ onSuccess, onCancel, initialData }: ExtendedStockEntry
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault();
 
     if (!validateForm()) {
@@ -121,28 +134,30 @@ const StockEntryForm = ({ onSuccess, onCancel, initialData }: ExtendedStockEntry
       if (initialData) {
         await updateMutation.mutateAsync({
           id: initialData.id,
-          rawMaterialId: formData.rawMaterialId,
+          rawMaterialId: parseInt(formData.rawMaterialId, 10), // Convert string to number
           quantity: formData.quantity,
           unitCost: formData.unitCost,
-          supplier: formData.supplier || undefined,
+          totalCost: formData.quantity * formData.unitCost, // Calculate total cost
+          supplier: formData.supplier.startsWith("new-") ? formData.newSupplierName : getSupplierNameById(formData.supplier),
           batchNumber: formData.batchNumber || undefined,
           expiryDate: formData.expiryDate ? new Date(formData.expiryDate) : undefined,
           productionDate: formData.productionDate ? new Date(formData.productionDate) : undefined,
           receivedDate: new Date(formData.receivedDate!),
-          receivedBy: state.user?.id || "1",
+          receivedById: parseInt(state.user?.id || "1", 10),
           notes: formData.notes || undefined
         });
       } else {
         await createMutation.mutateAsync({
-          rawMaterialId: formData.rawMaterialId,
+          rawMaterialId: parseInt(formData.rawMaterialId, 10), // Convert string to number
           quantity: formData.quantity,
           unitCost: formData.unitCost,
-          supplier: formData.supplier || undefined,
+          totalCost: formData.quantity * formData.unitCost, // Calculate total cost
+          supplier: formData.supplier.startsWith("new-") ? formData.newSupplierName : getSupplierNameById(formData.supplier),
           batchNumber: formData.batchNumber || undefined,
           expiryDate: formData.expiryDate ? new Date(formData.expiryDate) : undefined,
           productionDate: formData.productionDate ? new Date(formData.productionDate) : undefined,
           receivedDate: new Date(formData.receivedDate!),
-          receivedBy: state.user?.id || "1",
+          receivedById: parseInt(state.user?.id || "1", 10),
           notes: formData.notes || undefined
         });
       }
@@ -152,7 +167,7 @@ const StockEntryForm = ({ onSuccess, onCancel, initialData }: ExtendedStockEntry
     }
   };
 
-  const handleInputChange = (field: string, value: string | number) => {
+  const handleInputChange = (field: string, value: string | number): void => {
     setFormData(prev => ({ ...prev, [field]: value }));
     // Clear error when user starts typing
     if (errors[field]) {
@@ -161,31 +176,61 @@ const StockEntryForm = ({ onSuccess, onCancel, initialData }: ExtendedStockEntry
   };
 
   const handleMaterialChange = (materialId: string) => {
-    const material = rawMaterials.find(m => m.id === materialId);
+    const material = rawMaterials.find(m => m.id === parseInt(materialId, 10));
+    if (material) {
+      // If material has a supplier, find its ID from the suppliers list
+      let supplierId = "";
+      if (material.supplier) {
+        const supplierMatch = suppliers.find(s => s.name === material.supplier);
+        supplierId = supplierMatch ? supplierMatch.id.toString() : "";
+      }
 
-    setFormData(prev => ({
-      ...prev,
-      rawMaterialId: materialId,
-      // Auto-load default supplier from raw material
-      supplier: material?.supplier || prev.supplier,
-      // Auto-load unit cost from selected material
-      unitCost: material ? material.unitCost : prev.unitCost
-    }));
-
-    // Clear material error
+      setFormData(prev => ({
+        ...prev,
+        rawMaterialId: materialId,
+        supplier: supplierId, // Use the supplier from raw material as recommended in memory
+        unitCost: material.unitCost // Use the unit cost from raw material
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        rawMaterialId: materialId
+      }));
+    }
     if (errors.rawMaterialId) {
       setErrors(prev => ({ ...prev, rawMaterialId: "" }));
     }
   };
 
-  const handleAddNewSupplier = () => {
-    if (newSupplierName.trim()) {
-      // Add to form data
-      setFormData(prev => ({ ...prev, supplier: newSupplierName.trim() }));
+  const handleCreateSupplier = async (data: CreateSupplierRequest) => {
+    try {
+      // Create the supplier and get the response
+      const response = await createSupplier.mutateAsync(data);
+      
+      // Close the modal
+      setShowCreateModal(false);
+      
+      // If we have a successful response with the new supplier data
+      if (response && response.id) {
+        // Select the newly created supplier
+        setFormData(prev => ({
+          ...prev,
+          supplier: response.id.toString()
+        }));
+      }
+    } catch (error) {
+      console.error("Failed to create supplier:", error);
+    }
+  };
 
-      // Add to supplier options for future use
-      const newOption = { value: newSupplierName.trim(), label: newSupplierName.trim() };
-      setSupplierOptions(prev => [...prev, newOption].sort((a, b) => a.label.localeCompare(b.label)));
+  const handleAddNewSupplier = (): void => {
+    if (newSupplierName.trim()) {
+      // For new suppliers, we'll use the name as a temporary ID
+      // The backend will handle creating a proper supplier if needed
+      const tempId = `new-${Date.now()}`;
+
+      // Add to form data - we'll use the temporary ID as the value
+      setFormData(prev => ({ ...prev, supplier: tempId, newSupplierName: newSupplierName.trim() }));
 
       // Reset new supplier input
       setNewSupplierName("");
@@ -193,19 +238,18 @@ const StockEntryForm = ({ onSuccess, onCancel, initialData }: ExtendedStockEntry
     }
   };
 
-  const handleCancelNewSupplier = () => {
+  const handleCancelNewSupplier = (): void => {
     setNewSupplierName("");
     setShowNewSupplierInput(false);
   };
 
-  const selectedMaterial = rawMaterials.find(m => m.id === formData.rawMaterialId);
-  const isLoading = createMutation.isPending || updateMutation.isPending;
+  const selectedMaterial = rawMaterials.find(m => m.id === Number(formData.rawMaterialId));
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <>
+      <form onSubmit={handleSubmit} className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* <Select label="Raw Material" options={materialOptions} value={formData.rawMaterialId} onChange={e => handleMaterialChange(e.target.value)} error={errors.rawMaterialId} required placeholder="Select a material" /> */}
-        <Select label="Raw Material" options={materialOptions} value={formData.rawMaterialId} onChange={handleMaterialChange} error={errors.rawMaterialId} required placeholder="Select a material" />
+        <Select<string> label="Raw Material" options={materialOptions} value={formData.rawMaterialId} onChange={value => value && handleMaterialChange(value)} error={errors.rawMaterialId} required placeholder="Select a material" />
 
         <Input label="Quantity" type="number" min="0" step="0.01" value={formData.quantity} onChange={e => handleInputChange("quantity", parseFloat(e.target.value) || 0)} error={errors.quantity} required helperText={selectedMaterial ? `Unit: ${selectedMaterial.unit}` : undefined} />
 
@@ -221,9 +265,19 @@ const StockEntryForm = ({ onSuccess, onCancel, initialData }: ExtendedStockEntry
           {!showNewSupplierInput ? (
             <div className="flex space-x-2">
               <div className="flex-1">
-                <Select options={[{ value: "", label: "Select or type supplier..." }, ...supplierOptions]} value={formData.supplier} onChange={value => handleInputChange("supplier", value ?? "")} placeholder="Choose existing supplier" />
+                <Select<string> options={[{ value: "", label: "Select a supplier..." }, ...supplierOptions]} value={formData.supplier} onChange={value => handleInputChange("supplier", value ?? "")} placeholder="Choose existing supplier" />
               </div>
-              <Button type="button" variant="outline" size="sm" onClick={() => setShowNewSupplierInput(true)} leftIcon={<Plus className="w-3 h-3" />} title="Add new supplier">
+              <Button 
+                type="button" 
+                variant="outline" 
+                size="sm" 
+                onClick={(e) => {
+                  e.preventDefault(); // Prevent form submission
+                  setShowCreateModal(true);
+                }} 
+                leftIcon={<Plus className="w-3 h-3" />} 
+                title="Add new supplier"
+              >
                 New
               </Button>
             </div>
@@ -253,9 +307,9 @@ const StockEntryForm = ({ onSuccess, onCancel, initialData }: ExtendedStockEntry
             </div>
           )}
 
-          {!showNewSupplierInput && (
-            <div className="flex space-x-2">
-              <Input value={formData.supplier} onChange={e => handleInputChange("supplier", e.target.value)} placeholder="Or type supplier name directly" className="text-sm" />
+          {!showNewSupplierInput && formData.supplier && formData.supplier.startsWith("new-") && (
+            <div className="mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded text-sm">
+              Using new supplier: <strong>{formData.newSupplierName}</strong>
             </div>
           )}
         </div>
@@ -316,14 +370,31 @@ const StockEntryForm = ({ onSuccess, onCancel, initialData }: ExtendedStockEntry
       )}
 
       <div className="flex justify-end space-x-3 pt-6">
-        <Button type="button" variant="outline" onClick={onCancel} disabled={isLoading}>
+        <Button type="button" variant="outline" onClick={onCancel}>
           Cancel
         </Button>
-        <Button type="submit" loading={isLoading}>
+        <Button type="submit" loading={createMutation.isPending || updateMutation.isPending}>
           {initialData ? "Update Stock Entry" : "Add Stock Entry"}
         </Button>
       </div>
-    </form>
+      </form>
+      
+      {/* Create Supplier Modal - Outside the form to prevent form submission */}
+      <Modal 
+        isOpen={showCreateModal}
+        onClose={() => !createSupplier.isPending && setShowCreateModal(false)} 
+        title="Add New Supplier" 
+        size="lg"
+      >
+        <div className="p-6">
+          <SupplierForm 
+            onSubmit={handleCreateSupplier} 
+            onCancel={() => !createSupplier.isPending && setShowCreateModal(false)} 
+            isLoading={createSupplier.isPending} 
+          />
+        </div>
+      </Modal>
+    </>
   );
 };
 
