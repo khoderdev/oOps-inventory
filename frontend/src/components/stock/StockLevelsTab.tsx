@@ -3,7 +3,7 @@ import { AlertTriangle, Filter, Package, Search } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useRawMaterials } from "../../hooks/useRawMaterials";
 import { useStockLevels } from "../../hooks/useStock";
-import type { SortConfig, StockLevel } from "../../types";
+import type { MaterialCategory, SortConfig, StockLevel } from "../../types";
 import { MeasurementUnit } from "../../types";
 import Button from "../ui/Button";
 import Input from "../ui/Input";
@@ -14,7 +14,7 @@ const StockLevelsTab = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
   const [stockFilter, setStockFilter] = useState<"all" | "low" | "available">("all");
-  const [sortConfig, setSortConfig] = useState<SortConfig>({ field: "rawMaterial.name", order: "asc" });
+  const [sortConfig] = useState<SortConfig>({ field: "rawMaterial.name", order: "asc" });
 
   const { data: stockLevels = [], isLoading } = useStockLevels();
   const { data: rawMaterials = [] } = useRawMaterials({ isActive: true });
@@ -77,30 +77,40 @@ const StockLevelsTab = () => {
     return filtered;
   }, [stockLevels, searchTerm, categoryFilter, stockFilter, sortConfig]);
 
-  const handleSort = (field: string) => {
-    setSortConfig(prev => ({
-      field,
-      order: prev.field === field && prev.order === "asc" ? "desc" : "asc"
-    }));
-  };
+  // const handleSort = (field: string) => {
+  //   setSortConfig(prev => ({
+  //     field,
+  //     order: prev.field === field && prev.order === "asc" ? "desc" : "asc"
+  //   }));
+  // };
 
   // Helper function to format quantity display for pack/box materials
-  const formatQuantityDisplay = (quantity: number, material: StockLevel["rawMaterial"]) => {
+  const formatQuantityDisplay = (quantity: number, material: StockLevel["rawMaterial"], isMinMax = false) => {
     if (!material) return `${quantity}`;
 
     const isPackOrBox = material.unit === MeasurementUnit.PACKS || material.unit === MeasurementUnit.BOXES;
     if (isPackOrBox) {
-      const packInfo = material as unknown as { unitsPerPack?: number; baseUnit?: string };
-      const unitsPerPack = packInfo.unitsPerPack || 1;
-      const baseUnit = packInfo.baseUnit || "pieces";
-      const packQuantity = quantity / unitsPerPack;
-      return `${packQuantity} ${material.unit} (${quantity} ${baseUnit})`;
+      const unitsPerPack = material.unitsPerPack || 1;
+      const baseUnit = material.baseUnit || "pieces";
+
+      if (isMinMax) {
+        // For min/max levels, we show PACKS first then subunits in parentheses
+        const subunitQuantity = quantity * unitsPerPack;
+        return `${quantity} ${material.unit} (${subunitQuantity} ${baseUnit})`;
+      } else {
+        // For available/total quantities, we show subunits converted to PACKS
+        const fullPacks = Math.floor(quantity / unitsPerPack);
+        const remainingSubunits = quantity % unitsPerPack;
+
+        if (remainingSubunits > 0) {
+          return `${fullPacks + remainingSubunits / unitsPerPack} ${material.unit} (${quantity} ${baseUnit})`;
+        }
+        return `${fullPacks} ${material.unit} (${quantity} ${baseUnit})`;
+      }
     }
 
     return `${quantity} ${material.unit}`;
   };
-
-  // Helper function to calculate total value considering pack/box pricing
   const calculateTotalValue = () => {
     return stockLevels.reduce((sum, level) => {
       const material = level.rawMaterial;
@@ -108,13 +118,13 @@ const StockLevelsTab = () => {
 
       const isPackOrBox = material.unit === MeasurementUnit.PACKS || material.unit === MeasurementUnit.BOXES;
       if (isPackOrBox) {
-        // For pack/box materials, unitCost is cost per pack/box
-        // We need to calculate value based on pack quantity
-        const packQuantity = level.availableUnitsQuantity;
-        return sum + packQuantity * material.unitCost;
+        // For pack/box items, we need to calculate based on subunit quantity and pack cost
+        const costPerSubunit = material.unitCost / (material.unitsPerPack || 1);
+        return sum + level.availableSubUnitsQuantity * costPerSubunit;
       }
 
-      return sum + level.availableUnitsQuantity * material.unitCost;
+      // For non-pack items, use direct unit cost
+      return sum + level.availableSubUnitsQuantity * material.unitCost;
     }, 0);
   };
 
@@ -155,20 +165,20 @@ const StockLevelsTab = () => {
     },
     {
       id: "minLevel",
-      accessorKey: "minLevel",
       header: "Min Level",
       cell: info => {
         const item = info.row.original;
-        return formatQuantityDisplay(item.minLevel, item.rawMaterial);
+        const minLevelInPacks = item.rawMaterial?.minStockLevel || 0;
+        return formatQuantityDisplay(minLevelInPacks, item.rawMaterial, true);
       }
     },
     {
       id: "maxLevel",
-      accessorKey: "maxLevel",
       header: "Max Level",
       cell: info => {
         const item = info.row.original;
-        return formatQuantityDisplay(item.maxLevel, item.rawMaterial);
+        const maxLevelInPacks = item.rawMaterial?.maxStockLevel || 0;
+        return formatQuantityDisplay(maxLevelInPacks, item.rawMaterial, true);
       }
     },
     {
@@ -176,8 +186,16 @@ const StockLevelsTab = () => {
       header: "Status",
       cell: info => {
         const item = info.row.original;
-        const statusText = item.isLowStock ? "Low Stock" : item.availableUnitsQuantity > item.maxLevel ? "Overstocked" : "Normal";
-        const statusClass = item.isLowStock ? "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300" : item.availableUnitsQuantity > item.maxLevel ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300" : "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300";
+        const availablePacks = item.availableSubUnitsQuantity / (item.rawMaterial?.unitsPerPack || 1);
+        const minPacks = item.rawMaterial?.minStockLevel || 0;
+        const maxPacks = item.rawMaterial?.maxStockLevel || 0;
+
+        const isLowStock = availablePacks < minPacks;
+        const isOverstocked = availablePacks > maxPacks;
+
+        const statusText = isLowStock ? "Low Stock" : isOverstocked ? "Overstocked" : "Normal";
+
+        const statusClass = isLowStock ? "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300" : isOverstocked ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300" : "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300";
 
         return <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusClass}`}>{statusText}</span>;
       }
@@ -239,7 +257,7 @@ const StockLevelsTab = () => {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Input placeholder="Search materials..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} leftIcon={<Search className="w-4 h-4" />} />
 
-        <Select placeholder="Filter by category" options={[{ value: "", label: "All Categories" }, ...categoryOptions]} value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)} />
+        <Select placeholder="Filter by category" options={[{ value: "", label: "All Categories" }, ...categoryOptions]} value={categoryFilter} onChange={value => setCategoryFilter(value as MaterialCategory | "")} />
 
         <Select
           placeholder="Stock status"
@@ -249,7 +267,7 @@ const StockLevelsTab = () => {
             { value: "available", label: "Available Only" }
           ]}
           value={stockFilter}
-          onChange={e => setStockFilter(e.target.value as "all" | "low" | "available")}
+          onChange={value => setStockFilter(value as "all" | "low" | "available")}
         />
 
         <Button variant="outline" leftIcon={<Filter className="w-4 h-4" />}>
@@ -258,7 +276,7 @@ const StockLevelsTab = () => {
       </div>
 
       {/* Table */}
-      <Table data={filteredData as unknown as Record<string, unknown>[]} columns={columns as unknown as any} loading={isLoading} emptyMessage="No stock levels found." sortConfig={sortConfig} onSort={handleSort} />
+      <Table data={filteredData as unknown as Record<string, unknown>[]} columns={columns as unknown as ColumnDef<Record<string, unknown>>[]} loading={isLoading} emptyMessage="No stock levels found." />
     </div>
   );
 };

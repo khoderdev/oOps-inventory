@@ -147,14 +147,14 @@ const SectionDetailsModal = ({ section, isOpen, onClose }: SectionDetailsModalPr
                   {inventory.map(item => {
                     const material = item.rawMaterial as RawMaterial;
                     const isPackOrBox = material?.unit === MeasurementUnit.PACKS || material?.unit === MeasurementUnit.BOXES;
-                    const unitsPerContainer = isPackOrBox ? (material.unit === MeasurementUnit.PACKS ? material.unitsPerPack || 1 : material.unitsPerBox || 1) : 1;
+                    const unitsPerContainer = isPackOrBox ? (material.unit === MeasurementUnit.PACKS ? material.unitsPerPack || 1 : material.unitsPerPack || 1) : 1;
                     const baseUnitName = material?.baseUnit || MeasurementUnit.PIECES;
 
                     // Calculate display values
                     let displayText = "";
                     if (isPackOrBox && material) {
                       // Prefer API-provided baseQuantity if available
-                      const totalPieces = item.baseQuantity ?? item.quantity * unitsPerContainer;
+                      const totalPieces = item.quantity ?? item.quantity * unitsPerContainer;
                       const fullContainers = Math.floor(totalPieces / unitsPerContainer);
                       displayText = `${fullContainers} ${material.unit} (${totalPieces} ${baseUnitName})`;
                     } else if (material) {

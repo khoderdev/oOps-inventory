@@ -21,7 +21,6 @@ export const SuppliersTab: React.FC = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedSupplier, setSelectedSupplier] = useState<SupplierType | null>(null);
   const [viewMode, setViewMode] = useState<"list" | "analytics" | "performance">("list");
-
   const { data: suppliersData, isLoading } = useSuppliers(filters);
   const { data: analytics } = useSupplierAnalytics(30);
   const createSupplier = useCreateSupplier();
@@ -30,70 +29,73 @@ export const SuppliersTab: React.FC = () => {
   const suppliers = suppliersData?.suppliers || [];
 
   // Define columns for top suppliers table
-  const topSuppliersColumns = useMemo<ColumnDef<TopSupplierData>[]>(() => [
-    {
-      id: "name",
-      accessorKey: "name",
-      header: "Supplier",
-      size: 200,
-      minSize: 150,
-      maxSize: 300,
-      enableSorting: true,
-      meta: { align: "left" },
-    },
-    {
-      id: "rating",
-      accessorKey: "rating",
-      header: "Rating",
-      size: 150,
-      minSize: 120,
-      maxSize: 200,
-      enableSorting: true,
-      meta: { align: "center" },
-      cell: ({ getValue }) => {
-        const rating = getValue() as number;
-        return rating ? renderSupplierGrade(rating) : "Not Rated";
+  const topSuppliersColumns = useMemo<ColumnDef<TopSupplierData>[]>(
+    () => [
+      {
+        id: "name",
+        accessorKey: "name",
+        header: "Supplier",
+        size: 200,
+        minSize: 150,
+        maxSize: 300,
+        enableSorting: true,
+        meta: { align: "left" }
       },
-    },
-    {
-      id: "orderCount",
-      accessorKey: "orderCount",
-      header: "Orders",
-      size: 100,
-      minSize: 80,
-      maxSize: 120,
-      enableSorting: true,
-      meta: { align: "center" },
-    },
-    {
-      id: "totalValue",
-      accessorKey: "totalValue",
-      header: "Total Value",
-      size: 130,
-      minSize: 100,
-      maxSize: 160,
-      enableSorting: true,
-      meta: { align: "right" },
-      cell: ({ getValue }) => {
-        const value = getValue() as number;
-        return formatCurrency(value);
+      {
+        id: "rating",
+        accessorKey: "rating",
+        header: "Rating",
+        size: 150,
+        minSize: 120,
+        maxSize: 200,
+        enableSorting: true,
+        meta: { align: "center" },
+        cell: ({ getValue }) => {
+          const rating = getValue() as number;
+          return rating ? renderSupplierGrade(rating) : "Not Rated";
+        }
       },
-    },
-    {
-      id: "avgOrderValue",
-      accessorKey: "avgOrderValue",
-      header: "Avg Order Value",
-      size: 140,
-      minSize: 120,
-      maxSize: 180,
-      enableSorting: true,
-      meta: { align: "right" },
-      cell: ({ getValue }) => {
-        const value = getValue() as number;
-        return formatCurrency(value);
+      {
+        id: "orderCount",
+        accessorKey: "orderCount",
+        header: "Orders",
+        size: 100,
+        minSize: 80,
+        maxSize: 120,
+        enableSorting: true,
+        meta: { align: "center" }
       },
-    },
-  ], []);
+      {
+        id: "totalValue",
+        accessorKey: "totalValue",
+        header: "Total Value",
+        size: 130,
+        minSize: 100,
+        maxSize: 160,
+        enableSorting: true,
+        meta: { align: "right" },
+        cell: ({ getValue }) => {
+          const value = getValue() as number;
+          return formatCurrency(value);
+        }
+      },
+      {
+        id: "avgOrderValue",
+        accessorKey: "avgOrderValue",
+        header: "Avg Order Value",
+        size: 140,
+        minSize: 120,
+        maxSize: 180,
+        enableSorting: true,
+        meta: { align: "right" },
+        cell: ({ getValue }) => {
+          const value = getValue() as number;
+          return formatCurrency(value);
+        }
+      }
+    ],
+    []
+  );
 
   const handleCreateSupplier = async (data: CreateSupplierRequest) => {
     try {
@@ -333,13 +335,7 @@ export const SuppliersTab: React.FC = () => {
               <h4 className="text-lg font-medium text-gray-900">Top Performing Suppliers</h4>
             </div>
             <div className="p-6">
-              <Table
-                columns={topSuppliersColumns}
-                data={analytics.topSuppliers}
-                enableColumnResizing={true}
-                enableSorting={true}
-                maxHeight="400px"
-              />
+              <Table columns={topSuppliersColumns} data={analytics.topSuppliers} enableColumnResizing={true} enableSorting={true} maxHeight="400px" />
             </div>
           </div>
         </>

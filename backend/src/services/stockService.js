@@ -594,33 +594,43 @@ export const updateStockEntry = async updateData => {
 /**
  * Delete stock entry
  */
-export const deleteStockEntry = async id => {
+export const deleteStockEntry = async (id, force = false) => {
   try {
     if (!id) {
       throw new Error("Stock entry ID is required");
     }
 
-    logger.info("Deleting stock entry:", id);
+    logger.info(`Deleting stock entry ${id} (force=${force})`);
 
-    // Check if there are any movements associated with this entry
-    const movements = await prisma().stockMovement.findMany({
+    const db = prisma();
+
+    const movements = await db.stockMovement.findMany({
       where: { stock_entry_id: id }
     });
 
     if (movements.length > 0) {
-      throw new Error("Cannot delete stock entry with associated movements. Please delete movements first.");
+      if (!force) {
+        throw new Error("Cannot delete stock entry with associated movements. Please delete movements first.");
+      }
+
+      // Delete all associated movements first
+      await db.stockMovement.deleteMany({
+        where: { stock_entry_id: id }
+      });
+
+      logger.info(`Deleted ${movements.length} associated stock movements for entry ${id}`);
     }
 
-    await prisma().stockEntry.delete({
+    await db.stockEntry.delete({
       where: { id }
     });
 
-    logger.info("Stock entry deleted successfully:", id);
+    logger.info(`Stock entry ${id} deleted successfully.`);
 
     return {
       data: true,
       success: true,
-      message: "Stock entry deleted successfully"
+      message: "Stock entry and associated movements deleted successfully"
     };
   } catch (error) {
     logger.error("Error in deleteStockEntry service:", error);

@@ -6,6 +6,7 @@ import { AppContext } from "../../contexts/AppContext";
 import useFloatingButtonVisibility from "../../hooks/useFloatingButtonVisibility";
 import { useDeleteRawMaterial, useRawMaterials } from "../../hooks/useRawMaterials";
 import { useStockLevels } from "../../hooks/useStock";
+import { useSuppliers } from "../../hooks/useSuppliers";
 import { MaterialCategory, type RawMaterial, type SortConfig, type User } from "../../types";
 import Button from "../ui/Button";
 import Input from "../ui/Input";
@@ -26,6 +27,7 @@ const RawMaterialsPage = () => {
   } = useContext(AppContext) as { state: { user: User } };
   const { data: rawMaterials = [], isLoading } = useRawMaterials();
   const { data: stockLevels = [] } = useStockLevels();
+  const { data: suppliersData } = useSuppliers();
   const deleteMutation = useDeleteRawMaterial();
 
   const categoryOptions = Object.values(MaterialCategory).map(category => ({
@@ -80,7 +82,7 @@ const RawMaterialsPage = () => {
     async (material: RawMaterial) => {
       if (window.confirm(`Are you sure you want to delete "${material.name}"? This action cannot be undone.`)) {
         try {
-          await deleteMutation.mutateAsync(material.id);
+          await deleteMutation.mutateAsync(material.id.toString());
         } catch (error) {
           console.error("Error deleting material:", error);
         }
@@ -91,7 +93,7 @@ const RawMaterialsPage = () => {
 
   const getStockStatus = useCallback(
     (materialId: string) => {
-      const stockLevel = stockLevels.find(level => level.rawMaterial?.id === materialId);
+      const stockLevel = stockLevels.find(level => level.rawMaterial?.id === parseInt(materialId));
       if (!stockLevel) return { status: "no-stock", quantity: 0, unit: "" };
 
       return {
@@ -104,10 +106,21 @@ const RawMaterialsPage = () => {
     [stockLevels]
   );
 
+  // Helper function to get supplier name from ID
+  const getSupplierName = useCallback(
+    (supplierId: string | null) => {
+      if (!supplierId || !suppliersData?.suppliers) return "";
+
+      const supplier = suppliersData.suppliers.find(s => s.id.toString() === supplierId.toString());
+      return supplier ? supplier.name : "";
+    },
+    [suppliersData]
+  );
+
   // Calculate stats
   const activeCount = rawMaterials.filter(m => m.isActive).length;
   const lowStockCount = rawMaterials.filter(m => {
-    const stock = getStockStatus(m.id);
+    const stock = getStockStatus(m.id.toString());
     return stock.isLowStock;
   }).length;
   const categoryBreakdown = rawMaterials.reduce(
@@ -193,11 +206,12 @@ const RawMaterialsPage = () => {
         minSize: 120,
         maxSize: 200,
         enableSorting: true,
-        cell: ({ getValue }) => {
-          const supplier = getValue() as string;
+        cell: ({ row }) => {
+          const supplierId = row.original.supplier;
+          const supplierName = getSupplierName(supplierId?.toString() || null);
           return (
-            <span className="truncate" title={supplier || "No supplier"}>
-              {supplier || "-"}
+            <span className="truncate" title={supplierName || "No supplier"}>
+              {supplierName || "-"}
             </span>
           );
         }
@@ -212,7 +226,7 @@ const RawMaterialsPage = () => {
         enableSorting: false,
         cell: ({ row }) => {
           const item = row.original;
-          const stock = getStockStatus(item.id);
+          const stock = getStockStatus(item.id.toString());
           return (
             <div className="flex items-center justify-center space-x-2">
               <span
@@ -348,9 +362,9 @@ const RawMaterialsPage = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Input placeholder="Search materials..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} leftIcon={<Search className="w-4 h-4" />} />
 
-          <Select placeholder="Filter by category" options={[{ value: "", label: "All Categories" }, ...categoryOptions]} value={categoryFilter} onChange={e => setCategoryFilter(e.target.value as MaterialCategory | "")} />
+          <Select placeholder="Filter by category" options={[{ value: "", label: "All Categories" }, ...categoryOptions]} value={categoryFilter} onChange={value => setCategoryFilter(value as MaterialCategory | "")} />
 
-          <Select placeholder="Filter by status" options={statusOptions} value={statusFilter} onChange={e => setStatusFilter(e.target.value as "all" | "active" | "inactive")} />
+          <Select placeholder="Filter by status" options={statusOptions} value={statusFilter} onChange={value => setStatusFilter(value as "all" | "active" | "inactive")} />
 
           <Button variant="outline" leftIcon={<Filter className="w-4 h-4" />}>
             Advanced Filters

@@ -1,58 +1,58 @@
 import type { BaseEntity } from "./common.types";
+import type { SupplierMaterial } from "./suppliers.types";
 
 export interface RawMaterial extends BaseEntity {
   name: string;
-  description?: string;
+  description?: string | null;
   category: MaterialCategory;
   unit: MeasurementUnit;
-  unitCost: number;
-  supplier?: string;
-  minStockLevel: number;
-  maxStockLevel: number;
+  baseUnit?: MeasurementUnit | null; // Optional in Prisma
+  unitsPerPack?: number | null; // Optional in Prisma
+  unitCost: number; // Prisma uses Decimal
+  supplier?: string | null;
+  supplierMaterials?: SupplierMaterial[];
+  minStockLevel: number; // Was nested stockThreshold.min
+  maxStockLevel: number; // Was nested stockThreshold.max
   isActive: boolean;
-  unitsPerPack?: number;
-  unitsPerBox?: number;
-  baseUnit?: MeasurementUnit; // The unit of the individual items (e.g., "pieces", "bottles")
 }
 
 export enum MaterialCategory {
-  MEAT = "meat",
-  VEGETABLES = "vegetables",
-  DAIRY = "dairy",
-  BEVERAGES = "beverages",
-  BREAD = "bread",
-  GRAINS = "grains",
-  SPICES = "spices",
-  PACKAGING = "packaging",
-  OTHER = "other"
+  MEAT = "MEAT",
+  VEGETABLES = "VEGETABLES",
+  DAIRY = "DAIRY",
+  BEVERAGES = "BEVERAGES",
+  BREAD = "BREAD",
+  GRAINS = "GRAINS",
+  SPICES = "SPICES",
+  PACKAGING = "PACKAGING",
+  OTHER = "OTHER"
 }
 
 export enum MeasurementUnit {
-  KG = "kg",
-  GRAMS = "grams",
-  LITERS = "liters",
-  ML = "ml",
-  PIECES = "pieces",
-  PACKS = "packs",
-  BOXES = "boxes",
-  BOTTLES = "bottles"
+  KG = "KG",
+  GRAMS = "GRAMS",
+  LITERS = "LITERS",
+  ML = "ML",
+  PIECES = "PIECES",
+  PACKS = "PACKS",
+  BOXES = "BOXES",
+  BOTTLES = "BOTTLES"
 }
 
 export interface CreateRawMaterialInput {
   name: string;
-  description?: string;
+  description?: string | null;
   category: MaterialCategory;
   unit: MeasurementUnit;
+  baseUnit?: MeasurementUnit | null;
+  unitsPerPack?: number | null;
   unitCost: number;
-  supplier?: string;
+  supplier?: string | null;
   minStockLevel: number;
   maxStockLevel: number;
-  unitsPerPack?: number;
-  unitsPerBox?: number;
-  baseUnit?: MeasurementUnit;
 }
 
 export interface UpdateRawMaterialInput extends Partial<CreateRawMaterialInput> {
-  id: string;
+  id: number;
   isActive?: boolean;
 }

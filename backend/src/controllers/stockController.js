@@ -118,6 +118,9 @@ export const updateStockEntry = asyncHandler(async (req, res) => {
 export const deleteStockEntry = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const entryId = parseInt(id);
+  
+  // Read force parameter from query string and convert to boolean
+  const forceDelete = req.query.force === 'true';
 
   if (isNaN(entryId)) {
     return res.status(400).json({
@@ -126,7 +129,7 @@ export const deleteStockEntry = asyncHandler(async (req, res) => {
     });
   }
 
-  const result = await stockService.deleteStockEntry(entryId);
+  const result = await stockService.deleteStockEntry(entryId, forceDelete);
 
   if (!result.success) {
     return res.status(400).json({

@@ -15,7 +15,7 @@ interface PurchaseOrderFormProps {
 export const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({ suppliers, rawMaterials, onSuccess, onCancel, prefilledMaterial }) => {
   const createPurchaseOrder = useCreatePurchaseOrder();
 
-  const [formData, setFormData] = useState<Omit<CreatePurchaseOrderRequest, "order_items">>({
+  const [formData, setFormData] = useState<Omit<CreatePurchaseOrderRequest, "items">>({
     supplier_id: 0,
     order_date: new Date().toISOString().split("T")[0] || "",
     expected_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0] || "",
@@ -26,9 +26,9 @@ export const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({ suppliers,
     prefilledMaterial
       ? [
           {
-            raw_material_id: prefilledMaterial.id,
+            raw_material_id: Number(prefilledMaterial.id),
             quantity_ordered: 0,
-            unit_price: prefilledMaterial.unitCost || 0,
+            unit_cost: prefilledMaterial.unitCost || 0,
             notes: ""
           }
         ]
@@ -36,7 +36,7 @@ export const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({ suppliers,
           {
             raw_material_id: 0,
             quantity_ordered: 0,
-            unit_price: 0,
+            unit_cost: 0,
             notes: ""
           }
         ]
@@ -100,9 +100,12 @@ export const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({ suppliers,
     setOrderItems(orderItems.filter((_, i) => i !== index));
   };
 
-  const handleItemChange = (index: number, field: keyof CreatePurchaseOrderItem, value: any) => {
+  const handleItemChange = (index: number, field: keyof CreatePurchaseOrderItem, value: CreatePurchaseOrderItem[keyof CreatePurchaseOrderItem]) => {
     const updatedItems = [...orderItems];
-    updatedItems[index] = { ...updatedItems[index], [field]: value };
+    updatedItems[index] = {
+      ...(updatedItems[index] as CreatePurchaseOrderItem),
+      [field]: value
+    };
 
     // Auto-fill unit price when material is selected
     if (field === "raw_material_id") {
@@ -131,7 +134,7 @@ export const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({ suppliers,
     try {
       const purchaseOrderData: CreatePurchaseOrderRequest = {
         ...formData,
-        order_items: orderItems.filter(item => item.raw_material_id && item.quantity_ordered > 0)
+        items: orderItems.filter(item => item.raw_material_id && item.quantity_ordered > 0)
       };
 
       await createPurchaseOrder.mutateAsync(purchaseOrderData);
@@ -154,7 +157,7 @@ export const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({ suppliers,
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Supplier <span className="text-red-500">*</span>
           </label>
-          <Select value={formData.supplier_id.toString()} onChange={value => setFormData({ ...formData, supplier_id: parseInt(value) })} error={errors.supplier_id} required>
+          <Select value={formData.supplier_id.toString()} onChange={e => setFormData({ ...formData, supplier_id: parseInt(e.target.value) })} error={errors.supplier_id} required>
             <option value="">Select a supplier</option>
             {suppliers.map(supplier => (
               <option key={supplier.id} value={supplier.id}>
@@ -162,6 +165,7 @@ export const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({ suppliers,
               </option>
             ))}
           </Select>
+
           {selectedSupplier && (
             <div className="mt-2 text-sm text-gray-600">
               <p>Payment Terms: {selectedSupplier.payment_terms} days</p>
@@ -207,11 +211,11 @@ export const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({ suppliers,
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Material <span className="text-red-500">*</span>
                   </label>
-                  <Select value={item.raw_material_id.toString()} onChange={value => handleItemChange(index, "raw_material_id", parseInt(value))} error={errors[`item_${index}_material`]} disabled={prefilledMaterial && index === 0}>
-                    <option value="">Select material</option>
+                  <Select value={item.raw_material_id.toString()} onChange={e => handleItemChange(index, "raw_material_id", parseInt(e.target.value))} error={errors.supplier_id} required>
+                    <option value="">Select a material</option>
                     {rawMaterials.map(material => (
                       <option key={material.id} value={material.id}>
-                        {material.name} ({material.unit})
+                        {material.name}
                       </option>
                     ))}
                   </Select>

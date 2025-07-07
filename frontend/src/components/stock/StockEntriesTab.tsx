@@ -85,9 +85,21 @@ const StockEntriesTab = () => {
   const handleDelete = async (entry: StockEntry) => {
     if (window.confirm(`Are you sure you want to delete this stock entry? This action cannot be undone.`)) {
       try {
-        await deleteMutation.mutateAsync(entry.id);
-      } catch (error) {
-        console.error("Error deleting stock entry:", error);
+        // First try normal delete
+        const result = await deleteMutation.mutateAsync({ id: entry.id.toString() });
+
+        // If there's an error about associated movements, offer to force delete
+        if (!result.success && result.message?.includes("associated movements")) {
+          const forceDelete = window.confirm(`This stock entry has associated movements. Would you like to force delete both the entry and all its movements?\n\nWarning: This will delete all movement records associated with this stock entry.`);
+
+          if (forceDelete) {
+            await deleteMutation.mutateAsync({ id: entry.id.toString(), force: true });
+          }
+        }
+      } catch (error: any) {
+        const message = error?.response?.data?.message || error?.message || "Failed to delete stock entry.";
+        alert(message);
+        console.error("Error deleting stock entry:", message);
       }
     }
   };

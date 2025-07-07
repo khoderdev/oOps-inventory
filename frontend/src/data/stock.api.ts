@@ -205,9 +205,9 @@ export class StockAPI {
    * Delete stock entry
    * DELETE /api/stock/entries/:id
    */
-  static async deleteEntry(id: string): Promise<ApiResponse<boolean>> {
+  static async deleteEntry(id: string, force: boolean = false): Promise<ApiResponse<boolean>> {
     try {
-      const response = await apiClient.delete<{ success: boolean; message: string }>(`/stock/entries/${id}`);
+      const response = await apiClient.delete<{ success: boolean; message: string }>(`/stock/entries/${id}?force=${force}`);
 
       return {
         data: response.success,

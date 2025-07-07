@@ -24,21 +24,21 @@ interface CustomTableProps {
 const CustomTable: React.FC<CustomTableProps> = ({ columns, data }) => {
   return (
     <div className="overflow-x-auto">
-      <table className="min-w-full divide-y divide-gray-200">
-        <thead className="bg-gray-50">
+      <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+        <thead className="bg-gray-50 dark:bg-gray-700">
           <tr>
             {columns.map(column => (
-              <th key={column.accessor} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th key={column.accessor} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-100">
                 {column.header}
               </th>
             ))}
           </tr>
         </thead>
-        <tbody className="bg-white divide-y divide-gray-200">
+        <tbody className="bg-white divide-y divide-gray-200 dark:bg-gray-900 dark:divide-gray-700">
           {data.map((row, index) => (
             <tr key={index}>
               {columns.map(column => (
-                <td key={column.accessor} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                <td key={column.accessor} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
                   {column.cell ? column.cell(row[column.accessor], row as unknown as Record<string, unknown>) : String(row[column.accessor] || "-")}
                 </td>
               ))}
@@ -66,7 +66,7 @@ export const PurchaseOrdersTab: React.FC = () => {
   const suppliers = suppliersData?.suppliers || [];
 
   const renderStatusBadge = (status: PurchaseOrderStatus) => {
-    const colors = PurchaseOrderStatusColors[status] || "bg-gray-100 text-gray-800";
+    const colors = PurchaseOrderStatusColors[status] || "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-100";
     const label = PurchaseOrderStatusLabels[status] || status;
 
     return <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${colors}`}>{label}</span>;
@@ -77,8 +77,8 @@ export const PurchaseOrdersTab: React.FC = () => {
       {/* Header with filters and actions */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h3 className="text-lg font-medium text-gray-900">Purchase Orders</h3>
-          <p className="text-sm text-gray-500">Manage purchase orders and supplier workflows</p>
+          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Purchase Orders</h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Manage purchase orders and supplier workflows</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" size="sm" onClick={() => setViewMode("analytics")}>
@@ -94,10 +94,10 @@ export const PurchaseOrdersTab: React.FC = () => {
       </div>
 
       {/* Filters */}
-      <div className="bg-white p-4 rounded-lg border border-gray-200">
+      <div className="bg-white p-4 rounded-lg border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-100">Status</label>
             <select value={filters.status || ""} onChange={e => setFilters({ ...filters, status: (e.target.value as PurchaseOrderStatus) || undefined })} className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
               <option value="">All Statuses</option>
               {Object.entries(PurchaseOrderStatusLabels).map(([value, label]) => (
@@ -108,8 +108,8 @@ export const PurchaseOrdersTab: React.FC = () => {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Supplier</label>
-            <select value={filters.supplier_id || ""} onChange={e => setFilters({ ...filters, supplier_id: e.target.value ? parseInt(e.target.value) : undefined })} className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+            <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-100">Supplier</label>
+            <select value={filters.supplier_id || ""} onChange={e => setFilters({ ...filters, supplier_id: e.target.value ? parseInt(e.target.value) : undefined })} className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:ring-gray-700">
               <option value="">All Suppliers</option>
               {suppliers.map(supplier => (
                 <option key={supplier.id} value={supplier.id}>
@@ -119,7 +119,7 @@ export const PurchaseOrdersTab: React.FC = () => {
             </select>
           </div>
           <div className="flex items-end">
-            <Button variant="outline" onClick={() => setFilters({})} className="w-full">
+            <Button variant="outline" onClick={() => setFilters({})} className="w-full dark:text-gray-100">
               Clear Filters
             </Button>
           </div>
@@ -127,10 +127,10 @@ export const PurchaseOrdersTab: React.FC = () => {
       </div>
 
       {/* Purchase Orders Table */}
-      <div className="bg-white rounded-lg shadow">
+      <div className="bg-white rounded-lg shadow dark:bg-gray-800 dark:border-gray-700">
         {isLoading ? (
           <div className="flex items-center justify-center h-64">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 dark:border-blue-400"></div>
           </div>
         ) : (
           <CustomTable
@@ -138,7 +138,7 @@ export const PurchaseOrdersTab: React.FC = () => {
               {
                 header: "PO Number",
                 accessor: "po_number",
-                cell: (value: unknown) => <span className="font-medium text-gray-900">{String(value)}</span>
+                cell: (value: unknown) => <span className="font-medium text-gray-900 dark:text-gray-100">{String(value)}</span>
               },
               {
                 header: "Supplier",
@@ -223,7 +223,7 @@ export const PurchaseOrdersTab: React.FC = () => {
   const renderAnalyticsView = () => (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h3 className="text-lg font-medium text-gray-900">Purchase Order Analytics</h3>
+        <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Purchase Order Analytics</h3>
         <Button variant="outline" onClick={() => setViewMode("list")}>
           ← Back to List
         </Button>
@@ -233,67 +233,67 @@ export const PurchaseOrdersTab: React.FC = () => {
         <>
           {/* Summary Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="bg-white p-6 rounded-lg border border-gray-200">
+            <div className="bg-white p-6 rounded-lg border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
               <div className="flex items-center">
                 <div className="flex-shrink-0">
-                  <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
-                    <span className="text-white text-sm">📋</span>
+                  <div className="w-8 h-8 bg-blue-500 dark:bg-blue-600 rounded-lg flex items-center justify-center">
+                    <span className="text-white text-sm dark:text-gray-100">📋</span>
                   </div>
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-500">Total Orders</p>
-                  <p className="text-2xl font-semibold text-gray-900">{analytics.summary.totalOrders}</p>
+                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Orders</p>
+                  <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">{analytics.summary.totalOrders}</p>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white p-6 rounded-lg border border-gray-200">
+            <div className="bg-white p-6 rounded-lg border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
               <div className="flex items-center">
                 <div className="flex-shrink-0">
-                  <div className="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center">
-                    <span className="text-white text-sm">💰</span>
+                  <div className="w-8 h-8 bg-green-500 dark:bg-green-600 rounded-lg flex items-center justify-center">
+                    <span className="text-white text-sm dark:text-gray-100">💰</span>
                   </div>
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-500">Total Value</p>
-                  <p className="text-2xl font-semibold text-gray-900">{formatCurrency(analytics.summary.totalValue)}</p>
+                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Value</p>
+                  <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">{formatCurrency(analytics.summary.totalValue)}</p>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white p-6 rounded-lg border border-gray-200">
+            <div className="bg-white p-6 rounded-lg border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
               <div className="flex items-center">
                 <div className="flex-shrink-0">
-                  <div className="w-8 h-8 bg-yellow-500 rounded-lg flex items-center justify-center">
-                    <span className="text-white text-sm">⏳</span>
+                  <div className="w-8 h-8 bg-yellow-500 dark:bg-yellow-600 rounded-lg flex items-center justify-center">
+                    <span className="text-white text-sm dark:text-gray-100">⏳</span>
                   </div>
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-500">Pending Orders</p>
-                  <p className="text-2xl font-semibold text-gray-900">{analytics.summary.pendingOrders}</p>
+                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Pending Orders</p>
+                  <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">{analytics.summary.pendingOrders}</p>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white p-6 rounded-lg border border-gray-200">
+            <div className="bg-white p-6 rounded-lg border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
               <div className="flex items-center">
                 <div className="flex-shrink-0">
-                  <div className="w-8 h-8 bg-red-500 rounded-lg flex items-center justify-center">
-                    <span className="text-white text-sm">🚨</span>
+                  <div className="w-8 h-8 bg-red-500 dark:bg-red-600 rounded-lg flex items-center justify-center">
+                    <span className="text-white text-sm dark:text-gray-100">🚨</span>
                   </div>
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-500">Overdue Orders</p>
-                  <p className="text-2xl font-semibold text-gray-900">{analytics.summary.overdueOrders}</p>
+                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Overdue Orders</p>
+                  <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">{analytics.summary.overdueOrders}</p>
                 </div>
               </div>
             </div>
           </div>
 
           {/* Top Suppliers */}
-          <div className="bg-white rounded-lg shadow">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h4 className="text-lg font-medium text-gray-900">Top Suppliers</h4>
+          <div className="bg-white rounded-lg shadow dark:bg-gray-800 dark:border-gray-700">
+            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+              <h4 className="text-lg font-medium text-gray-900 dark:text-gray-100">Top Suppliers</h4>
             </div>
             <div className="p-6">
               <CustomTable
@@ -315,7 +315,7 @@ export const PurchaseOrdersTab: React.FC = () => {
   const renderReorderView = () => (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h3 className="text-lg font-medium text-gray-900">Reorder Suggestions</h3>
+        <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Reorder Suggestions</h3>
         <Button variant="outline" onClick={() => setViewMode("list")}>
           ← Back to List
         </Button>
@@ -323,7 +323,7 @@ export const PurchaseOrdersTab: React.FC = () => {
 
       {reorderSuggestions && (
         <>
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 dark:bg-blue-800 dark:border-blue-700">
             <div className="flex">
               <div className="flex-shrink-0">
                 <svg className="h-5 w-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
@@ -331,7 +331,7 @@ export const PurchaseOrdersTab: React.FC = () => {
                 </svg>
               </div>
               <div className="ml-3">
-                <p className="text-sm text-blue-800">
+                <p className="text-sm text-blue-800 dark:text-blue-100">
                   <strong>{reorderSuggestions.summary.totalItems} items</strong> need reordering.
                   <strong> {reorderSuggestions.summary.highUrgency} high priority</strong> items requiring immediate attention. Estimated total value: <strong>{formatCurrency(reorderSuggestions.summary.estimatedValue)}</strong>
                 </p>
@@ -339,7 +339,7 @@ export const PurchaseOrdersTab: React.FC = () => {
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow">
+          <div className="bg-white rounded-lg shadow dark:bg-gray-800 dark:border-gray-700">
             <CustomTable
               columns={[
                 { header: "Material", accessor: "name" },

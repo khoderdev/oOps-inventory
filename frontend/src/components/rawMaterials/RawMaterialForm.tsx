@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { useCreateRawMaterial, useUpdateRawMaterial } from "../../hooks/useRawMaterials";
+import { useSuppliers } from "../../hooks/useSuppliers";
 import { MaterialCategory, MeasurementUnit, type RawMaterial } from "../../types";
+import type { Supplier } from "../../types/suppliers.types";
 import Button from "../ui/Button";
 import Input from "../ui/Input";
 import Select from "../ui/Select";
@@ -12,17 +14,17 @@ interface RawMaterialFormProps {
 }
 
 const RawMaterialForm = ({ initialData, onSuccess, onCancel }: RawMaterialFormProps) => {
+  const { data: suppliersData } = useSuppliers();
   const [formData, setFormData] = useState({
     name: "",
     description: "",
     category: MaterialCategory.OTHER,
     unit: MeasurementUnit.PIECES,
     unitCost: 0,
-    supplier: "",
+    supplierId: null as number | null,
     minStockLevel: 0,
     maxStockLevel: 100,
     unitsPerPack: 1,
-    unitsPerBox: 1,
     baseUnit: MeasurementUnit.PIECES
   });
 
@@ -32,35 +34,46 @@ const RawMaterialForm = ({ initialData, onSuccess, onCancel }: RawMaterialFormPr
   const updateMutation = useUpdateRawMaterial();
 
   useEffect(() => {
-    console.log("RawMaterialForm useEffect triggered with initialData:", initialData);
-
     if (initialData) {
-      // Normalize enum values to handle case mismatches
       const normalizeCategory = (category: string): MaterialCategory => {
         const categoryKey = category.toUpperCase() as keyof typeof MaterialCategory;
         return MaterialCategory[categoryKey] || MaterialCategory.OTHER;
       };
-      
+
       const normalizeUnit = (unit: string): MeasurementUnit => {
         const unitKey = unit.toUpperCase() as keyof typeof MeasurementUnit;
         return MeasurementUnit[unitKey] || MeasurementUnit.PIECES;
       };
-      
+
+      // Handle supplier ID from different possible sources
+      let supplierId: number | null = null;
+
+      // First check direct supplier field (string ID from API)
+      if (initialData.supplier) {
+        const parsedId = parseInt(initialData.supplier);
+        if (!isNaN(parsedId)) {
+          supplierId = parsedId;
+        }
+      }
+
+      // Fallback to supplierMaterials if available
+      if (supplierId === null && initialData.supplierMaterials && initialData.supplierMaterials.length > 0) {
+        supplierId = initialData.supplierMaterials[0]?.supplier_id || null;
+      }
+
       const newFormData = {
         name: initialData.name || "",
         description: initialData.description || "",
         category: normalizeCategory(initialData.category as string),
         unit: normalizeUnit(initialData.unit as string),
         unitCost: initialData.unitCost || 0,
-        supplier: initialData.supplier || "",
+        supplierId: supplierId,
         minStockLevel: initialData.minStockLevel || 0,
         maxStockLevel: initialData.maxStockLevel || 100,
         unitsPerPack: initialData.unitsPerPack || 1,
-        unitsPerBox: initialData.unitsPerBox || 1,
         baseUnit: initialData.baseUnit ? normalizeUnit(initialData.baseUnit as string) : MeasurementUnit.PIECES
       };
 
-      console.log("Setting form data for edit mode:", newFormData);
       setFormData(newFormData);
     } else {
       // Reset form when no initial data (for create mode)
@@ -70,15 +83,13 @@ const RawMaterialForm = ({ initialData, onSuccess, onCancel }: RawMaterialFormPr
         category: MaterialCategory.OTHER,
         unit: MeasurementUnit.PIECES,
         unitCost: 0,
-        supplier: "",
+        supplierId: null,
         minStockLevel: 0,
         maxStockLevel: 100,
         unitsPerPack: 1,
-        unitsPerBox: 1,
         baseUnit: MeasurementUnit.PIECES
       };
 
-      console.log("Setting form data for create mode:", resetFormData);
       setFormData(resetFormData);
     }
     // Clear any existing errors when data changes
@@ -103,12 +114,14 @@ const RawMaterialForm = ({ initialData, onSuccess, onCancel }: RawMaterialFormPr
     if (formData.maxStockLevel <= formData.minStockLevel) {
       newErrors.maxStockLevel = "Maximum stock level must be greater than minimum";
     }
+
+    if (formData.supplierId === null) {
+      newErrors.supplierId = "Please select a supplier";
+    }
+
     // Validate pack/box specific fields
     if (isPackOrBox() && formData.unitsPerPack <= 0) {
       newErrors.unitsPerPack = "Units per pack/box must be greater than 0";
-    }
-    if (isPackOrBox() && formData.unitsPerBox <= 0) {
-      newErrors.unitsPerBox = "Units per pack/box must be greater than 0";
     }
 
     setErrors(newErrors);
@@ -123,25 +136,23 @@ const RawMaterialForm = ({ initialData, onSuccess, onCancel }: RawMaterialFormPr
     }
 
     try {
-      // Convert enum values back to uppercase for API
-      const convertToApiFormat = (data: typeof formData) => {
+      // Convert form data to API format
+      const convertToApiFormat = () => {
         return {
-          ...data,
-          category: data.category.toUpperCase() as MaterialCategory,
-          unit: data.unit.toUpperCase() as MeasurementUnit,
-          baseUnit: data.baseUnit ? (data.baseUnit.toUpperCase() as MeasurementUnit) : undefined
+          name: formData.name,
+          description: formData.description || undefined,
+          category: formData.category,
+          unit: formData.unit,
+          unitCost: formData.unitCost,
+          supplier: formData.supplierId?.toString(),
+          minStockLevel: formData.minStockLevel,
+          maxStockLevel: formData.maxStockLevel,
+          baseUnit: isPackOrBox() ? formData.baseUnit : null,
+          unitsPerPack: isPackOrBox() ? formData.unitsPerPack : null
         };
       };
-      
-      const submitData = convertToApiFormat(formData);
-      console.log('Submitting data to API:', submitData);
 
-      // Only include pack-specific fields if it's a pack or box
-      if (!isPackOrBox()) {
-        delete (submitData as unknown as { unitsPerPack?: number }).unitsPerPack;
-        delete (submitData as unknown as { unitsPerBox?: number }).unitsPerBox;
-        delete (submitData as unknown as { baseUnit?: string }).baseUnit;
-      }
+      const submitData = convertToApiFormat();
 
       if (initialData) {
         await updateMutation.mutateAsync({
@@ -157,9 +168,8 @@ const RawMaterialForm = ({ initialData, onSuccess, onCancel }: RawMaterialFormPr
     }
   };
 
-  const handleInputChange = (field: string, value: string | number) => {
+  const handleInputChange = (field: string, value: string | number | null) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-    // Clear error when user starts typing
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: "" }));
     }
@@ -179,7 +189,6 @@ const RawMaterialForm = ({ initialData, onSuccess, onCancel }: RawMaterialFormPr
     label: unit.toUpperCase()
   }));
 
-  // Base unit options (excluding packs and boxes for the inner unit)
   const baseUnitOptions = Object.values(MeasurementUnit)
     .filter(unit => unit !== MeasurementUnit.PACKS && unit !== MeasurementUnit.BOXES)
     .map(unit => ({
@@ -187,69 +196,26 @@ const RawMaterialForm = ({ initialData, onSuccess, onCancel }: RawMaterialFormPr
       label: unit.toUpperCase()
     }));
 
+  const supplierOptions =
+    suppliersData?.suppliers?.map((supplier: Supplier) => ({
+      value: supplier.id,
+      label: supplier.name
+    })) || [];
+
   const isLoading = createMutation.isPending || updateMutation.isPending;
 
   const getPackLabel = () => {
     return formData.unit === MeasurementUnit.PACKS ? "pack" : "box";
   };
 
-  // Debug logging for Select values
-  console.log('Current formData values:', {
-    category: formData.category,
-    unit: formData.unit,
-    baseUnit: formData.baseUnit
-  });
-  
-  console.log('Category options:', categoryOptions);
-  console.log('Unit options:', unitOptions);
-  console.log('Base unit options:', baseUnitOptions);
-  
-  // Check if current values exist in options
-  const categoryExists = categoryOptions.find(opt => opt.value === formData.category);
-  const unitExists = unitOptions.find(opt => opt.value === formData.unit);
-  const baseUnitExists = baseUnitOptions.find(opt => opt.value === formData.baseUnit);
-  
-  console.log('Value matches:', {
-    categoryExists: !!categoryExists,
-    unitExists: !!unitExists,
-    baseUnitExists: !!baseUnitExists
-  });
-
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Input 
-          label="Name" 
-          value={formData.name} 
-          onChange={e => handleInputChange("name", e.target.value)} 
-          error={errors.name} 
-          required 
-          placeholder="e.g., Fresh Beef, Organic Tomatoes" 
-        />
+        <Input label="Name" value={formData.name} onChange={e => handleInputChange("name", e.target.value)} error={errors.name} required placeholder="e.g., Fresh Beef, Organic Tomatoes" />
 
-        <Select 
-          key={`category-${formData.category}`}
-          label="Category" 
-          options={categoryOptions} 
-          value={formData.category} 
-          onChange={e => {
-            console.log('Category changed to:', e.target.value);
-            handleInputChange("category", e.target.value);
-          }} 
-          required 
-        />
+        <Select key={`category-${formData.category}`} label="Category" options={categoryOptions} value={formData.category} onChange={value => handleInputChange("category", value)} required />
 
-        <Select 
-          key={`unit-${formData.unit}`}
-          label="Unit of Measurement" 
-          options={unitOptions} 
-          value={formData.unit} 
-          onChange={e => {
-            console.log('Unit changed to:', e.target.value);
-            handleInputChange("unit", e.target.value);
-          }} 
-          required 
-        />
+        <Select key={`unit-${formData.unit}`} label="Unit of Measurement" options={unitOptions} value={formData.unit} onChange={value => handleInputChange("unit", value)} required />
 
         <Input label="Unit Cost" type="number" step="0.01" min="0" value={formData.unitCost} onChange={e => handleInputChange("unitCost", parseFloat(e.target.value) || 0)} error={errors.unitCost} required placeholder="0.00" />
 
@@ -258,22 +224,11 @@ const RawMaterialForm = ({ initialData, onSuccess, onCancel }: RawMaterialFormPr
           <>
             <Input label={`Units per ${getPackLabel()}`} type="number" min="1" value={formData.unitsPerPack} onChange={e => handleInputChange("unitsPerPack", parseInt(e.target.value) || 1)} error={errors.unitsPerPack} required placeholder="e.g., 12" helperText={`How many individual units are in each ${getPackLabel()}?`} />
 
-            <Select 
-              key={`baseUnit-${formData.baseUnit}`}
-              label={`Base unit (individual items)`} 
-              options={baseUnitOptions} 
-              value={formData.baseUnit} 
-              onChange={e => {
-                console.log('Base unit changed to:', e.target.value);
-                handleInputChange("baseUnit", e.target.value);
-              }} 
-              required 
-              helperText={`What unit are the individual items measured in?`} 
-            />
+            <Select key={`baseUnit-${formData.baseUnit}`} label="Base unit (individual items)" options={baseUnitOptions} value={formData.baseUnit} onChange={value => handleInputChange("baseUnit", value)} required helperText={`What unit are the individual items measured in?`} />
           </>
         )}
 
-        <Input label="Supplier" value={formData.supplier} onChange={e => handleInputChange("supplier", e.target.value)} placeholder="e.g., Fresh Foods Inc." />
+        <Select<number> label="Supplier" options={supplierOptions} value={formData.supplierId} onChange={value => handleInputChange("supplierId", value)} error={errors.supplierId} required placeholder="Select a supplier" />
 
         {!isPackOrBox() && <div></div>}
 

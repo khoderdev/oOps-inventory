@@ -3,108 +3,112 @@ import type { RawMaterial } from "./rawMaterials.types";
 
 export interface Section extends BaseEntity {
   name: string;
-  description?: string;
+  description?: string | null;
   type: SectionType;
-  managerId: string;
-  manager?: User;
   isActive: boolean;
+  managerId: number;
+  manager?: User;
 }
 
 export enum SectionType {
-  KITCHEN = "kitchen",
-  BAR = "bar",
-  STORAGE = "storage",
-  PREPARATION = "preparation",
-  OTHER = "other"
+  KITCHEN = "KITCHEN",
+  BAR = "BAR",
+  STORAGE = "STORAGE",
+  PREPARATION = "PREPARATION",
+  OTHER = "OTHER"
 }
 
 export interface SectionInventory extends BaseEntity {
-  sectionId: string;
+  sectionId: number;
   section?: Section;
-  rawMaterialId: string;
+  rawMaterialId: number;
   rawMaterial?: RawMaterial;
   quantity: number;
-  baseQuantity?: number; // For pack/box materials, this is the quantity in base units (pieces)
   reservedQuantity: number;
+  minLevel?: number | null;
+  maxLevel?: number | null;
   lastUpdated: Date;
-  minLevel?: number;
-  maxLevel?: number;
 }
 
 export interface SectionConsumption extends BaseEntity {
-  sectionId: string;
+  sectionId: number;
   section?: Section;
-  rawMaterialId: string;
+  rawMaterialId: number;
   rawMaterial?: RawMaterial;
   quantity: number;
   consumedDate: Date;
-  consumedBy: string;
+  consumedBy: number;
+  user?: User;
   reason: string;
-  orderId?: string;
-  notes?: string;
+  orderId?: string | null;
+  notes?: string | null;
 }
 
 export interface SectionAssignment {
-  sectionId: string;
-  rawMaterialId: string;
+  sectionId: number;
+  rawMaterialId: number;
   quantity: number;
-  assignedBy: string;
+  assignedBy: number;
   assignedDate: Date;
-  notes?: string;
+  notes?: string | null;
 }
 
+// INPUT TYPES
 export interface CreateSectionInput {
   name: string;
-  description?: string;
+  description?: string | null;
   type: SectionType;
-  managerId: string;
-}
-
-export interface UpdateSectionInput extends Partial<CreateSectionInput> {
-  id: string;
+  managerId: number;
   isActive?: boolean;
 }
 
-export interface CreateSectionAssignmentInput {
-  sectionId: string;
-  rawMaterialId: string;
-  quantity: number;
-  assignedBy: string;
-  notes?: string;
+export interface UpdateSectionInput extends Partial<CreateSectionInput> {
+  id: number;
 }
 
+export interface CreateSectionAssignmentInput {
+  sectionId: number;
+  rawMaterialId: number;
+  quantity: number;
+  assignedBy: number;
+  notes?: string | null;
+}
+
+// COMPONENT PROPS
 export interface SectionDetailsModalProps {
   section: Section | null;
   isOpen: boolean;
   onClose: () => void;
 }
 
-// Sections API filters interfaces
+// FILTER TYPES
 export interface SectionFilters {
-  type?: string;
+  type?: SectionType;
   isActive?: boolean;
-  managerId?: string;
+  managerId?: number;
 }
 
 export interface SectionConsumptionFilters {
-  rawMaterialId?: string;
-  fromDate?: string;
-  toDate?: string;
+  rawMaterialId?: number;
+  fromDate?: Date;
+  toDate?: Date;
+  sectionId?: number;
 }
 
+// REQUEST TYPES
 export interface ConsumptionRequest {
-  sectionId: string;
-  rawMaterialId: string;
+  sectionId: number;
+  rawMaterialId: number;
   quantity: number;
-  consumedBy: string;
+  consumedBy: number;
   reason: string;
-  orderId?: string;
-  notes?: string;
+  orderId?: string | null;
+  notes?: string | null;
 }
 
 export interface InventoryUpdateRequest {
-  inventoryId: string;
+  inventoryId: number;
   quantity: number;
-  updatedBy: string;
-  notes?: string;
+  updatedBy: number;
+  notes?: string | null;
 }

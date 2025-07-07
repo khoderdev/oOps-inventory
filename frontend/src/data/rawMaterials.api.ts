@@ -1,7 +1,6 @@
 import { apiClient } from "../lib/api";
 import type { ApiResponse, CreateRawMaterialInput, RawMaterial, UpdateRawMaterialInput } from "../types";
 
-// Raw Materials API filters interface
 export interface RawMaterialFilters {
   category?: string;
   isActive?: boolean;
@@ -9,10 +8,6 @@ export interface RawMaterialFilters {
 }
 
 export class RawMaterialsAPI {
-  /**
-   * Create a new raw material
-   * POST /api/raw-materials
-   */
   static async create(data: CreateRawMaterialInput): Promise<ApiResponse<RawMaterial>> {
     try {
       return await apiClient.post<RawMaterial>("/raw-materials", data);
@@ -25,10 +20,6 @@ export class RawMaterialsAPI {
     }
   }
 
-  /**
-   * Get all raw materials with optional filtering
-   * GET /api/raw-materials
-   */
   static async getAll(filters?: RawMaterialFilters): Promise<ApiResponse<RawMaterial[]>> {
     try {
       let endpoint = "/raw-materials";
@@ -60,10 +51,6 @@ export class RawMaterialsAPI {
     }
   }
 
-  /**
-   * Get raw material by ID
-   * GET /api/raw-materials/:id
-   */
   static async getById(id: string): Promise<ApiResponse<RawMaterial | null>> {
     try {
       const response = await apiClient.get<RawMaterial>(`/raw-materials/${id}`);
@@ -82,10 +69,6 @@ export class RawMaterialsAPI {
     }
   }
 
-  /**
-   * Update raw material
-   * PUT /api/raw-materials/:id
-   */
   static async update(data: UpdateRawMaterialInput): Promise<ApiResponse<RawMaterial>> {
     try {
       const { id, ...updateData } = data;
@@ -99,10 +82,6 @@ export class RawMaterialsAPI {
     }
   }
 
-  /**
-   * Delete raw material (soft delete by setting isActive to false)
-   * DELETE /api/raw-materials/:id
-   */
   static async delete(id: string): Promise<ApiResponse<boolean>> {
     try {
       const response = await apiClient.delete<{ success: boolean; message: string }>(`/raw-materials/${id}`);
@@ -121,10 +100,6 @@ export class RawMaterialsAPI {
     }
   }
 
-  /**
-   * Get low stock materials
-   * GET /api/raw-materials/low-stock
-   */
   static async getLowStock(): Promise<ApiResponse<RawMaterial[]>> {
     try {
       return await apiClient.get<RawMaterial[]>("/raw-materials/low-stock");
@@ -137,10 +112,6 @@ export class RawMaterialsAPI {
     }
   }
 
-  /**
-   * Get materials by category
-   * GET /api/raw-materials/category/:category
-   */
   static async getByCategory(category: string): Promise<ApiResponse<RawMaterial[]>> {
     try {
       return await apiClient.get<RawMaterial[]>(`/raw-materials/category/${encodeURIComponent(category)}`);
@@ -153,10 +124,6 @@ export class RawMaterialsAPI {
     }
   }
 
-  /**
-   * Get all categories
-   * Derived from all raw materials
-   */
   static async getCategories(): Promise<ApiResponse<string[]>> {
     try {
       const response = await this.getAll({ isActive: true });
@@ -169,7 +136,6 @@ export class RawMaterialsAPI {
         };
       }
 
-      // Extract unique categories
       const categories = [...new Set(response.data.map(material => material.category).filter(Boolean))];
 
       return {

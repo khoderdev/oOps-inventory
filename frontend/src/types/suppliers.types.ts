@@ -1,3 +1,5 @@
+import type { MaterialCategory, MeasurementUnit } from "./rawMaterials.types";
+
 export interface Supplier {
   id: number;
   name: string;
@@ -39,11 +41,12 @@ export interface SupplierMaterial {
   last_price_update?: string;
   created_at: string;
   updated_at: string;
+  supplier?: Pick<Supplier, "id" | "name" | "rating">;
   raw_material?: {
     id: number;
     name: string;
-    unit: string;
-    category: string;
+    unit: MeasurementUnit;
+    category: MaterialCategory;
   };
 }
 
@@ -87,8 +90,8 @@ export interface SupplierComparison {
   material: {
     id: number;
     name: string;
-    category: string;
-    unit: string;
+    category: MaterialCategory;
+    unit: MeasurementUnit;
     currentUnitCost: number;
   };
   suppliers: SupplierComparisonItem[];

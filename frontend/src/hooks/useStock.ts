@@ -81,7 +81,7 @@ export const useCreateStockEntry = () => {
         queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.stockMovements] });
         if (response.data.rawMaterialId) {
           queryClient.invalidateQueries({
-            queryKey: QUERY_KEYS.stockLevel(response.data.rawMaterialId)
+            queryKey: QUERY_KEYS.stockLevel(response.data.rawMaterialId.toString())
           });
         }
       }
@@ -115,10 +115,12 @@ export const useDeleteStockEntry = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (id: string) => StockAPI.deleteEntry(id),
+    mutationFn: (params: { id: string; force?: boolean }) => {
+      const { id, force = false } = params;
+      return StockAPI.deleteEntry(id, force);
+    },
     onSuccess: response => {
       if (response.success) {
-        // Invalidate relevant queries
         queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.stockEntries] });
         queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.stockLevels] });
         queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.stockMovements] });
@@ -135,7 +137,6 @@ export const useCreateStockMovement = () => {
     mutationFn: (data: CreateStockMovementInput) => StockAPI.createMovement(data),
     onSuccess: response => {
       if (response.success) {
-        // Invalidate relevant queries
         queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.stockMovements] });
         queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.stockLevels] });
       }
