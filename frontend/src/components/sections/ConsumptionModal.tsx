@@ -3,47 +3,45 @@ import { useApp } from "../../hooks/useApp";
 import { useRecordConsumption } from "../../hooks/useSections";
 import type { ConsumptionModalProps } from "../../types";
 import { MeasurementUnit } from "../../types";
-import { generateNextOrderId } from "../../utils/orderId";
 import { getStepValue } from "../../utils/units";
 import Button from "../ui/Button";
 import Input from "../ui/Input";
 import Modal from "../ui/Modal";
 import Select from "../ui/Select";
+import { useOrderIdCounter } from "../../utils/orderId";
 
-const ConsumptionModal = ({ section, inventoryItem, isOpen, onClose, onSuccess }: ConsumptionModalProps) => {
+const ConsumptionModal = ({
+  section,
+  inventoryItem,
+  isOpen,
+  onClose,
+  onSuccess,
+}: ConsumptionModalProps) => {
   const [quantity, setQuantity] = useState("");
   const [reason, setReason] = useState("");
-  const [orderId, setOrderId] = useState("");
   const [notes, setNotes] = useState("");
-
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [orderId, setOrderId] = useState("");
   const [generatedOrderId, setGeneratedOrderId] = useState("");
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const { generateNextOrderId } = useOrderIdCounter();
 
   const { state } = useApp();
   const recordMutation = useRecordConsumption();
 
-  // Reset form when modal opens/closes
+  // Reset form and generate order ID when modal opens
   useEffect(() => {
     if (isOpen && inventoryItem) {
       setQuantity("");
       setReason("selling");
-      setOrderId("");
       setNotes("");
       setErrors({});
-
-      // Generate order ID when modal opens
-      generateNextOrderId()
-        .then(id => {
-          setGeneratedOrderId(id);
-          setOrderId(id);
-        })
-        .catch(error => {
-          console.error("Failed to generate order ID:", error);
-          setGeneratedOrderId("");
-          setOrderId("");
-        });
+      
+      const id = generateNextOrderId();
+      setGeneratedOrderId(id);
+      setOrderId(id);
     }
-  }, [isOpen, inventoryItem]);
+  }, [isOpen, inventoryItem, generateNextOrderId]);
 
   const reasonOptions = [
     { value: "selling", label: "Selling" },
@@ -52,12 +50,12 @@ const ConsumptionModal = ({ section, inventoryItem, isOpen, onClose, onSuccess }
     { value: "sampling", label: "Sampling/Testing" },
     { value: "transfer", label: "Transfer to Another Section" },
     { value: "adjustment", label: "Inventory Adjustment" },
-    { value: "other", label: "Other" }
+    { value: "other", label: "Other" },
   ];
 
-  const isPackOrBox = () => {
-    return inventoryItem?.rawMaterial?.unit === MeasurementUnit.PACKS || inventoryItem?.rawMaterial?.unit === MeasurementUnit.BOXES;
-  };
+  const isPackOrBox = () =>
+    inventoryItem?.rawMaterial?.unit === MeasurementUnit.PACKS ||
+    inventoryItem?.rawMaterial?.unit === MeasurementUnit.BOXES;
 
   const getPackInfo = () => {
     if (!inventoryItem?.rawMaterial || !isPackOrBox()) return null;
@@ -70,26 +68,18 @@ const ConsumptionModal = ({ section, inventoryItem, isOpen, onClose, onSuccess }
     return {
       unitsPerPack: material.unitsPerPack || 1,
       baseUnit: material.baseUnit || MeasurementUnit.PIECES,
-      packUnit: inventoryItem.rawMaterial.unit
+      packUnit: inventoryItem.rawMaterial.unit,
     };
   };
 
-  const convertToBaseQuantity = (inputQuantity: number) => {
-    // Always work with base units (individual pieces/bottles)
-    return inputQuantity;
-  };
+  const convertToBaseQuantity = (inputQuantity: number) => inputQuantity;
 
-  const getMaxQuantity = () => {
-    if (!inventoryItem) return 0;
-    // Always return quantity in base units (individual pieces/bottles)
-    return inventoryItem.quantity;
-  };
+  const getMaxQuantity = () => (inventoryItem ? inventoryItem.quantity : 0);
 
   const getDisplayUnit = () => {
     if (!inventoryItem?.rawMaterial) return "";
     if (isPackOrBox()) {
       const packInfo = getPackInfo();
-      // Always use base unit (individual pieces/bottles) for packs and boxes
       return packInfo?.baseUnit?.toLowerCase() || "pieces";
     }
     return inventoryItem.rawMaterial.unit.toLowerCase();
@@ -100,38 +90,26 @@ const ConsumptionModal = ({ section, inventoryItem, isOpen, onClose, onSuccess }
 
     if (isPackOrBox()) {
       const packInfo = getPackInfo();
-      // Always use the base unit's step value for individual items
       return getStepValue(packInfo?.baseUnit as MeasurementUnit);
     }
 
     return getStepValue(inventoryItem.rawMaterial.unit as MeasurementUnit);
   };
 
-  // Helper function to get numeric quantity
-  const getNumericQuantity = () => {
-    return parseFloat(quantity) || 0;
-  };
+  const getNumericQuantity = () => parseFloat(quantity) || 0;
 
-  const getFormattedQuantity = (qty: number, unit: string) => {
-    return `${qty} ${unit}`;
-  };
+  const getFormattedQuantity = (qty: number, unit: string) => `${qty} ${unit}`;
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
     const numericQuantity = getNumericQuantity();
 
-    if (numericQuantity <= 0) {
-      newErrors.quantity = "Quantity must be greater than 0";
-    }
+    if (numericQuantity <= 0) newErrors.quantity = "Quantity must be greater than 0";
 
-    const maxQty = getMaxQuantity();
-    if (numericQuantity > maxQty) {
-      newErrors.quantity = `Quantity cannot exceed available stock (${maxQty} ${getDisplayUnit()})`;
-    }
+    if (numericQuantity > getMaxQuantity())
+      newErrors.quantity = `Quantity cannot exceed available stock (${getMaxQuantity()} ${getDisplayUnit()})`;
 
-    if (!reason) {
-      newErrors.reason = "Please select a reason";
-    }
+    if (!reason) newErrors.reason = "Please select a reason";
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -140,18 +118,14 @@ const ConsumptionModal = ({ section, inventoryItem, isOpen, onClose, onSuccess }
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!inventoryItem || !validateForm()) {
+    if (!inventoryItem || !validateForm()) return;
+
+    if (!orderId) {
+      console.error("No order ID available");
       return;
     }
 
     try {
-      // Use the generated order ID
-      if (!orderId) {
-        console.error("No order ID available");
-        return;
-      }
-
-      // Always submit in base units (individual pieces for packs/boxes)
       const baseQuantity = convertToBaseQuantity(getNumericQuantity());
 
       await recordMutation.mutateAsync({
@@ -160,8 +134,8 @@ const ConsumptionModal = ({ section, inventoryItem, isOpen, onClose, onSuccess }
         quantity: baseQuantity,
         consumedBy: state.user?.id || "1",
         reason,
-        orderId: orderId,
-        notes: notes || undefined
+        orderId,
+        notes: notes || undefined,
       });
 
       onSuccess();
@@ -187,9 +161,8 @@ const ConsumptionModal = ({ section, inventoryItem, isOpen, onClose, onSuccess }
         break;
     }
 
-    // Clear error when user makes changes
     if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: "" }));
+      setErrors((prev) => ({ ...prev, [field]: "" }));
     }
   };
 
@@ -251,11 +224,35 @@ const ConsumptionModal = ({ section, inventoryItem, isOpen, onClose, onSuccess }
             )}
           </div>
 
-          <Input autoFocus label={`Quantity Used (${getDisplayUnit()})`} type="number" min="0" max={maxQuantity} step={getStepValueForDisplay()} value={quantity} onChange={value => handleInputChange("quantity", value)} error={errors.quantity} required helperText={`Max: ${getFormattedQuantity(maxQuantity, getDisplayUnit())}`} />
+          <Input
+            autoFocus
+            label={`Quantity Used (${getDisplayUnit()})`}
+            type="number"
+            min="0"
+            max={maxQuantity}
+            step={getStepValueForDisplay()}
+            value={quantity}
+            onChange={(value) => handleInputChange("quantity", value)}
+            error={errors.quantity}
+            required
+            helperText={`Max: ${getFormattedQuantity(maxQuantity, getDisplayUnit())}`}
+          />
 
-          <Select label="Reason for Usage" options={[{ value: "", label: "Select a reason..." }, ...reasonOptions]} value={reason} onChange={value => handleInputChange("reason", value ?? "")} error={errors.reason} required />
+          <Select
+            label="Reason for Usage"
+            options={[{ value: "", label: "Select a reason..." }, ...reasonOptions]}
+            value={reason}
+            onChange={(value) => handleInputChange("reason", value ?? "")}
+            error={errors.reason}
+            required
+          />
 
-          <Input label="Notes (Optional)" value={notes} onChange={value => handleInputChange("notes", value)} placeholder="Additional notes about this usage" />
+          <Input
+            label="Notes (Optional)"
+            value={notes}
+            onChange={(value) => handleInputChange("notes", value)}
+            placeholder="Additional notes about this usage"
+          />
 
           {/* Usage Summary */}
           {getNumericQuantity() > 0 && inventoryItem.rawMaterial && (
@@ -266,7 +263,6 @@ const ConsumptionModal = ({ section, inventoryItem, isOpen, onClose, onSuccess }
                   $
                   {(() => {
                     const numericQuantity = getNumericQuantity();
-                    // Always calculate value based on individual units
                     const packInfo = getPackInfo();
                     if (packInfo && isPackOrBox()) {
                       const individualCost = inventoryItem.rawMaterial.unitCost / packInfo.unitsPerPack;
