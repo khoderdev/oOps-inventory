@@ -141,6 +141,74 @@ export const assignStockToSection = asyncHandler(async (req, res) => {
 });
 
 /**
+ * Assign recipe to section
+ * POST /api/sections/:id/assign-recipe
+ */
+export const assignRecipeToSection = asyncHandler(async (req, res) => {
+  const { id: sectionId } = req.params;
+  const { recipeId, assignedBy, notes } = req.body;
+
+  const result = await sectionsService.assignRecipeToSection({
+    sectionId: parseInt(sectionId, 10),
+    recipeId,
+    assignedBy,
+    notes
+  });
+
+  if (!result.success) {
+    return res.status(400).json({
+      success: false,
+      error: result.message
+    });
+  }
+
+  res.status(201).json({
+    success: true,
+    data: result.data,
+    message: result.message
+  });
+});
+
+/**
+ * Get section recipe assignments
+ * GET /api/sections/:id/recipes
+ */
+export const getSectionRecipes = asyncHandler(async (req, res) => {
+  const { id: sectionId } = req.params;
+
+  const result = await sectionsService.getSectionRecipeAssignments(parseInt(sectionId, 10));
+
+  res.json({
+    success: true,
+    data: result.data
+  });
+});
+
+/**
+ * Remove recipe assignment from section
+ * DELETE /api/sections/recipes/:assignmentId
+ */
+export const removeSectionRecipe = asyncHandler(async (req, res) => {
+  const { assignmentId } = req.params;
+  const { removedBy, notes } = req.body;
+
+  const result = await sectionsService.removeRecipeAssignment(parseInt(assignmentId, 10), removedBy, notes);
+
+  if (!result.success) {
+    return res.status(400).json({
+      success: false,
+      error: result.message
+    });
+  }
+
+  res.json({
+    success: true,
+    data: result.data,
+    message: result.message
+  });
+});
+
+/**
  * Get section inventory
  * GET /api/sections/:id/inventory
  */

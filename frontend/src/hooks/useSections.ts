@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { SectionsAPI } from "../data/sections.api";
-import type { CreateSectionAssignmentInput, CreateSectionInput, UpdateSectionInput } from "../types";
+import type { CreateSectionAssignmentInput, CreateSectionInput, CreateSectionRecipeAssignmentInput, UpdateSectionInput } from "../types";
 
 const QUERY_KEYS = {
   sections: "sections",
@@ -124,6 +124,25 @@ export const useAssignStockToSection = () => {
         });
         // Invalidate stock levels (they would have changed)
         queryClient.invalidateQueries({ queryKey: ["stockLevels"] });
+      }
+    }
+  });
+};
+
+// Assign recipe to section mutation
+export const useAssignRecipeToSection = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: CreateSectionRecipeAssignmentInput) => SectionsAPI.assignRecipe(data),
+    onSuccess: (response, variables) => {
+      if (response.success) {
+        // Invalidate section inventory
+        queryClient.invalidateQueries({
+          queryKey: QUERY_KEYS.sectionInventory(variables.sectionId)
+        });
+        // Invalidate recipes (they might have changed)
+        queryClient.invalidateQueries({ queryKey: ["recipes"] });
       }
     }
   });

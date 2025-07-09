@@ -448,6 +448,252 @@ export const assignStockToSection = async assignmentData => {
 };
 
 /**
+ * Assign recipe to section
+ */
+export const assignRecipeToSection = async assignmentData => {
+  try {
+    const { sectionId, recipeId, assignedBy, notes } = assignmentData;
+
+    logger.info("Assigning recipe to section:", { sectionId, recipeId });
+
+    // Check if section exists
+    const section = await prisma().section.findUnique({
+      where: { id: parseInt(sectionId, 10) }
+    });
+
+    if (!section) {
+      throw new Error("Section not found");
+    }
+
+    // Check if recipe exists and get its ingredients
+    const recipe = await prisma().recipe.findUnique({
+      where: { id: parseInt(recipeId, 10) },
+      include: {
+        ingredients: {
+          include: {
+            raw_material: true
+          }
+        }
+      }
+    });
+
+    if (!recipe) {
+      throw new Error("Recipe not found");
+    }
+
+    // Check if recipe is already assigned to this section
+    const existingAssignment = await prisma().sectionRecipe.findFirst({
+      where: {
+        section_id: parseInt(sectionId, 10),
+        recipe_id: parseInt(recipeId, 10)
+      }
+    });
+
+    if (existingAssignment) {
+      throw new Error("This recipe is already assigned to this section");
+    }
+
+    // Assign the recipe to the section
+    const assignment = await prisma().sectionRecipe.create({
+      data: {
+        section_id: parseInt(sectionId, 10),
+        recipe_id: parseInt(recipeId, 10),
+        assigned_by: parseInt(assignedBy, 10),
+        notes: notes,
+        assigned_at: new Date()
+      },
+      include: {
+        recipe: true,
+        assigned_by_user: true
+      }
+    });
+
+    // Get all required ingredients with their quantities
+    const requiredIngredients = recipe.ingredients.map(ingredient => ({
+      raw_material_id: ingredient.raw_material_id,
+      quantity: parseFloat(ingredient.quantity.toString()),
+      baseUnit: ingredient.baseUnit,
+      raw_material: ingredient.raw_material
+    }));
+
+    // Check stock availability for all ingredients
+    const stockChecks = await Promise.all(
+      requiredIngredients.map(async ingredient => {
+        const stockLevel = await stockService.getStockLevel(ingredient.raw_material_id);
+        return {
+          ...ingredient,
+          available: stockLevel.success ? stockLevel.data.availableQuantity : 0
+        };
+      })
+    );
+
+    // Check for insufficient stock
+    const insufficientStock = stockChecks.filter(item => item.available < item.quantity);
+
+    if (insufficientStock.length > 0) {
+      const insufficientItems = insufficientStock.map(item => ({
+        raw_material_id: item.raw_material_id,
+        name: item.raw_material?.name || "Unknown",
+        required: item.quantity,
+        available: item.available,
+        unit: item.baseUnit
+      }));
+
+      return {
+        data: {
+          assignment: formatSectionRecipeAssignmentForFrontend(assignment),
+          insufficientStock: insufficientItems,
+          status: "PARTIAL"
+        },
+        success: true,
+        message: "Recipe assigned but some ingredients have insufficient stock"
+      };
+    }
+
+    // If all ingredients are available, optionally auto-assign them
+    // (You might want to make this configurable via a parameter)
+    const autoAssign = true;
+    if (autoAssign) {
+      await Promise.all(
+        requiredIngredients.map(async ingredient => {
+          await assignStockToSection({
+            sectionId: parseInt(sectionId, 10),
+            rawMaterialId: ingredient.raw_material_id,
+            quantity: ingredient.quantity,
+            assignedBy: parseInt(assignedBy, 10),
+            notes: `Auto-assigned from recipe: ${recipe.name}`
+          });
+        })
+      );
+    }
+
+    return {
+      data: {
+        assignment: formatSectionRecipeAssignmentForFrontend(assignment),
+        status: "COMPLETE"
+      },
+      success: true,
+      message: "Recipe assigned successfully"
+    };
+  } catch (error) {
+    logger.error("Error in assignRecipeToSection service:", error);
+    return {
+      data: null,
+      success: false,
+      message: error.message || "Failed to assign recipe to section"
+    };
+  }
+};
+
+/**
+ * Helper function to format section recipe assignment for frontend
+ */
+const formatSectionRecipeAssignmentForFrontend = assignment => ({
+  id: assignment.id,
+  sectionId: assignment.section_id,
+  recipeId: assignment.recipe_id,
+  assignedBy: assignment.assigned_by_user ? formatUserForFrontend(assignment.assigned_by_user) : null,
+  assignedAt: assignment.assigned_at,
+  notes: assignment.notes,
+  recipe: assignment.recipe ? formatRecipeForFrontend(assignment.recipe) : null
+});
+
+/**
+ * Helper function to format recipe for frontend
+ */
+const formatRecipeForFrontend = recipe => ({
+  id: recipe.id,
+  name: recipe.name,
+  category: recipe.category,
+  instructions: recipe.instructions,
+  isActive: recipe.is_active,
+  createdAt: recipe.created_at,
+  updatedAt: recipe.updated_at
+});
+
+/**
+ * Get section recipe assignments
+ */
+export const getSectionRecipeAssignments = async sectionId => {
+  try {
+    logger.info("Fetching recipe assignments for section:", sectionId);
+
+    const assignments = await prisma().sectionRecipe.findMany({
+      where: { section_id: parseInt(sectionId, 10) },
+      include: {
+        recipe: true,
+        assigned_by_user: true
+      },
+      orderBy: {
+        assigned_at: "desc"
+      }
+    });
+
+    return {
+      data: assignments.map(formatSectionRecipeAssignmentForFrontend),
+      success: true
+    };
+  } catch (error) {
+    logger.error("Error in getSectionRecipeAssignments service:", error);
+    throw new Error("Failed to retrieve section recipe assignments");
+  }
+};
+
+/**
+ * Remove recipe assignment from section
+ */
+export const removeRecipeAssignment = async (assignmentId, removedBy, notes) => {
+  try {
+    logger.info("Removing recipe assignment:", assignmentId);
+
+    // Get the assignment first
+    const assignment = await prisma().sectionRecipe.findUnique({
+      where: { id: assignmentId },
+      include: {
+        recipe: true
+      }
+    });
+
+    if (!assignment) {
+      throw new Error("Recipe assignment not found");
+    }
+
+    // Delete the assignment
+    await prisma().sectionRecipe.delete({
+      where: { id: assignmentId }
+    });
+
+    // Get user information for response
+    const removedByUser = await prisma().user.findUnique({
+      where: { id: parseInt(removedBy, 10) }
+    });
+
+    const removalDetails = {
+      assignmentId: assignmentId,
+      recipeId: assignment.recipe_id,
+      sectionId: assignment.section_id,
+      removedBy: removedByUser ? formatUserForFrontend(removedByUser) : null,
+      recipe: assignment.recipe ? formatRecipeForFrontend(assignment.recipe) : null,
+      notes: notes,
+      removedAt: new Date()
+    };
+
+    return {
+      data: removalDetails,
+      success: true,
+      message: "Recipe assignment removed successfully"
+    };
+  } catch (error) {
+    logger.error("Error in removeRecipeAssignment service:", error);
+    return {
+      data: false,
+      success: false,
+      message: error.message || "Failed to remove recipe assignment"
+    };
+  }
+};
+
+/**
  * Get section inventory with pack information
  */
 export const getSectionInventory = async sectionId => {

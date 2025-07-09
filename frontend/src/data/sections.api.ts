@@ -1,5 +1,5 @@
 import { apiClient } from "../lib/api";
-import { type ApiResponse, type ConsumptionRequest, type CreateSectionAssignmentInput, type CreateSectionInput, type InventoryUpdateRequest, type RawMaterial, type Section, type SectionConsumption, type SectionConsumptionFilters, type SectionFilters, type SectionInventory, type UpdateSectionInput } from "../types";
+import { type ApiResponse, type ConsumptionRequest, type CreateSectionAssignmentInput, type CreateSectionInput, type CreateSectionRecipeAssignmentInput, type InventoryUpdateRequest, type RawMaterial, type Section, type SectionConsumption, type SectionConsumptionFilters, type SectionFilters, type SectionInventory, type UpdateSectionInput } from "../types";
 
 export class SectionsAPI {
   static async create(data: CreateSectionInput): Promise<ApiResponse<Section>> {
@@ -120,6 +120,25 @@ export class SectionsAPI {
         data: false,
         success: false,
         message: error instanceof Error ? error.message : "Failed to assign stock to section"
+      };
+    }
+  }
+
+  static async assignRecipe(data: CreateSectionRecipeAssignmentInput): Promise<ApiResponse<boolean>> {
+    try {
+      const { sectionId, ...assignmentData } = data;
+      const response = await apiClient.post<{ success: boolean; message: string }>(`/sections/${sectionId}/assign-recipe`, assignmentData);
+
+      return {
+        data: response.success,
+        success: response.success,
+        message: response.message
+      };
+    } catch (error) {
+      return {
+        data: false,
+        success: false,
+        message: error instanceof Error ? error.message : "Failed to assign recipe to section"
       };
     }
   }

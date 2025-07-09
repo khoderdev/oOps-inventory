@@ -18,14 +18,11 @@ model User {
   is_active     Boolean  @default(true) @map("is_active")
   created_at    DateTime @default(now()) @map("created_at")
   updated_at    DateTime @updatedAt @map("updated_at")
-
-  // Relationships
   managed_sections     Section[]           @relation("SectionManager")
   stock_entries        StockEntry[]        @relation("StockEntryCreatedBy")
   stock_movements      StockMovement[]     @relation("StockMovementPerformedBy")
   section_consumptions SectionConsumption[] @relation("ConsumptionPerformedBy")
-  
-  // New relationships for comprehensive restaurant management
+  assigned_section_recipes SectionRecipe[] @relation("UserAssignedSectionRecipes")
   created_purchase_orders  PurchaseOrder[] @relation("PurchaseOrderCreatedBy")
   approved_purchase_orders PurchaseOrder[] @relation("PurchaseOrderApprovedBy")
   received_receipts       PurchaseReceipt[] @relation("PurchaseReceiptReceivedBy")
@@ -80,6 +77,7 @@ model Section {
   manager_id           Int                  @map("manager_id")
   section_consumptions SectionConsumption[]
   section_inventories  SectionInventory[]
+  section_recipes      SectionRecipe[]
   manager              User                 @relation("SectionManager", fields: [manager_id], references: [id])
   movements_from       StockMovement[]      @relation("MovementFromSection")
   movements_to         StockMovement[]      @relation("MovementToSection")
@@ -112,6 +110,22 @@ model SectionInventory {
   @@index([raw_material_id])
   @@map("section_inventories")
 }
+
+model SectionRecipe {
+  id                Int      @id @default(autoincrement())
+  section_id        Int
+  recipe_id         Int
+  assigned_by       Int
+  notes             String?
+  assigned_at       DateTime @default(now())
+
+  section           Section   @relation(fields: [section_id], references: [id])
+  recipe            Recipe    @relation(fields: [recipe_id], references: [id])
+  assigned_by_user  User      @relation("UserAssignedSectionRecipes", fields: [assigned_by], references: [id])
+
+  @@unique([section_id, recipe_id])
+}
+
 
 model SectionConsumption {
   quantity        Decimal     @db.Decimal(10, 2)
@@ -389,12 +403,11 @@ model Recipe {
   category        String?
   instructions    String?
   cost_per_serving Decimal?       @map("cost_per_serving") @db.Decimal(10, 5)
+  section_assignments SectionRecipe[]
   is_active       Boolean         @default(true) @map("is_active")
   created_by      Int             @map("created_by")
   created_at      DateTime        @default(now()) @map("created_at")
   updated_at      DateTime        @updatedAt @map("updated_at")
-  
-  // Relationships
   creator         User            @relation("RecipeCreatedBy", fields: [created_by], references: [id])
   ingredients     RecipeIngredient[]
   menu_items      MenuItem[]

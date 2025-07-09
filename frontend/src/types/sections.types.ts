@@ -75,6 +75,14 @@ export interface CreateSectionAssignmentInput {
   notes?: string | null;
 }
 
+export interface CreateSectionRecipeAssignmentInput {
+  sectionId: number;
+  recipeId: number;
+  quantity: number;
+  assignedBy: number;
+  notes?: string | null;
+}
+
 // COMPONENT PROPS
 export interface SectionDetailsModalProps {
   section: Section | null;

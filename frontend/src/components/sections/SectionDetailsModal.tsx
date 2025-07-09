@@ -1,5 +1,6 @@
 import { Minus, Package, Plus } from "lucide-react";
 import { useState } from "react";
+import { useRecipes } from "../../hooks/useRecipes";
 import { useSectionConsumption, useSectionInventory } from "../../hooks/useSections";
 import type { RawMaterial, Section, SectionDetailsModalProps, SectionInventory } from "../../types";
 import { MeasurementUnit } from "../../types";
@@ -7,6 +8,7 @@ import { splitQuantityAndUnit } from "../../utils/units";
 import Button from "../ui/Button";
 import Modal from "../ui/Modal";
 import ConsumptionModal from "./ConsumptionModal";
+import RecipeAssignmentModal from "./RecipeAssignmentModal";
 import SectionInventoryEditModal from "./SectionInventoryEditModal";
 import StockAssignmentModal from "./StockAssignmentModal";
 
@@ -18,6 +20,16 @@ const SectionDetailsModal = ({ section, isOpen, onClose }: SectionDetailsModalPr
   const [selectedInventoryItem, setSelectedInventoryItem] = useState<SectionInventory | null>(null);
   const { data: inventory = [], refetch } = useSectionInventory(section?.id.toString() || "");
   const { data: consumption = [], refetch: refetchConsumption } = useSectionConsumption(section?.id.toString() || "");
+  const [showRecipeAssignModal, setShowRecipeAssignModal] = useState(false);
+
+  // Add recipes data hook
+  const { data: recipesData } = useRecipes({});
+  const recipes = recipesData?.recipes || [];
+
+  const handleRecipeAssignSuccess = () => {
+    refetch();
+    setShowRecipeAssignModal(false);
+  };
 
   if (!section) return null;
 
@@ -115,9 +127,14 @@ const SectionDetailsModal = ({ section, isOpen, onClose }: SectionDetailsModalPr
             <div className="space-y-4">
               <div className="flex justify-between items-center">
                 <h3 className="text-lg font-medium text-gray-900 dark:text-gray-300">Current Inventory</h3>
-                <Button size="sm" leftIcon={<Plus className="w-4 h-4" />} onClick={() => setShowAssignModal(true)}>
-                  Assign Stock
-                </Button>
+                <div className="flex space-x-2">
+                  <Button size="sm" leftIcon={<Plus className="w-4 h-4" />} onClick={() => setShowAssignModal(true)}>
+                    Assign Stock
+                  </Button>
+                  <Button size="sm" leftIcon={<Plus className="w-4 h-4" />} onClick={() => setShowRecipeAssignModal(true)}>
+                    Assign Recipe
+                  </Button>
+                </div>
               </div>
 
               {inventory.length === 0 ? (
@@ -212,6 +229,9 @@ const SectionDetailsModal = ({ section, isOpen, onClose }: SectionDetailsModalPr
 
       {/* Stock Assignment Modal */}
       <StockAssignmentModal section={section} isOpen={showAssignModal} onClose={() => setShowAssignModal(false)} onSuccess={handleAssignSuccess} />
+
+      {/* Recipe Assignment Modal */}
+      <RecipeAssignmentModal section={section} recipes={recipes} isOpen={showRecipeAssignModal} onClose={() => setShowRecipeAssignModal(false)} onSuccess={handleRecipeAssignSuccess} />
 
       {/* Consumption Modal */}
       {selectedInventoryItem && (
