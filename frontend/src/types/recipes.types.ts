@@ -29,7 +29,7 @@ export interface RecipeIngredient {
   recipe_id: number;
   raw_material_id: number;
   quantity: number;
-  unit: string;
+  baseUnit: string;
   cost_per_unit?: number;
   notes?: string;
   created_at: string;
@@ -155,8 +155,7 @@ export interface CreateRecipeRequest {
 export interface CreateRecipeIngredient {
   raw_material_id: number;
   quantity: number;
-  unit: string;
-  notes?: string;
+  baseUnit: string;
 }
 
 export interface CreateMenuItemRequest {
@@ -172,6 +171,7 @@ export interface CreateMenuItemRequest {
 }
 
 export interface RecipeFilters {
+  search: string;
   category?: string;
   is_active?: boolean;
   page?: number;

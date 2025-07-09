@@ -11,14 +11,12 @@ const QUERY_KEYS = {
 
 // Get all raw materials
 export const useRawMaterials = (filters?: { category?: string; isActive?: boolean; search?: string }) => {
-  // Default to active materials only if isActive is not explicitly set
   const effectiveFilters = filters?.isActive !== undefined ? filters : { ...filters, isActive: true };
-
   return useQuery({
     queryKey: [QUERY_KEYS.rawMaterials, effectiveFilters],
     queryFn: () => RawMaterialsAPI.getAll(effectiveFilters),
     select: response => response.data,
-    staleTime: 5 * 60 * 1000 // 5 minutes
+    staleTime: 5 * 60 * 1000
   });
 };
 
@@ -38,7 +36,7 @@ export const useLowStockMaterials = () => {
     queryKey: [QUERY_KEYS.lowStock],
     queryFn: () => RawMaterialsAPI.getLowStock(),
     select: response => response.data,
-    staleTime: 2 * 60 * 1000 // 2 minutes
+    staleTime: 2 * 60 * 1000
   });
 };
 
@@ -60,7 +58,6 @@ export const useCreateRawMaterial = () => {
     mutationFn: (data: CreateRawMaterialInput) => RawMaterialsAPI.create(data),
     onSuccess: response => {
       if (response.success) {
-        // Invalidate and refetch raw materials list
         queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.rawMaterials] });
         queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.lowStock] });
       }
@@ -76,9 +73,7 @@ export const useUpdateRawMaterial = () => {
     mutationFn: (data: UpdateRawMaterialInput) => RawMaterialsAPI.update(data),
     onSuccess: (response, variables) => {
       if (response.success) {
-        // Update specific item in cache
-        queryClient.setQueryData(QUERY_KEYS.rawMaterial(variables.id), { data: response.data });
-        // Invalidate lists
+        queryClient.setQueryData(QUERY_KEYS.rawMaterial(variables.id.toString()), { data: response.data });
         queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.rawMaterials] });
         queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.lowStock] });
       }
@@ -94,7 +89,6 @@ export const useDeleteRawMaterial = () => {
     mutationFn: (id: string) => RawMaterialsAPI.delete(id),
     onSuccess: response => {
       if (response.success) {
-        // Invalidate all raw materials queries
         queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.rawMaterials] });
         queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.lowStock] });
       }

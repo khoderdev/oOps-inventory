@@ -8,8 +8,6 @@
   "main": "index.js",
   "scripts": {
     "dev": "nodemon index.js",
-    "start": "node index.js",
-    "test": "jest",
     "migrate": "prisma migrate dev",
     "db:push": "prisma db push",
     "db:generate": "prisma generate",

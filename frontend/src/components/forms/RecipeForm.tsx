@@ -1,15 +1,18 @@
-import React, { useEffect, useState } from "react";
-import type { CreateRecipeRequest, Recipe } from "../../types";
-import { Button, Input } from "../ui";
+import { Plus, Trash2 } from "lucide-react";
+import React, { useEffect, useMemo, useState } from "react";
+import type { CreateRecipeRequest, RawMaterial, Recipe, RecipeIngredient } from "../../types";
+import { Button, Input, Select } from "../ui";
 
 interface RecipeFormProps {
   recipe?: Recipe | null;
   onSubmit: (data: CreateRecipeRequest) => void;
   onCancel: () => void;
   isLoading?: boolean;
+  rawMaterials: RawMaterial[];
 }
 
-export const RecipeForm: React.FC<RecipeFormProps> = ({ recipe, onSubmit, onCancel, isLoading = false }) => {
+export const RecipeForm: React.FC<RecipeFormProps> = ({ recipe, onSubmit, onCancel, isLoading = false, rawMaterials = [] }) => {
+  const materials = useMemo(() => (Array.isArray(rawMaterials) ? rawMaterials : []), [rawMaterials]);
   const [formData, setFormData] = useState<CreateRecipeRequest>({
     name: "",
     description: "",
@@ -23,6 +26,7 @@ export const RecipeForm: React.FC<RecipeFormProps> = ({ recipe, onSubmit, onCanc
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [ingredientErrors, setIngredientErrors] = useState<Record<number, Record<string, string>>>({});
 
   useEffect(() => {
     if (recipe) {
@@ -38,15 +42,21 @@ export const RecipeForm: React.FC<RecipeFormProps> = ({ recipe, onSubmit, onCanc
         ingredients: recipe.ingredients.map(ing => ({
           raw_material_id: ing.raw_material_id,
           quantity: ing.quantity,
-          unit: ing.unit,
-          notes: ing.notes
+          baseUnit: ing.baseUnit
         }))
       });
+
+      const initialIngredientErrors: Record<number, Record<string, string>> = {};
+      recipe.ingredients.forEach((_, index) => {
+        initialIngredientErrors[index] = {};
+      });
+      setIngredientErrors(initialIngredientErrors);
     }
   }, [recipe]);
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
+    const newIngredientErrors: Record<number, Record<string, string>> = {};
 
     if (!formData.name.trim()) {
       newErrors.name = "Recipe name is required";
@@ -56,8 +66,38 @@ export const RecipeForm: React.FC<RecipeFormProps> = ({ recipe, onSubmit, onCanc
       newErrors.serving_size = "Serving size must be greater than 0";
     }
 
+    let hasIngredientErrors = false;
+    formData.ingredients.forEach((ingredient, index) => {
+      const ingredientError: Record<string, string> = {};
+
+      if (!ingredient.raw_material_id) {
+        ingredientError.raw_material_id = "Please select an ingredient";
+        hasIngredientErrors = true;
+      }
+
+      if (ingredient.quantity <= 0) {
+        ingredientError.quantity = "Quantity must be greater than 0";
+        hasIngredientErrors = true;
+      }
+
+      if (!ingredient.baseUnit) {
+        ingredientError.baseUnit = "Please select a unit";
+        hasIngredientErrors = true;
+      }
+
+      if (Object.keys(ingredientError).length > 0) {
+        newIngredientErrors[index] = ingredientError;
+      }
+    });
+
+    if (formData.ingredients.length === 0) {
+      newErrors.ingredients = "Please add at least one ingredient";
+    }
+
     setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    setIngredientErrors(newIngredientErrors);
+
+    return Object.keys(newErrors).length === 0 && !hasIngredientErrors;
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -74,52 +114,226 @@ export const RecipeForm: React.FC<RecipeFormProps> = ({ recipe, onSubmit, onCanc
     }
   };
 
+  const handleIngredientChange = (index: number, field: keyof RecipeIngredient, value: string | number | null) => {
+    setFormData(prev => {
+      const updatedIngredients = [...prev.ingredients];
+      const currentIngredient = updatedIngredients[index] || {
+        raw_material_id: 0,
+        quantity: 0,
+        baseUnit: ""
+      };
+
+      let processedValue: string | number;
+      if (field === "raw_material_id" || field === "quantity") {
+        // Handle numeric fields
+        processedValue = typeof value === "number" ? value : field === "raw_material_id" ? parseInt(String(value)) || 0 : parseFloat(String(value)) || 0;
+      } else {
+        // Handle string fields
+        processedValue = value === null ? "" : String(value);
+      }
+
+      updatedIngredients[index] = {
+        ...currentIngredient,
+        [field]: processedValue
+      };
+
+      return { ...prev, ingredients: updatedIngredients };
+    });
+
+    // Clear validation error
+    if (ingredientErrors[index]?.[field]) {
+      setIngredientErrors(prev => ({
+        ...prev,
+        [index]: {
+          ...prev[index],
+          [field]: ""
+        }
+      }));
+    }
+  };
+
+  const addIngredient = () => {
+    setFormData(prev => ({
+      ...prev,
+      ingredients: [
+        ...prev.ingredients,
+        {
+          raw_material_id: 0,
+          quantity: 0,
+          baseUnit: ""
+        }
+      ]
+    }));
+  };
+
+  const removeIngredient = (index: number) => {
+    setFormData(prev => {
+      const updatedIngredients = [...prev.ingredients];
+      updatedIngredients.splice(index, 1);
+      return { ...prev, ingredients: updatedIngredients };
+    });
+
+    setIngredientErrors(prev => {
+      const updatedErrors = { ...prev };
+      delete updatedErrors[index];
+      const newErrors: Record<number, Record<string, string>> = {};
+      Object.keys(updatedErrors).forEach(key => {
+        const oldIndex = parseInt(key);
+        if (oldIndex > index && updatedErrors[oldIndex]) {
+          newErrors[oldIndex - 1] = updatedErrors[oldIndex];
+        } else if (oldIndex < index && updatedErrors[oldIndex]) {
+          newErrors[oldIndex] = updatedErrors[oldIndex];
+        }
+      });
+      return newErrors;
+    });
+  };
+
+  useEffect(() => {
+    console.log("Raw materials data:", materials);
+  }, [materials]);
+
+  // const getAvailableUnits = (rawMaterialId: number): string[] => {
+  //   const material = materials.find(rm => rm.id === rawMaterialId);
+  //   return Array.isArray(material?.baseUnit) ? material.baseUnit : [];
+  // };
+
+  const getAvailableUnits = (rawMaterialId: number): string[] => {
+    const material = materials.find(rm => rm.id === rawMaterialId);
+    if (!material) return [];
+
+    // Create a Set to ensure unique values
+    const units = new Set<string>();
+    if (material.baseUnit) units.add(material.baseUnit);
+    if (material.unit) units.add(material.unit);
+
+    return Array.from(units);
+  };
+
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-200">Recipe Name *</label>
-          <Input type="text" value={formData.name} onChange={e => handleInputChange("name", e.target.value)} required />
+          <Input type="text" value={formData.name} onValueChange={value => handleInputChange("name", value)} required />
           {errors.name && <p className="text-sm text-red-600 mt-1 dark:text-red-400">{errors.name}</p>}
         </div>
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-200">Category</label>
-          <Input type="text" value={formData.category || ""} onChange={e => handleInputChange("category", e.target.value)} placeholder="e.g., Appetizer, Main Course" />
+          <Input type="text" value={formData.category || ""} onValueChange={value => handleInputChange("category", value)} placeholder="e.g., Appetizer, Main Course" />
         </div>
       </div>
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-200">Description</label>
-        <Input type="text" value={formData.description || ""} onChange={e => handleInputChange("description", e.target.value)} placeholder="Brief description of the recipe" />
+        <Input type="text" value={formData.description || ""} onValueChange={value => handleInputChange("description", value)} placeholder="Brief description of the recipe" />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-200">Serving Size *</label>
-          <Input type="number" value={formData.serving_size} onChange={e => handleInputChange("serving_size", parseInt(e.target.value) || 1)} min="1" required />
+          <Input type="number" value={formData.serving_size} onValueChange={value => handleInputChange("serving_size", parseInt(value) || 1)} min="1" required />
           {errors.serving_size && <p className="text-sm text-red-600 mt-1 dark:text-red-400">{errors.serving_size}</p>}
         </div>
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-200">Prep Time (minutes)</label>
-          <Input type="number" value={formData.prep_time || ""} onChange={e => handleInputChange("prep_time", parseInt(e.target.value) || 0)} min="0" />
+          <Input type="number" value={formData.prep_time || ""} onValueChange={value => handleInputChange("prep_time", parseInt(value) || 0)} min="0" />
         </div>
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-200">Cook Time (minutes)</label>
-          <Input type="number" value={formData.cook_time || ""} onChange={e => handleInputChange("cook_time", parseInt(e.target.value) || 0)} min="0" />
+          <Input type="number" value={formData.cook_time || ""} onValueChange={value => handleInputChange("cook_time", parseInt(value) || 0)} min="0" />
         </div>
       </div>
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-200">Margin Percentage (%)</label>
-        <Input type="number" value={formData.margin_percentage || ""} onChange={e => handleInputChange("margin_percentage", parseFloat(e.target.value) || 0)} min="0" max="100" step="0.1" />
+        <Input type="number" value={formData.margin_percentage || ""} onValueChange={value => handleInputChange("margin_percentage", parseFloat(value) || 0)} min="0" max="100" step="0.1" />
+      </div>
+
+      {/* Ingredients Section */}
+      <div>
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-200">Ingredients</h3>
+          <Button type="button" size="sm" variant="outline" onClick={addIngredient}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Ingredient
+          </Button>
+        </div>
+
+        {errors.ingredients && <p className="text-sm text-red-600 mb-4 dark:text-red-400">{errors.ingredients}</p>}
+
+        {formData.ingredients.length === 0 ? (
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 text-center">
+            <p className="text-gray-500 dark:text-gray-400">No ingredients added yet</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {formData.ingredients.map((ingredient, index) => (
+              <div key={index} className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  {/* Ingredient Selection */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-200">Ingredient *</label>
+                    <Select
+                      value={ingredient.raw_material_id?.toString() || ""}
+                      onChange={value => {
+                        handleIngredientChange(index, "raw_material_id", value ? parseInt(value) : "0");
+                        handleIngredientChange(index, "baseUnit", "");
+                      }}
+                      placeholder="Select ingredient"
+                    >
+                      {materials.map(material => (
+                        <Select.Item key={material.id} value={material.id.toString()} disabled={formData.ingredients.some((ing, i) => ing.raw_material_id === material.id && i !== index)}>
+                          {material.name}
+                        </Select.Item>
+                      ))}
+                    </Select>
+                    {ingredientErrors[index]?.raw_material_id && <p className="text-sm text-red-600 mt-1 dark:text-red-400">{ingredientErrors[index]?.raw_material_id}</p>}
+                  </div>
+                  {/* Quantity */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-200">Quantity *</label>
+                    <Input type="number" value={ingredient.quantity || ""} onValueChange={value => handleIngredientChange(index, "quantity", parseFloat(value) || 0)} min="0" step="0.01" />
+                    {ingredientErrors[index]?.quantity && <p className="text-sm text-red-600 mt-1 dark:text-red-400">{ingredientErrors[index]?.quantity}</p>}
+                  </div>
+                  {/* Unit */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-200">Unit *</label>
+                    <Select value={ingredient.baseUnit} onChange={value => handleIngredientChange(index, "baseUnit", value)} placeholder="Select unit" disabled={!ingredient.raw_material_id}>
+                      {ingredient.raw_material_id &&
+                        getAvailableUnits(ingredient.raw_material_id).map(baseUnit => (
+                          <Select.Item key={baseUnit} value={baseUnit}>
+                            {baseUnit}
+                          </Select.Item>
+                        ))}
+                    </Select>
+                    {ingredientErrors[index]?.baseUnit && <p className="text-sm text-red-600 mt-1 dark:text-red-400">{ingredientErrors[index]?.baseUnit}</p>}
+                  </div>
+                  {/* Delete Button */}
+                  <div className="flex items-end space-x-2">
+                    <Button type="button" variant="ghost" size="sm" onClick={() => removeIngredient(index)} className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300">
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-200">Instructions</label>
-        <Input value={formData.instructions || ""} onChange={e => handleInputChange("instructions", e.target.value)} rows={6} placeholder="Step-by-step cooking instructions" />
+        <textarea
+          className="block w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:border-blue-500 dark:focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400 disabled:cursor-not-allowed disabled:bg-gray-50 dark:disabled:bg-gray-800 disabled:opacity-50"
+          value={formData.instructions || ""}
+          onChange={e => handleInputChange("instructions", e.target.value)}
+          rows={6}
+          placeholder="Step-by-step cooking instructions"
+        />
       </div>
 
       <div className="flex justify-end gap-3 pt-6 border-t">

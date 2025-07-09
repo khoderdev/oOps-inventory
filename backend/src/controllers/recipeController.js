@@ -1,14 +1,15 @@
 import { asyncHandler } from "../middleware/errorHandler.js";
 import * as recipeService from "../services/recipeService.js";
 
-/**
- * Create a new recipe
- * POST /api/recipes
- */
 export const createRecipe = asyncHandler(async (req, res) => {
   const result = await recipeService.createRecipe({
     ...req.body,
-    created_by: req.user.id
+    created_by: req.user.id,
+    ingredients: req.body.ingredients.map(ing => ({
+      raw_material_id: ing.raw_material_id,
+      quantity: ing.quantity,
+      baseUnit: ing.baseUnit
+    }))
   });
 
   if (!result.success) {
@@ -25,10 +26,26 @@ export const createRecipe = asyncHandler(async (req, res) => {
   });
 });
 
-/**
- * Get all recipes with filtering
- * GET /api/recipes
- */
+// export const createRecipe = asyncHandler(async (req, res) => {
+//   const result = await recipeService.createRecipe({
+//     ...req.body,
+//     created_by: req.user.id
+//   });
+
+//   if (!result.success) {
+//     return res.status(400).json({
+//       success: false,
+//       error: result.message
+//     });
+//   }
+
+//   res.status(201).json({
+//     success: true,
+//     data: result.data,
+//     message: result.message
+//   });
+// });
+
 export const getRecipes = asyncHandler(async (req, res) => {
   const result = await recipeService.getRecipes(req.query);
 
@@ -45,10 +62,6 @@ export const getRecipes = asyncHandler(async (req, res) => {
   });
 });
 
-/**
- * Get recipe by ID
- * GET /api/recipes/:id
- */
 export const getRecipeById = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
@@ -70,10 +83,6 @@ export const getRecipeById = asyncHandler(async (req, res) => {
   });
 });
 
-/**
- * Calculate recipe cost
- * GET /api/recipes/:id/calculate-cost
- */
 export const calculateRecipeCost = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
@@ -92,10 +101,6 @@ export const calculateRecipeCost = asyncHandler(async (req, res) => {
   });
 });
 
-/**
- * Create menu item
- * POST /api/recipes/menu-items
- */
 export const createMenuItem = asyncHandler(async (req, res) => {
   const result = await recipeService.createMenuItem(req.body);
 
@@ -113,10 +118,6 @@ export const createMenuItem = asyncHandler(async (req, res) => {
   });
 });
 
-/**
- * Get menu engineering analysis
- * GET /api/recipes/menu-engineering
- */
 export const getMenuEngineering = asyncHandler(async (req, res) => {
   const { days = 30 } = req.query;
 
@@ -135,10 +136,6 @@ export const getMenuEngineering = asyncHandler(async (req, res) => {
   });
 });
 
-/**
- * Get recipe cost variance analysis
- * GET /api/recipes/:id/cost-variance
- */
 export const getRecipeCostVariance = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { days = 30 } = req.query;
@@ -158,10 +155,6 @@ export const getRecipeCostVariance = asyncHandler(async (req, res) => {
   });
 });
 
-/**
- * Update recipe
- * PUT /api/recipes/:id
- */
 export const updateRecipe = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { ingredients, ...recipeData } = req.body;
@@ -175,10 +168,6 @@ export const updateRecipe = asyncHandler(async (req, res) => {
   });
 });
 
-/**
- * Delete recipe (soft delete)
- * DELETE /api/recipes/:id
- */
 export const deleteRecipe = asyncHandler(async (req, res) => {
   const { id } = req.params;
 

@@ -2,16 +2,11 @@ import { apiClient } from "../lib/api";
 import { type ApiResponse, type ConsumptionRequest, type CreateSectionAssignmentInput, type CreateSectionInput, type InventoryUpdateRequest, type RawMaterial, type Section, type SectionConsumption, type SectionConsumptionFilters, type SectionFilters, type SectionInventory, type UpdateSectionInput } from "../types";
 
 export class SectionsAPI {
-  /**
-   * Create a new section
-   * POST /api/sections
-   */
   static async create(data: CreateSectionInput): Promise<ApiResponse<Section>> {
     try {
-      // Transform data to match backend expectations
       const transformedData = {
         ...data,
-        type: data.type.toUpperCase() // Ensure type is uppercase for database enum
+        type: data.type.toUpperCase()
       };
 
       return await apiClient.post<Section>("/sections", transformedData);
@@ -24,10 +19,6 @@ export class SectionsAPI {
     }
   }
 
-  /**
-   * Get all sections with optional filtering
-   * GET /api/sections
-   */
   static async getAll(filters?: SectionFilters): Promise<ApiResponse<Section[]>> {
     try {
       let endpoint = "/sections";
@@ -42,7 +33,7 @@ export class SectionsAPI {
       }
 
       if (filters?.managerId) {
-        params.append("managerId", filters.managerId);
+        params.append("managerId", filters.managerId.toString());
       }
 
       if (params.toString()) {
@@ -59,10 +50,6 @@ export class SectionsAPI {
     }
   }
 
-  /**
-   * Get section by ID
-   * GET /api/sections/:id
-   */
   static async getById(id: string): Promise<ApiResponse<Section | null>> {
     try {
       const response = await apiClient.get<Section>(`/sections/${id}`);
@@ -81,15 +68,10 @@ export class SectionsAPI {
     }
   }
 
-  /**
-   * Update section
-   * PUT /api/sections/:id
-   */
   static async update(data: UpdateSectionInput): Promise<ApiResponse<Section>> {
     try {
       const { id, ...updateData } = data;
 
-      // Transform data to match backend expectations
       const transformedData = {
         ...updateData,
         type: updateData.type ? updateData.type.toUpperCase() : updateData.type // Ensure type is uppercase for database enum
@@ -105,10 +87,6 @@ export class SectionsAPI {
     }
   }
 
-  /**
-   * Delete section (soft delete)
-   * DELETE /api/sections/:id
-   */
   static async delete(id: string): Promise<ApiResponse<boolean>> {
     try {
       const response = await apiClient.delete<{ success: boolean; message: string }>(`/sections/${id}`);
@@ -127,10 +105,6 @@ export class SectionsAPI {
     }
   }
 
-  /**
-   * Assign stock to section
-   * POST /api/sections/:id/assign-stock
-   */
   static async assignStock(data: CreateSectionAssignmentInput): Promise<ApiResponse<boolean>> {
     try {
       const { sectionId, ...assignmentData } = data;
@@ -150,10 +124,6 @@ export class SectionsAPI {
     }
   }
 
-  /**
-   * Get section inventory
-   * GET /api/sections/:id/inventory
-   */
   static async getSectionInventory(sectionId: string): Promise<ApiResponse<SectionInventory[]>> {
     try {
       return await apiClient.get<SectionInventory[]>(`/sections/${sectionId}/inventory`);
@@ -166,16 +136,12 @@ export class SectionsAPI {
     }
   }
 
-  /**
-   * Record consumption from section
-   * POST /api/sections/:id/consume
-   */
   static async recordConsumption(sectionId: string, rawMaterialId: string, quantity: number, consumedBy: string, reason: string, orderId?: string, notes?: string): Promise<ApiResponse<boolean>> {
     try {
       const consumptionData: Omit<ConsumptionRequest, "sectionId"> = {
-        rawMaterialId,
+        rawMaterialId: parseInt(rawMaterialId),
         quantity,
-        consumedBy,
+        consumedBy: parseInt(consumedBy),
         reason,
         orderId,
         notes
@@ -197,25 +163,21 @@ export class SectionsAPI {
     }
   }
 
-  /**
-   * Get section consumption history
-   * GET /api/sections/:id/consumption
-   */
   static async getSectionConsumption(sectionId: string, filters?: SectionConsumptionFilters): Promise<ApiResponse<SectionConsumption[]>> {
     try {
       let endpoint = `/sections/${sectionId}/consumption`;
       const params = new URLSearchParams();
 
       if (filters?.rawMaterialId) {
-        params.append("rawMaterialId", filters.rawMaterialId);
+        params.append("rawMaterialId", filters.rawMaterialId.toString());
       }
 
       if (filters?.fromDate) {
-        params.append("fromDate", filters.fromDate);
+        params.append("fromDate", filters.fromDate.toString());
       }
 
       if (filters?.toDate) {
-        params.append("toDate", filters.toDate);
+        params.append("toDate", filters.toDate.toString());
       }
 
       if (params.toString()) {
@@ -232,14 +194,8 @@ export class SectionsAPI {
     }
   }
 
-  /**
-   * Update section inventory quantity
-   * PUT /api/sections/:id/inventory/:inventoryId
-   */
   static async updateSectionInventory(inventoryId: string, quantity: number, updatedBy: string, notes?: string): Promise<ApiResponse<boolean>> {
     try {
-      // Extract section ID from inventory ID (assuming format sectionId-inventoryId or similar)
-      // This might need adjustment based on actual ID structure
       const updateData: Omit<InventoryUpdateRequest, "inventoryId"> = {
         quantity,
         updatedBy,
@@ -262,10 +218,6 @@ export class SectionsAPI {
     }
   }
 
-  /**
-   * Remove item from section inventory
-   * DELETE /api/sections/inventory/:inventoryId
-   */
   static async removeSectionInventory(inventoryId: string, removedBy: string, notes?: string): Promise<ApiResponse<boolean>> {
     try {
       const response = await apiClient.delete<{ success: boolean; message: string }>(`/sections/inventory/${inventoryId}`, {
@@ -287,14 +239,9 @@ export class SectionsAPI {
     }
   }
 
-  /**
-   * Get available materials for section assignment
-   * Helper method to get materials that have available stock
-   */
   static async getAvailableMaterials(): Promise<ApiResponse<RawMaterial[]>> {
     try {
-      // This could be enhanced to call a specific endpoint that returns materials with stock
-      return await apiClient.get<RawMaterial[]>("/raw-materials?isActive=true");
+      return await apiClient.get<RawMaterial[]>("/raw-materials");
     } catch (error) {
       return {
         data: [],
@@ -304,10 +251,6 @@ export class SectionsAPI {
     }
   }
 
-  /**
-   * Get section types
-   * Helper method to get available section types
-   */
   static async getSectionTypes(): Promise<ApiResponse<string[]>> {
     try {
       const response = await this.getAll({ isActive: true });
@@ -320,9 +263,7 @@ export class SectionsAPI {
         };
       }
 
-      // Extract unique types
       const types = [...new Set(response.data.map(section => section.type).filter(Boolean))];
-
       return {
         data: types,
         success: true

@@ -360,7 +360,7 @@ const RawMaterialsPage = () => {
       {/* Filters */}
       <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Input placeholder="Search materials..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} leftIcon={<Search className="w-4 h-4" />} />
+          <Input placeholder="Search materials..." value={searchTerm} onValueChange={e => setSearchTerm(e)} leftIcon={<Search className="w-4 h-4" />} />
 
           <Select placeholder="Filter by category" options={[{ value: "", label: "All Categories" }, ...categoryOptions]} value={categoryFilter} onChange={value => setCategoryFilter(value as MaterialCategory | "")} />
 

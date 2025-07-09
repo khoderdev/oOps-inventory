@@ -75,11 +75,11 @@ const StockEntryForm = ({ onSuccess, onCancel, initialData }: ExtendedStockEntry
       const supplierId = supplierMatch ? supplierMatch.id.toString() : "";
 
       setFormData({
-        rawMaterialId: initialData.rawMaterialId.toString(), // Convert number to string for form
+        rawMaterialId: initialData.rawMaterialId.toString(),
         quantity: initialData.quantity,
         unitCost: initialData.unitCost,
         supplier: supplierId,
-        newSupplierName: supplierMatch ? "" : supplierName, // If no match, treat as new supplier
+        newSupplierName: supplierMatch ? "" : supplierName,
         batchNumber: initialData.batchNumber || "",
         expiryDate: initialData.expiryDate ? new Date(initialData.expiryDate).toISOString().split("T")[0] || "" : "",
         productionDate: initialData.productionDate ? new Date(initialData.productionDate).toISOString().split("T")[0] || "" : "",
@@ -90,7 +90,7 @@ const StockEntryForm = ({ onSuccess, onCancel, initialData }: ExtendedStockEntry
   }, [initialData, suppliers]);
 
   const materialOptions = rawMaterials.map(material => ({
-    value: material.id.toString(), // Convert to string for Select component
+    value: material.id.toString(),
     label: `${material.name} (${material.unit})`
   }));
 
@@ -134,10 +134,10 @@ const StockEntryForm = ({ onSuccess, onCancel, initialData }: ExtendedStockEntry
       if (initialData) {
         await updateMutation.mutateAsync({
           id: initialData.id,
-          rawMaterialId: parseInt(formData.rawMaterialId, 10), // Convert string to number
+          rawMaterialId: parseInt(formData.rawMaterialId, 10),
           quantity: formData.quantity,
           unitCost: formData.unitCost,
-          totalCost: formData.quantity * formData.unitCost, // Calculate total cost
+          totalCost: formData.quantity * formData.unitCost,
           supplier: formData.supplier.startsWith("new-") ? formData.newSupplierName : getSupplierNameById(formData.supplier),
           batchNumber: formData.batchNumber || undefined,
           expiryDate: formData.expiryDate ? new Date(formData.expiryDate) : undefined,
@@ -148,10 +148,10 @@ const StockEntryForm = ({ onSuccess, onCancel, initialData }: ExtendedStockEntry
         });
       } else {
         await createMutation.mutateAsync({
-          rawMaterialId: parseInt(formData.rawMaterialId, 10), // Convert string to number
+          rawMaterialId: parseInt(formData.rawMaterialId, 10),
           quantity: formData.quantity,
           unitCost: formData.unitCost,
-          totalCost: formData.quantity * formData.unitCost, // Calculate total cost
+          totalCost: formData.quantity * formData.unitCost,
           supplier: formData.supplier.startsWith("new-") ? formData.newSupplierName : getSupplierNameById(formData.supplier),
           batchNumber: formData.batchNumber || undefined,
           expiryDate: formData.expiryDate ? new Date(formData.expiryDate) : undefined,
@@ -249,13 +249,12 @@ const StockEntryForm = ({ onSuccess, onCancel, initialData }: ExtendedStockEntry
     <>
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Select<string> label="Raw Material" options={materialOptions} value={formData.rawMaterialId} onChange={value => value && handleMaterialChange(value)} error={errors.rawMaterialId} required placeholder="Select a material" />
+          <Select label="Raw Material" options={materialOptions} value={formData.rawMaterialId} onChange={value => value && handleMaterialChange(value)} error={errors.rawMaterialId} required placeholder="Select a material" />
 
-          <Input label="Quantity" type="number" min="0" step="0.01" value={formData.quantity} onChange={e => handleInputChange("quantity", parseFloat(e.target.value) || 0)} error={errors.quantity} required helperText={selectedMaterial ? `Unit: ${selectedMaterial.unit}` : undefined} />
+          <Input label="Quantity" type="number" min="0" step="0.01" value={formData.quantity} onValueChange={e => handleInputChange("quantity", parseFloat(e) || 0)} error={errors.quantity} required helperText={selectedMaterial ? `Unit: ${selectedMaterial.unit}` : undefined} />
 
-          <Input label="Unit Cost" type="number" step="0.01" min="0" value={formData.unitCost} onChange={e => handleInputChange("unitCost", parseFloat(e.target.value) || 0)} error={errors.unitCost} placeholder="0.00" helperText={selectedMaterial ? `Auto-filled from material (${selectedMaterial.unit === MeasurementUnit.PACKS || selectedMaterial.unit === MeasurementUnit.BOXES ? `Cost per ${selectedMaterial.unit.toLowerCase()}` : "Unit cost"})` : "Will be auto-filled when material is selected"} />
+          <Input label="Unit Cost" type="number" step="0.01" min="0" value={formData.unitCost} onValueChange={e => handleInputChange("unitCost", parseFloat(e) || 0)} error={errors.unitCost} placeholder="0.00" helperText={selectedMaterial ? `Auto-filled from material (${selectedMaterial.unit === MeasurementUnit.PACKS || selectedMaterial.unit === MeasurementUnit.BOXES ? `Cost per ${selectedMaterial.unit.toLowerCase()}` : "Unit cost"})` : "Will be auto-filled when material is selected"} />
 
-          {/* Enhanced Supplier Input */}
           <div className="space-y-2">
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
               Supplier
@@ -265,14 +264,14 @@ const StockEntryForm = ({ onSuccess, onCancel, initialData }: ExtendedStockEntry
             {!showNewSupplierInput ? (
               <div className="flex space-x-2">
                 <div className="flex-1">
-                  <Select<string> options={[{ value: "", label: "Select a supplier..." }, ...supplierOptions]} value={formData.supplier} onChange={value => handleInputChange("supplier", value ?? "")} placeholder="Choose existing supplier" />
+                  <Select options={[{ value: "", label: "Select a supplier..." }, ...supplierOptions]} value={formData.supplier} onChange={value => handleInputChange("supplier", value ?? "")} placeholder="Choose existing supplier" />
                 </div>
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
                   onClick={e => {
-                    e.preventDefault(); // Prevent form submission
+                    e.preventDefault();
                     setShowCreateModal(true);
                   }}
                   leftIcon={<Plus className="w-3 h-3" />}
@@ -286,7 +285,7 @@ const StockEntryForm = ({ onSuccess, onCancel, initialData }: ExtendedStockEntry
                 <div className="flex-1">
                   <Input
                     value={newSupplierName}
-                    onChange={e => setNewSupplierName(e.target.value)}
+                    onValueChange={e => setNewSupplierName(e)}
                     placeholder="Enter new supplier name"
                     onKeyDown={e => {
                       if (e.key === "Enter") {
@@ -314,20 +313,19 @@ const StockEntryForm = ({ onSuccess, onCancel, initialData }: ExtendedStockEntry
             )}
           </div>
 
-          <Input label="Batch Number" value={formData.batchNumber} onChange={e => handleInputChange("batchNumber", e.target.value)} placeholder="Optional batch/lot number" />
+          <Input label="Batch Number" value={formData.batchNumber} onValueChange={e => handleInputChange("batchNumber", e)} placeholder="Optional batch/lot number" />
 
-          <Input label="Received Date" type="date" value={formData.receivedDate} onChange={e => handleInputChange("receivedDate", e.target.value)} error={errors.receivedDate} required />
+          <Input label="Received Date" type="date" value={formData.receivedDate} onValueChange={e => handleInputChange("receivedDate", e)} error={errors.receivedDate} required />
 
-          <Input label="Production Date" type="date" value={formData.productionDate} onChange={e => handleInputChange("productionDate", e.target.value)} helperText="Optional production/manufacturing date" />
+          <Input label="Production Date" type="date" value={formData.productionDate} onValueChange={e => handleInputChange("productionDate", e)} helperText="Optional production/manufacturing date" />
 
-          <Input label="Expiry Date" type="date" value={formData.expiryDate} onChange={e => handleInputChange("expiryDate", e.target.value)} helperText="Optional expiry date" />
+          <Input label="Expiry Date" type="date" value={formData.expiryDate} onValueChange={e => handleInputChange("expiryDate", e)} helperText="Optional expiry date" />
 
           <div></div>
         </div>
 
-        <Input label="Notes" value={formData.notes} onChange={e => handleInputChange("notes", e.target.value)} placeholder="Optional notes about this stock entry" />
+        <Input label="Notes" value={formData.notes} onValueChange={e => handleInputChange("notes", e)} placeholder="Optional notes about this stock entry" />
 
-        {/* Pack/Box Cost Summary */}
         {selectedMaterial && (selectedMaterial.unit === MeasurementUnit.PACKS || selectedMaterial.unit === MeasurementUnit.BOXES) && formData.quantity > 0 && formData.unitCost > 0 && (
           <div className="bg-blue-50 dark:bg-blue-900/10 p-4 rounded-lg">
             <h4 className="font-medium text-blue-900 dark:text-blue-300 mb-2">Cost Breakdown</h4>
@@ -359,7 +357,6 @@ const StockEntryForm = ({ onSuccess, onCancel, initialData }: ExtendedStockEntry
           </div>
         )}
 
-        {/* Total Cost Display */}
         {formData.quantity > 0 && formData.unitCost > 0 && (
           <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
             <div className="flex justify-between items-center">
@@ -379,7 +376,6 @@ const StockEntryForm = ({ onSuccess, onCancel, initialData }: ExtendedStockEntry
         </div>
       </form>
 
-      {/* Create Supplier Modal - Outside the form to prevent form submission */}
       <Modal isOpen={showCreateModal} onClose={() => !createSupplier.isPending && setShowCreateModal(false)} title="Add New Supplier" size="lg">
         <div className="p-6">
           <SupplierForm onSubmit={handleCreateSupplier} onCancel={() => !createSupplier.isPending && setShowCreateModal(false)} isLoading={createSupplier.isPending} />

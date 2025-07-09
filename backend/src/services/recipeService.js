@@ -4,6 +4,43 @@ import logger from "../utils/logger.js";
 /**
  * Create a new recipe with ingredients
  */
+// export const createRecipe = async recipeData => {
+//   try {
+//     const { ingredients, ...recipe } = recipeData;
+
+//     const newRecipe = await prisma().recipe.create({
+//       data: {
+//         ...recipe,
+//         ingredients: {
+//           create: ingredients.map(ingredient => ({
+//             raw_material_id: ingredient.raw_material_id,
+//             quantity: parseFloat(ingredient.quantity),
+//             baseUnit: ingredient.baseUnit
+//           }))
+//         }
+//       },
+//       include: { ingredients: { include: { raw_material: true } } }
+//     });
+
+//     // Calculate recipe cost
+//     const updatedRecipe = await calculateRecipeCost(newRecipe.id);
+
+//     logger.info(`Recipe created: ${newRecipe.name}`);
+
+//     return {
+//       success: true,
+//       data: updatedRecipe.data,
+//       message: "Recipe created successfully"
+//     };
+//   } catch (error) {
+//     logger.error("Error creating recipe:", error);
+//     return {
+//       success: false,
+//       message: error.message
+//     };
+//   }
+// };
+
 export const createRecipe = async recipeData => {
   try {
     const { ingredients, ...recipe } = recipeData;
@@ -15,18 +52,12 @@ export const createRecipe = async recipeData => {
           create: ingredients.map(ingredient => ({
             raw_material_id: ingredient.raw_material_id,
             quantity: parseFloat(ingredient.quantity),
-            unit: ingredient.unit,
-            notes: ingredient.notes
+            unit: ingredient.baseUnit, // Use baseUnit for the unit field
+            baseUnit: ingredient.baseUnit // Also store baseUnit separately if needed
           }))
         }
       },
-      include: {
-        ingredients: {
-          include: {
-            raw_material: true
-          }
-        }
-      }
+      include: { ingredients: { include: { raw_material: true } } }
     });
 
     // Calculate recipe cost
@@ -55,13 +86,7 @@ export const calculateRecipeCost = async recipeId => {
   try {
     const recipe = await prisma().recipe.findUnique({
       where: { id: parseInt(recipeId) },
-      include: {
-        ingredients: {
-          include: {
-            raw_material: true
-          }
-        }
-      }
+      include: { ingredients: { include: { raw_material: true } } }
     });
 
     if (!recipe) {
@@ -86,9 +111,10 @@ export const calculateRecipeCost = async recipeId => {
         materialName: ingredient.raw_material.name,
         quantity,
         unit: ingredient.unit,
+        baseUnit: ingredient.baseUnit,
         unitCost,
         totalCost: ingredientCost,
-        percentage: 0 // Will be calculated after total
+        percentage: 0
       });
 
       // Update ingredient cost
@@ -109,13 +135,7 @@ export const calculateRecipeCost = async recipeId => {
     const updatedRecipe = await prisma().recipe.update({
       where: { id: parseInt(recipeId) },
       data: { cost_per_serving: costPerServing },
-      include: {
-        ingredients: {
-          include: {
-            raw_material: true
-          }
-        }
-      }
+      include: { ingredients: { include: { raw_material: true } } }
     });
 
     return {
@@ -153,27 +173,9 @@ export const getRecipes = async (filters = {}) => {
       prisma().recipe.findMany({
         where,
         include: {
-          ingredients: {
-            include: {
-              raw_material: true
-            }
-          },
-          menu_items: {
-            select: {
-              id: true,
-              name: true,
-              selling_price: true,
-              margin_percentage: true
-            }
-          },
-          creator: {
-            select: {
-              id: true,
-              username: true,
-              first_name: true,
-              last_name: true
-            }
-          }
+          ingredients: { include: { raw_material: true } },
+          menu_items: { select: { id: true, name: true, selling_price: true, margin_percentage: true } },
+          creator: { select: { id: true, username: true, first_name: true, last_name: true } }
         },
         orderBy: { created_at: "desc" },
         skip: (page - 1) * limit,
@@ -195,6 +197,7 @@ export const getRecipes = async (filters = {}) => {
           materialName: ingredient.raw_material.name,
           quantity,
           unit: ingredient.unit,
+          baseUnit: ingredient.baseUnit,
           unitCost,
           totalCost: ingredientCost
         };
@@ -216,12 +219,7 @@ export const getRecipes = async (filters = {}) => {
       success: true,
       data: {
         recipes: recipesWithAnalysis,
-        pagination: {
-          total,
-          page,
-          limit,
-          totalPages: Math.ceil(total / limit)
-        }
+        pagination: { total, page, limit, totalPages: Math.ceil(total / limit) }
       }
     };
   } catch (error) {
@@ -261,17 +259,7 @@ export const createMenuItem = async menuData => {
         margin_amount: marginAmount,
         margin_percentage: marginPercentage
       },
-      include: {
-        recipe: {
-          include: {
-            ingredients: {
-              include: {
-                raw_material: true
-              }
-            }
-          }
-        }
-      }
+      include: { recipe: { include: { ingredients: { include: { raw_material: true } } } } }
     });
 
     logger.info(`Menu item created: ${menuItem.name}`);

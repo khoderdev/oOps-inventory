@@ -7,10 +7,13 @@ export function useOrderIdCounter() {
   const [lastOrderNumber, setLastOrderNumber] = useState(0);
 
   const generateNextOrderId = useCallback((): string => {
-    const nextNumber = lastOrderNumber + 1;
-    setLastOrderNumber(nextNumber);
-    return `${ORDER_PREFIX}${nextNumber.toString().padStart(PAD_LENGTH, "0")}`;
-  }, [lastOrderNumber]);
+    let nextNumber = 0;
+    setLastOrderNumber(prev => {
+      nextNumber = prev + 1;
+      return nextNumber;
+    });
+    return `${ORDER_PREFIX}${(lastOrderNumber + 1).toString().padStart(PAD_LENGTH, "0")}`;
+  }, []);
 
   const getCurrentOrderNumber = useCallback(() => lastOrderNumber, [lastOrderNumber]);
 

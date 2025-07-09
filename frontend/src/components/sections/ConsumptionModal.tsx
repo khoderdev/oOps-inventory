@@ -146,9 +146,10 @@ const ConsumptionModal = ({
   };
 
   const handleInputChange = (field: string, value: string | number) => {
+      console.log(`Field: ${field}, Value:`, value); 
     switch (field) {
       case "quantity":
-        setQuantity(value as string);
+        setQuantity(String(value)); 
         break;
       case "reason":
         setReason(value as string);
@@ -232,7 +233,7 @@ const ConsumptionModal = ({
             max={maxQuantity}
             step={getStepValueForDisplay()}
             value={quantity}
-            onChange={(value) => handleInputChange("quantity", value)}
+           onValueChange={(value) => handleInputChange("quantity", value)}
             error={errors.quantity}
             required
             helperText={`Max: ${getFormattedQuantity(maxQuantity, getDisplayUnit())}`}

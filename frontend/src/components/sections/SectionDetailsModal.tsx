@@ -72,17 +72,13 @@ const SectionDetailsModal = ({ section, isOpen, onClose }: SectionDetailsModalPr
   };
 
   // Helper function to format quantity display for pack/box materials
-  const formatQuantityDisplay = (quantity: number, material: RawMaterial | undefined, isBaseQuantity: boolean = false) => {
+  // Updated formatQuantityDisplay function
+  const formatQuantityDisplay = (quantity: number, material: RawMaterial | undefined) => {
     if (!material) return `${quantity}`;
 
     const isPackOrBox = material.unit === MeasurementUnit.PACKS || material.unit === MeasurementUnit.BOXES;
-    if (isPackOrBox && !isBaseQuantity) {
-      // For pack/box materials, show in the original unit (packs/boxes)
-      return `${quantity} ${material.unit}`;
-    }
-
-    if (isPackOrBox && isBaseQuantity) {
-      // If we need to show base quantity, show in base units
+    if (isPackOrBox) {
+      // Always show in base units (bottles)
       const packInfo = material as unknown as { unitsPerPack?: number; baseUnit?: string };
       const baseUnit = packInfo.baseUnit || "pieces";
       return `${quantity} ${baseUnit}`;
@@ -147,21 +143,12 @@ const SectionDetailsModal = ({ section, isOpen, onClose }: SectionDetailsModalPr
                   {inventory.map(item => {
                     const material = item.rawMaterial as RawMaterial;
                     const isPackOrBox = material?.unit === MeasurementUnit.PACKS || material?.unit === MeasurementUnit.BOXES;
-                    const unitsPerContainer = isPackOrBox ? (material.unit === MeasurementUnit.PACKS ? material.unitsPerPack || 1 : material.unitsPerPack || 1) : 1;
+                    const unitsPerContainer = isPackOrBox ? (material.unitsPerPack || 1) : 1;
                     const baseUnitName = material?.baseUnit || MeasurementUnit.PIECES;
 
-                    // Calculate display values
-                    let displayText = "";
-                    if (isPackOrBox && material) {
-                      // Prefer API-provided baseQuantity if available
-                      const totalPieces = item.quantity ?? item.quantity * unitsPerContainer;
-                      const fullContainers = Math.floor(totalPieces / unitsPerContainer);
-                      displayText = `${fullContainers} ${material.unit} (${totalPieces} ${baseUnitName})`;
-                    } else if (material) {
-                      displayText = `${item.quantity} ${material.unit}`;
-                    } else {
-                      displayText = `${item.quantity}`;
-                    }
+                    // Calculate total bottles
+                    const totalBottles = item.quantity * unitsPerContainer;
+                    const displayText = `${totalBottles} ${baseUnitName}`;
 
                     return (
                       <div key={item.id} onClick={() => handleEditClick(item)} className="flex items-center justify-between p-4 border rounded-lg dark:bg-gray-900/10 dark:border-gray-800 hover:bg-gray-100 dark:hover:bg-gray-900/20 transition-colors cursor-pointer">
@@ -175,7 +162,7 @@ const SectionDetailsModal = ({ section, isOpen, onClose }: SectionDetailsModalPr
                             <p className="text-sm text-gray-500 dark:text-gray-400">Available</p>
                             {item.reservedQuantity > 0 && (
                               <p className="text-xs text-yellow-600">
-                                {item.reservedQuantity} {isPackOrBox ? material?.unit : ""} reserved
+                                {item.reservedQuantity * unitsPerContainer} {baseUnitName} reserved
                               </p>
                             )}
                           </div>
@@ -188,59 +175,6 @@ const SectionDetailsModal = ({ section, isOpen, onClose }: SectionDetailsModalPr
                       </div>
                     );
                   })}
-                  {/* {inventory.map(item => (
-                    <div key={item.id} onClick={() => handleEditClick(item)} className="flex items-center justify-between p-4 border rounded-lg dark:bg-gray-900/10 dark:border-gray-800 hover:bg-gray-100 dark:hover:bg-gray-900/20 transition-colors cursor-pointer">
-                      <div>
-                        <p className="font-medium text-gray-900 dark:text-gray-300">{item.rawMaterial?.name}</p>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">Category: {item.rawMaterial?.category}</p>
-                      </div>
-                      <div className="flex items-center space-x-4">
-                        <div className="text-right">
-                          <p className="font-medium text-gray-900 dark:text-gray-300">
-                            {(() => {
-                              const material = item.rawMaterial as RawMaterial;
-                              if (!material) return `${item.quantity}`;
-                              
-                              const isPackOrBox = material.unit === MeasurementUnit.PACKS || material.unit === MeasurementUnit.BOXES;
-                              if (isPackOrBox) {
-                                // For pack/box materials, determine units per pack/box and base unit
-                                const unitsPerContainer = material.unit === MeasurementUnit.PACKS 
-                                  ? (material.unitsPerPack || 1) 
-                                  : (material.unitsPerBox || 1);
-                                const baseUnitName = material.baseUnit || MeasurementUnit.PIECES;
-                                
-                                // Check if we have baseQuantity from the API (preferred)
-                                if (item.baseQuantity && item.baseQuantity !== item.quantity) {
-                                  // We have both pack quantity and base quantity from API
-                                  return `${item.quantity} ${material.unit} (${item.baseQuantity} ${baseUnitName})`;
-                                }
-                                
-                                // Fallback: determine if quantity is in packs or base units
-                                if (item.quantity > 50 && item.quantity % unitsPerContainer === 0) {
-                                  // Likely base quantity, convert to packs
-                                  const packQuantity = item.quantity / unitsPerContainer;
-                                  return `${packQuantity} ${material.unit} (${item.quantity} ${baseUnitName})`;
-                                } else {
-                                  // Likely pack quantity, show with base equivalent
-                                  const baseQuantity = item.quantity * unitsPerContainer;
-                                  return `${item.quantity} ${material.unit} (${baseQuantity} ${baseUnitName})`;
-                                }
-                              }
-                              
-                              return `${item.quantity} ${material.unit}`;
-                            })()
-                          }</p>
-                          <p className="text-sm text-gray-500 dark:text-gray-400">Available</p>
-                          {item.reservedQuantity > 0 && <p className="text-xs text-yellow-600">{item.reservedQuantity} reserved</p>}
-                        </div>
-                        <div className="flex space-x-1">
-                          <Button size="sm" variant="outline" leftIcon={<Minus className="w-3 h-3" />} disabled={item.quantity <= 0} onClick={e => handleUseClick(item, e)} title="Record consumption">
-                            Use
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  ))} */}
                 </div>
               )}
             </div>
@@ -273,7 +207,7 @@ const SectionDetailsModal = ({ section, isOpen, onClose }: SectionDetailsModalPr
                           return (
                             <>
                               <span className="text-2xl font-bold text-gray-900 dark:text-gray-300">{quantity}</span>
-                              {unit && <span className="text-sm text-gray-500 dark:text-gray-400"> {unit}</span>}
+                              {unit && <span className="text-sm text-gray-500 dark:text-red-400"> {unit}</span>}
                             </>
                           );
                         })()}

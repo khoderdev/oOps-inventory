@@ -86,6 +86,7 @@
 import { clsx } from "clsx";
 import { ChevronDown } from "lucide-react";
 import React, { forwardRef, type ReactNode } from "react";
+import SelectItem from "./SelectItem";
 
 interface SelectOption<T = string | number> {
   value: T;
@@ -178,6 +179,13 @@ const Select = forwardRef(<T extends string | number>({ label, error, helperText
       )}
     </div>
   );
-}) as <T extends string | number>(props: SelectProps<T> & { ref?: React.Ref<HTMLSelectElement> }) => React.ReactElement;
+});
 
-export default Select;
+// Create a proper type for the Select component with Item property
+type SelectWithItem = typeof Select & { Item: typeof SelectItem };
+
+// Cast Select to include the Item property
+const SelectWithItem = Select as SelectWithItem;
+SelectWithItem.Item = SelectItem;
+
+export default SelectWithItem;

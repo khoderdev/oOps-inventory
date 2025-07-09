@@ -109,6 +109,6 @@ export interface ConsumptionRequest {
 export interface InventoryUpdateRequest {
   inventoryId: number;
   quantity: number;
-  updatedBy: number;
+  updatedBy: string;
   notes?: string | null;
 }

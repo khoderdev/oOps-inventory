@@ -414,6 +414,7 @@ model RecipeIngredient {
   raw_material_id Int         @map("raw_material_id")
   quantity        Decimal     @db.Decimal(10, 3)
   unit            MeasurementUnit
+  baseUnit        MeasurementUnit? @map("base_unit")
   cost_per_unit   Decimal?    @map("cost_per_unit") @db.Decimal(10, 2)
   notes           String?
   created_at      DateTime    @default(now()) @map("created_at")

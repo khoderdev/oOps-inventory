@@ -17,12 +17,12 @@ export const RecipesTab: React.FC = () => {
 
   const { data: recipesData, isLoading } = useRecipes(filters);
   const { data: menuEngineering } = useMenuEngineering(30);
-  const { data: rawMaterialsData } = useRawMaterials({ category: "ALL", isActive: true, search: "" });
+  const { data: rawMaterialsData } = useRawMaterials({});
   const createRecipe = useCreateRecipe();
   const updateRecipe = useUpdateRecipe();
 
   const recipes = recipesData?.recipes || [];
-  const rawMaterials = rawMaterialsData?.materials || [];
+  const rawMaterials = rawMaterialsData || [];
 
   // Define table columns with proper TanStack Table ColumnDef types
   const recipeColumns = useMemo<ColumnDef<Recipe>[]>(
@@ -193,7 +193,7 @@ export const RecipesTab: React.FC = () => {
       SAUCE: "bg-yellow-100 text-yellow-800"
     };
 
-    return <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${colors[category] || "bg-gray-100 text-gray-800"}`}>{label}</span>;
+    return <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${colors[category as keyof typeof colors] || "bg-gray-100 text-gray-800"}`}>{label}</span>;
   };
 
   const renderRecipesView = () => (
@@ -232,7 +232,7 @@ export const RecipesTab: React.FC = () => {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Search</label>
-            <input type="text" value={filters.search || ""} onChange={e => setFilters({ ...filters, search: e.target.value || undefined })} placeholder="Search recipes..." className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" />
+            <input type="text" value={filters.search || ""} onChange={e => setFilters({ ...filters, search: e.target.value })} placeholder="Search recipes..." className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" />
           </div>
           <div className="flex items-end">
             <Button variant="outline" onClick={() => setFilters({})} className="w-full">
@@ -439,7 +439,7 @@ export const RecipesTab: React.FC = () => {
           setSelectedRecipe(null);
         }}
         title={`Edit ${selectedRecipe?.name}`}
-        size="large"
+        size="lg"
       >
         <div className="p-6">
           <RecipeForm
@@ -495,7 +495,7 @@ const RecipeCostCard: React.FC<{ recipe: Recipe }> = ({ recipe }) => {
     <div className="bg-white rounded-lg border border-gray-200 p-6">
       <div className="flex items-center justify-between mb-4">
         <h4 className="text-lg font-medium text-gray-900">{recipe.name}</h4>
-        {renderCategoryBadge(recipe.category)}
+        {renderCategoryBadge(recipe.category as MenuCategory)}
       </div>
 
       <div className="space-y-3">
