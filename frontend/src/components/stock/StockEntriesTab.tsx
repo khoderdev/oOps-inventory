@@ -125,43 +125,34 @@ const StockEntriesTab = () => {
         const material = row.original.rawMaterial;
         if (!material) return `${row.original.quantity}`;
 
-        // Check if this is a pack/box material
         const isPackOrBox = material.unit.toUpperCase() === MeasurementUnit.PACKS.toUpperCase() || material.unit.toUpperCase() === MeasurementUnit.BOXES.toUpperCase();
         if (isPackOrBox) {
-          // Convert base quantity back to pack quantity for display
           const packInfo = material as unknown as { unitsPerPack?: number; baseUnit?: string };
           const unitsPerPack = packInfo.unitsPerPack || 1;
           const baseUnit = packInfo.baseUnit || (material.unit === MeasurementUnit.PACKS ? "bottles" : "pieces");
 
-          // Only convert if we have valid pack info, otherwise show base quantity
           if (packInfo.unitsPerPack && packInfo.unitsPerPack > 1) {
             const packQuantity = row.original.quantity / unitsPerPack;
             return `${packQuantity} ${material.unit} (${row.original.quantity} ${baseUnit})`;
           } else {
-            // Fallback: show base quantity with unit
             return `${row.original.quantity} ${baseUnit} (Pack info not set)`;
           }
         }
-
-        return `${row.original.quantity} ${material.unit || ""}`;
+        return `${row.original.quantity} ${row.original.convertedUnit}`;
       }
     },
+
     {
       accessorKey: "unitCost",
       header: "Unit Cost",
       cell: ({ row }) => {
         const material = row.original.rawMaterial;
         if (!material) return `$${row.original.unitCost.toFixed(2)}`;
-
-        // Check if this is a pack/box material
         const isPackOrBox = material.unit.toUpperCase() === MeasurementUnit.PACKS.toUpperCase() || material.unit.toUpperCase() === MeasurementUnit.BOXES.toUpperCase();
         if (isPackOrBox) {
-          // For pack/box materials, unitCost is cost per pack/box
           const packInfo = material as unknown as { unitsPerPack?: number; baseUnit?: string };
           const unitsPerPack = packInfo.unitsPerPack || 1;
           const baseUnit = packInfo.baseUnit || "pieces";
-
-          // Only show detailed breakdown if we have valid pack info
           if (packInfo.unitsPerPack && packInfo.unitsPerPack > 1) {
             const individualCost = row.original.unitCost / unitsPerPack;
             return (
@@ -175,7 +166,6 @@ const StockEntriesTab = () => {
               </div>
             );
           } else {
-            // Fallback: show basic cost with note
             return (
               <div>
                 <div className="font-medium">${row.original.unitCost.toFixed(2)}</div>
@@ -184,10 +174,10 @@ const StockEntriesTab = () => {
             );
           }
         }
-
         return `$${row.original.unitCost.toFixed(2)}`;
       }
     },
+
     {
       accessorKey: "totalCost",
       header: "Total Cost",
@@ -195,15 +185,12 @@ const StockEntriesTab = () => {
         const material = row.original.rawMaterial;
         if (!material) return `$${row.original.totalCost.toFixed(2)}`;
 
-        // Check if this is a pack/box material
         const isPackOrBox = material.unit.toUpperCase() === MeasurementUnit.PACKS.toUpperCase() || material.unit.toUpperCase() === MeasurementUnit.BOXES.toUpperCase();
         if (isPackOrBox) {
-          // For pack/box materials, show both pack cost and individual cost
           const packInfo = material as unknown as { unitsPerPack?: number; baseUnit?: string };
           const unitsPerPack = packInfo.unitsPerPack || 1;
           const baseUnit = packInfo.baseUnit || "pieces";
 
-          // Only show detailed breakdown if we have valid pack info
           if (packInfo.unitsPerPack && packInfo.unitsPerPack > 1) {
             const individualCost = row.original.unitCost / unitsPerPack;
             const totalIndividualCost = row.original.quantity * individualCost;
@@ -221,7 +208,6 @@ const StockEntriesTab = () => {
               </div>
             );
           } else {
-            // Fallback: show basic total with note
             return (
               <div>
                 <div className="font-medium">${row.original.totalCost.toFixed(2)}</div>
@@ -245,11 +231,6 @@ const StockEntriesTab = () => {
       )
     },
     {
-      accessorKey: "batchNumber",
-      header: "Batch",
-      cell: ({ row }) => row.original.batchNumber || "-"
-    },
-    {
       accessorKey: "receivedDate",
       header: "Received Date",
       cell: ({ row }) => new Date(row.original.receivedDate).toLocaleDateString()
@@ -266,17 +247,7 @@ const StockEntriesTab = () => {
         return <span className={`text-sm ${isExpired ? "text-red-600 font-medium" : isExpiringSoon ? "text-yellow-600 font-medium" : "text-gray-900 dark:text-white"}`}>{expiry.toLocaleDateString()}</span>;
       }
     },
-    {
-      accessorKey: "receivedBy",
-      header: "Received By",
-      cell: ({ row }) => {
-        if (row.original.user) {
-          const fullName = `${row.original.user.firstName || ""} ${row.original.user.lastName || ""}`.trim();
-          return fullName || row.original.user.username || row.original.user.email || `User #${row.original.receivedBy}`;
-        }
-        return `User #${row.original.receivedBy}`;
-      }
-    },
+
     ...(state.user?.role === "MANAGER" || state.user?.role === "ADMIN"
       ? [
           {
@@ -361,11 +332,11 @@ const StockEntriesTab = () => {
 
       {/* Filters */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Input placeholder="Search entries..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} leftIcon={<Search className="w-4 h-4" />} />
+        <Input placeholder="Search entries..." value={searchTerm} onValueChange={e => setSearchTerm(e)} leftIcon={<Search className="w-4 h-4" />} />
 
-        <Select placeholder="Filter by supplier" options={[{ value: "", label: "All Suppliers" }, ...supplierOptions]} value={supplierFilter} onChange={e => setSupplierFilter(e.target.value)} />
+        <Select placeholder="Filter by supplier" options={[{ value: "", label: "All Suppliers" }, ...supplierOptions]} value={supplierFilter} onChange={e => setSupplierFilter(e)} />
 
-        <Select placeholder="Filter by material" options={[{ value: "", label: "All Materials" }, ...materialOptions]} value={materialFilter} onChange={e => setMaterialFilter(e.target.value)} />
+        <Select placeholder="Filter by material" options={[{ value: "", label: "All Materials" }, ...materialOptions]} value={materialFilter} onChange={e => setMaterialFilter(e)} />
 
         <div></div>
       </div>

@@ -139,12 +139,15 @@ model SectionConsumption {
 model StockEntry {
   quantity        Decimal         @db.Decimal(10, 2)
   unit_cost       Decimal         @map("unit_cost") @db.Decimal(10, 2)
-  total_cost      Decimal         @map("total_cost") @db.Decimal(10, 2)
+  total_cost      Decimal         @map("total_cost") @db.Decimal(10, 6)
   supplier        String?
   batch_number    String?         @map("batch_number")
   expiry_date     DateTime?       @map("expiry_date")
   received_date   DateTime        @map("received_date")
   notes           String?
+  display_unit    String?         @map("display_unit")
+  original_unit   String?         @map("original_unit")
+  converted_unit  String?         @map("converted_unit")
   created_at      DateTime        @default(now()) @map("created_at")
   updated_at      DateTime        @updatedAt @map("updated_at")
   id              Int             @id @default(autoincrement())

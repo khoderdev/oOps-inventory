@@ -6,13 +6,14 @@ export interface RawMaterial extends BaseEntity {
   description?: string | null;
   category: MaterialCategory;
   unit: MeasurementUnit;
-  baseUnit?: MeasurementUnit | null; // Optional in Prisma
-  unitsPerPack?: number | null; // Optional in Prisma
-  unitCost: number; // Prisma uses Decimal
+  displayUnit?: string | null;
+  baseUnit?: MeasurementUnit | null;
+  unitsPerPack?: number | null;
+  unitCost: number;
   supplier?: string | null;
   supplierMaterials?: SupplierMaterial[];
-  minStockLevel: number; // Was nested stockThreshold.min
-  maxStockLevel: number; // Was nested stockThreshold.max
+  minStockLevel: number;
+  maxStockLevel: number;
   isActive: boolean;
 }
 

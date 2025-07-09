@@ -1,5 +1,5 @@
 import type { BaseEntity, User } from "./common.types";
-import type { RawMaterial } from "./rawMaterials.types";
+import type { MeasurementUnit, RawMaterial } from "./rawMaterials.types";
 import type { Section } from "./sections.types";
 
 // ENUMS (must exactly match Prisma)
@@ -14,11 +14,13 @@ export enum MovementType {
 
 // MAIN ENTITY TYPES
 export interface StockEntry extends BaseEntity {
+  convertedUnit: string;
+  rawMaterial: RawMaterial;
   rawMaterialId: number;
-  material?: RawMaterial;
   quantity: number;
   unitCost: number;
   totalCost: number;
+  displayUnit?: MeasurementUnit | null;
   supplier?: string;
   batchNumber?: string;
   expiryDate?: Date | null;
@@ -82,6 +84,8 @@ export interface StockLevel {
   totalSubUnitsQuantity: number;
   availableSubUnitsQuantity: number;
   reservedQuantity: number;
+  convertedUnit: string;
+  originalUnit: string;
   minLevel: number;
   maxLevel: number;
   isLowStock: boolean;

@@ -77,26 +77,6 @@ const StockLevelsTab = () => {
     return filtered;
   }, [stockLevels, searchTerm, categoryFilter, stockFilter, sortConfig]);
 
-  const formatQuantityDisplay = (inputQty: number, material: StockLevel["rawMaterial"], isPackInput = false) => {
-    if (!material) return `${inputQty}`;
-
-    const unitsPerPack = material.unitsPerPack || 1;
-    const baseUnit = material.baseUnit || "units";
-
-    let packQty: number;
-    let subunitQty: number;
-
-    if (isPackInput) {
-      packQty = inputQty;
-      subunitQty = packQty * unitsPerPack;
-    } else {
-      subunitQty = inputQty;
-      packQty = subunitQty / unitsPerPack;
-    }
-
-    return `${Math.round(packQty)} ${material.unit} (${subunitQty} ${baseUnit})`;
-  };
-
   const calculateTotalValue = () => {
     return stockLevels.reduce((sum, level) => {
       const material = level.rawMaterial;
@@ -114,39 +94,57 @@ const StockLevelsTab = () => {
     }, 0);
   };
 
+  const formatSingleConversion = (quantitySubUnit: number, originalUnit: string | undefined): string => {
+    if (!originalUnit) return `${quantitySubUnit} units`;
+
+    const unit = originalUnit.toUpperCase();
+
+    // Only convert grams -> KG and ml -> L
+    if (unit === "GRAMS") {
+      const kg = quantitySubUnit / 1000;
+      return `${kg} KG (${quantitySubUnit} GRAMS)`;
+    }
+
+    if (unit === "ML") {
+      const l = quantitySubUnit / 1000;
+      return `${l} L (${quantitySubUnit} ML)`;
+    }
+
+    // Default: show as is
+    return `${quantitySubUnit} ${unit}`;
+  };
+
   const columns: ColumnDef<StockLevel>[] = [
     {
       id: "rawMaterial.name",
       accessorFn: row => row.rawMaterial?.name,
       header: "Material",
-      cell: info => (
-        <div>
-          <p className="font-medium text-gray-900 dark:text-white">{info.getValue() as string}</p>
-          <p className="text-sm text-gray-500 dark:text-gray-400">{info.row.original.rawMaterial?.category}</p>
-        </div>
-      )
-    },
-    {
-      id: "availableUnitsQuantity",
-      accessorKey: "availableUnitsQuantity",
-      header: "Available",
       cell: info => {
-        const item = info.row.original;
+        const material = info.row.original.rawMaterial;
         return (
-          <div className="flex items-center space-x-2">
-            <span className="font-medium text-gray-900 dark:text-white">{formatQuantityDisplay(item.availableSubUnitsQuantity, item.rawMaterial)}</span>
-            {item.isLowStock && <AlertTriangle className="w-4 h-4 text-red-500 dark:text-red-400" />}
+          <div>
+            <p className="font-medium text-gray-900 dark:text-white">{material?.name}</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">{material?.category}</p>
           </div>
         );
       }
     },
     {
-      id: "totalUnitsQuantity",
-      accessorKey: "totalUnitsQuantity",
+      id: "available",
+      header: "Available",
+      cell: info => {
+        const item = info.row.original;
+        const { availableSubUnitsQuantity, convertedUnit, rawMaterial } = item;
+        return <span className="font-medium text-gray-900 dark:text-white">{formatSingleConversion(availableSubUnitsQuantity, convertedUnit || rawMaterial?.unit)}</span>;
+      }
+    },
+    {
+      id: "totalReceived",
       header: "Total Received",
       cell: info => {
         const item = info.row.original;
-        return formatQuantityDisplay(item.totalSubUnitsQuantity, item.rawMaterial);
+        const { totalSubUnitsQuantity, convertedUnit, rawMaterial } = item;
+        return <span>{formatSingleConversion(totalSubUnitsQuantity, convertedUnit || rawMaterial?.unit)}</span>;
       }
     },
     {
@@ -154,8 +152,8 @@ const StockLevelsTab = () => {
       header: "Min Level",
       cell: info => {
         const item = info.row.original;
-        const minLevelInPacks = item.rawMaterial?.minStockLevel || 0;
-        return formatQuantityDisplay(minLevelInPacks, item.rawMaterial, true);
+        const { minLevel, rawMaterial, convertedUnit } = item;
+        return <span>{formatSingleConversion(minLevel, convertedUnit || rawMaterial?.unit)}</span>;
       }
     },
     {
@@ -163,8 +161,8 @@ const StockLevelsTab = () => {
       header: "Max Level",
       cell: info => {
         const item = info.row.original;
-        const maxLevelInPacks = item.rawMaterial?.maxStockLevel || 0;
-        return formatQuantityDisplay(maxLevelInPacks, item.rawMaterial, true);
+        const { maxLevel, rawMaterial, convertedUnit } = item;
+        return <span>{formatSingleConversion(maxLevel, convertedUnit || rawMaterial?.unit)}</span>;
       }
     },
     {
@@ -172,25 +170,23 @@ const StockLevelsTab = () => {
       header: "Status",
       cell: info => {
         const item = info.row.original;
-        const availablePacks = item.availableSubUnitsQuantity / (item.rawMaterial?.unitsPerPack || 1);
-        const minPacks = item.rawMaterial?.minStockLevel || 0;
-        const maxPacks = item.rawMaterial?.maxStockLevel || 0;
+        const { availableUnitsQuantity, minLevel, maxLevel } = item;
 
-        const isLowStock = availablePacks < minPacks;
-        const isOverstocked = availablePacks > maxPacks;
+        const statusText = availableUnitsQuantity < minLevel ? "Low Stock" : availableUnitsQuantity > maxLevel ? "Overstocked" : "Normal";
 
-        const statusText = isLowStock ? "Low Stock" : isOverstocked ? "Overstocked" : "Normal";
-
-        const statusClass = isLowStock ? "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300" : isOverstocked ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300" : "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300";
+        const statusClass = statusText === "Low Stock" ? "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300" : statusText === "Overstocked" ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300" : "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300";
 
         return <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusClass}`}>{statusText}</span>;
       }
     },
     {
       id: "lastUpdated",
-      accessorKey: "lastUpdated",
       header: "Last Updated",
-      cell: info => new Date(info.getValue() as string).toLocaleDateString()
+      accessorKey: "lastUpdated",
+      cell: info => {
+        const date = new Date(info.getValue() as string);
+        return <span>{date.toLocaleDateString()}</span>;
+      }
     }
   ];
 
@@ -241,7 +237,7 @@ const StockLevelsTab = () => {
 
       {/* Filters */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Input placeholder="Search materials..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} leftIcon={<Search className="w-4 h-4" />} />
+        <Input placeholder="Search materials..." value={searchTerm} onValueChange={setSearchTerm} leftIcon={<Search className="w-4 h-4" />} />
 
         <Select placeholder="Filter by category" options={[{ value: "", label: "All Categories" }, ...categoryOptions]} value={categoryFilter} onChange={value => setCategoryFilter(value as MaterialCategory | "")} />
 

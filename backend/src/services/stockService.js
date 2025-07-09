@@ -1,5 +1,6 @@
 import { Decimal } from "@prisma/client/runtime/library";
 import prisma from "../config/prisma.js";
+import { getConversionInfo } from "../utils/conversions.js";
 import logger from "../utils/logger.js";
 import { generateNextOrderId } from "../utils/orderId.js";
 
@@ -32,6 +33,9 @@ const formatStockEntryForFrontend = entry => ({
   notes: entry.notes,
   createdAt: entry.created_at,
   updatedAt: entry.updated_at,
+  displayUnit: entry.display_unit || null,
+  originalUnit: entry.original_unit || null,
+  convertedUnit: entry.converted_unit || null,
   rawMaterial: entry.raw_material ? formatRawMaterialForFrontend(entry.raw_material) : null,
   user: entry.user ? formatUserForFrontend(entry.user) : null
 });
@@ -73,6 +77,7 @@ const formatRawMaterialForFrontend = material => ({
   isActive: material.is_active,
   unitsPerPack: material.units_per_pack,
   baseUnit: material.base_unit,
+  conversionFactor: material.conversion_factor,
   createdAt: material.created_at,
   updatedAt: material.updated_at
 });
@@ -130,7 +135,7 @@ export const createStockEntry = async entryData => {
   try {
     logger.info("Creating stock entry for material:", entryData.rawMaterialId);
 
-    // Get raw material to understand pack structure
+    // Get raw material to understand unit structure
     const rawMaterial = await prisma().rawMaterial.findUnique({
       where: { id: entryData.rawMaterialId }
     });
@@ -139,56 +144,67 @@ export const createStockEntry = async entryData => {
       throw new Error("Raw material not found");
     }
 
-    // Convert pack quantity to base units if needed
-    const baseQuantity = convertPackToBase(entryData.quantity, rawMaterial);
-
-    // Calculate costs for pack/box materials
-    const packInfo = getPackInfo(rawMaterial);
-    let enhancedNotes = entryData.notes || "";
+    // Get conversion information for the material
+    let quantity = entryData.quantity;
     let unitCost = entryData.unitCost;
-    let totalCost = entryData.quantity * entryData.unitCost;
+    let notes = entryData.notes || "";
+    let displayUnit = rawMaterial.unit;
 
-    if (packInfo) {
-      const individualItemCost = entryData.unitCost / packInfo.unitsPerPack;
-      enhancedNotes = `${enhancedNotes} (${entryData.quantity.toFixed(1)} ${rawMaterial.unit} = ${baseQuantity} ${packInfo.baseUnit}, Pack cost: $${entryData.unitCost.toFixed(2)}, Individual cost: $${individualItemCost.toFixed(4)})`.trim();
-      unitCost = entryData.unitCost;
-      totalCost = entryData.quantity * entryData.unitCost;
+    // Handle unit conversions if provided
+    if (entryData.convertedUnit && entryData.originalUnit) {
+      // Verify the conversion makes sense
+      const expectedConversion = getConversionInfo({
+        ...rawMaterial,
+        unit: entryData.originalUnit
+      });
+
+      if (entryData.convertedUnit !== expectedConversion.baseUnit) {
+        throw new Error(`Invalid unit conversion: ${entryData.originalUnit} to ${entryData.convertedUnit}`);
+      }
+
+      // For display purposes, use the converted unit
+      displayUnit = entryData.convertedUnit;
+
+      // Add conversion note
+      notes = `${notes} (Converted from ${entryData.quantity / entryData.conversionFactor} ${entryData.originalUnit})`.trim();
     }
 
-    // Map frontend data to database format
-    const dbData = {
-      // raw_material_id: entryData.rawMaterialId,
-      raw_material: {
-        connect: { id: entryData.rawMaterialId }
-      },
+    // Handle pack/box materials
+    const packInfo = getPackInfo(rawMaterial);
+    if (packInfo) {
+      // Convert pack quantity to base units
+      const baseQuantity = quantity * packInfo.unitsPerPack;
+      const individualItemCost = unitCost / packInfo.unitsPerPack;
 
-      quantity: new Decimal(baseQuantity),
-      unit_cost: new Decimal(unitCost),
-      total_cost: new Decimal(totalCost),
-      supplier: entryData.supplier,
-      batch_number: entryData.batchNumber,
-      expiry_date: entryData.expiryDate,
-      received_date: entryData.receivedDate,
-      received_by: entryData.receivedBy,
-      notes: enhancedNotes
-    };
+      notes = `${notes} (${quantity.toFixed(1)} ${rawMaterial.unit} = ${baseQuantity} ${packInfo.baseUnit}, Pack cost: $${unitCost.toFixed(2)}, Individual cost: $${individualItemCost.toFixed(4)})`.trim();
 
+      // Store in base units
+      quantity = baseQuantity;
+    }
+
+    // Calculate total cost
+    const totalCost = quantity * unitCost;
+
+    // Create the stock entry
     const stockEntry = await prisma().stockEntry.create({
       data: {
         raw_material: {
           connect: { id: entryData.rawMaterialId }
         },
         user: {
-          connect: { id: entryData.receivedBy } // ✅ this handles the relation
+          connect: { id: entryData.receivedBy }
         },
-        quantity: new Decimal(baseQuantity),
+        quantity: new Decimal(quantity),
         unit_cost: new Decimal(unitCost),
         total_cost: new Decimal(totalCost),
         supplier: entryData.supplier || undefined,
         batch_number: entryData.batchNumber || undefined,
         expiry_date: entryData.expiryDate || undefined,
         received_date: entryData.receivedDate,
-        notes: enhancedNotes
+        notes: notes,
+        ...(displayUnit !== rawMaterial.unit && { display_unit: displayUnit }),
+        ...(entryData.originalUnit && { original_unit: entryData.originalUnit }),
+        ...(entryData.convertedUnit && { converted_unit: entryData.convertedUnit })
       },
       include: {
         raw_material: true,
@@ -197,12 +213,19 @@ export const createStockEntry = async entryData => {
     });
 
     // Create initial stock movement
-    const movementReason = packInfo ? `Stock received (${entryData.quantity} ${rawMaterial.unit} = ${baseQuantity} ${packInfo.baseUnit})` : "Stock received";
+    let movementReason;
+    if (entryData.convertedUnit) {
+      movementReason = `Stock received (${entryData.quantity} ${displayUnit})`;
+    } else if (packInfo) {
+      movementReason = `Stock received (${entryData.quantity} ${rawMaterial.unit} = ${quantity} ${packInfo.baseUnit})`;
+    } else {
+      movementReason = "Stock received";
+    }
 
     await createStockMovement({
       stockEntryId: stockEntry.id,
       type: "IN",
-      quantity: baseQuantity,
+      quantity: quantity,
       reason: movementReason,
       performedBy: entryData.receivedBy
     });
@@ -400,7 +423,6 @@ export const getCurrentStockLevels = async () => {
   try {
     logger.info("Calculating current stock levels");
 
-    // Get all active raw materials
     const rawMaterials = await prisma().rawMaterial.findMany({
       where: { is_active: true }
     });
@@ -408,9 +430,9 @@ export const getCurrentStockLevels = async () => {
     const stockLevels = [];
 
     for (const material of rawMaterials) {
-      // Get all stock entries for this material
       const entries = await prisma().stockEntry.findMany({
-        where: { raw_material_id: material.id }
+        where: { raw_material_id: material.id },
+        orderBy: { received_date: "desc" } // latest first
       });
 
       let totalReceived = 0;
@@ -419,7 +441,6 @@ export const getCurrentStockLevels = async () => {
       for (const entry of entries) {
         totalReceived += parseFloat(entry.quantity.toString());
 
-        // Get outbound movements for this entry
         const outboundMovements = await prisma().stockMovement.findMany({
           where: {
             stock_entry_id: entry.id,
@@ -433,23 +454,26 @@ export const getCurrentStockLevels = async () => {
       const availableQuantity = totalReceived - totalUsed;
       const isLowStock = availableQuantity <= parseFloat(material.min_stock_level.toString());
 
-      // Calculate pack/box quantities vs sub-unit quantities
       const packInfo = getPackInfo(material);
+
       let totalUnitsQuantity, availableUnitsQuantity, totalSubUnitsQuantity, availableSubUnitsQuantity;
 
       if (packInfo) {
-        // For pack/box materials: totalReceived and availableQuantity are in base units
         totalSubUnitsQuantity = totalReceived;
         availableSubUnitsQuantity = availableQuantity;
         totalUnitsQuantity = parseFloat((totalReceived / packInfo.unitsPerPack).toFixed(1));
         availableUnitsQuantity = parseFloat((availableQuantity / packInfo.unitsPerPack).toFixed(1));
       } else {
-        // For regular materials: units and sub-units are the same
         totalUnitsQuantity = totalReceived;
         availableUnitsQuantity = availableQuantity;
         totalSubUnitsQuantity = totalReceived;
         availableSubUnitsQuantity = availableQuantity;
       }
+
+      // Extract unit conversion info from latest entry (if any)
+      const latestEntry = entries[0];
+      const originalUnit = latestEntry?.original_unit ?? null;
+      const convertedUnit = latestEntry?.converted_unit ?? null;
 
       stockLevels.push({
         rawMaterial: formatRawMaterialForFrontend(material),
@@ -457,11 +481,13 @@ export const getCurrentStockLevels = async () => {
         availableUnitsQuantity,
         totalSubUnitsQuantity,
         availableSubUnitsQuantity,
-        reservedQuantity: 0, // Would be calculated based on pending orders
+        reservedQuantity: 0,
         minLevel: parseFloat(material.min_stock_level.toString()),
         maxLevel: parseFloat(material.max_stock_level.toString()),
         isLowStock,
-        lastUpdated: new Date()
+        lastUpdated: new Date(),
+        originalUnit,
+        convertedUnit
       });
     }
 
@@ -537,52 +563,62 @@ export const updateStockEntry = async updateData => {
       }
     }
 
-    // Convert pack quantity to base units if needed
-    let quantity = data.quantity;
-    if (quantity !== undefined && rawMaterial) {
-      quantity = convertPackToBase(quantity, rawMaterial);
-    }
+    // Handle unit conversions if provided
+    const conversionInfo = getConversionInfo(rawMaterial);
+    let quantity = data.quantity !== undefined ? data.quantity : parseFloat(existingEntry.quantity.toString());
+    let unitCost = data.unitCost !== undefined ? data.unitCost : parseFloat(existingEntry.unit_cost.toString());
+    let notes = data.notes || existingEntry.notes || "";
+    let displayUnit = existingEntry.display_unit || rawMaterial.unit;
 
-    // Calculate costs for pack/box materials
-    let notes = data.notes;
-    let unitCost = data.unitCost;
-    let totalCost = undefined;
+    // If conversion data is provided (from frontend)
+    if (data.convertedUnit && data.originalUnit) {
+      // Verify the conversion makes sense
+      const expectedConversion = getConversionInfo({
+        ...rawMaterial,
+        unit: data.originalUnit
+      });
 
-    if (rawMaterial && (data.quantity !== undefined || data.unitCost !== undefined)) {
-      const packInfo = getPackInfo(rawMaterial);
-      if (packInfo && (data.quantity !== undefined || data.unitCost !== undefined)) {
-        const finalQuantity = data.quantity !== undefined ? data.quantity : convertBaseToPack(parseFloat(existingEntry.quantity.toString()), rawMaterial);
-        const finalUnitCost = data.unitCost !== undefined ? data.unitCost : parseFloat(existingEntry.unit_cost.toString());
-
-        const individualItemCost = finalUnitCost / packInfo.unitsPerPack;
-        const baseQuantity = convertPackToBase(finalQuantity, rawMaterial);
-
-        notes = `${notes || existingEntry.notes || ""} (${finalQuantity.toFixed(1)} ${rawMaterial.unit} = ${baseQuantity} ${packInfo.baseUnit}, Pack cost: $${finalUnitCost.toFixed(2)}, Individual cost: $${individualItemCost.toFixed(4)})`.trim();
-
-        unitCost = finalUnitCost;
-        totalCost = finalQuantity * finalUnitCost;
+      if (data.convertedUnit !== expectedConversion.baseUnit) {
+        throw new Error(`Invalid unit conversion: ${data.originalUnit} to ${data.convertedUnit}`);
       }
+
+      // For display purposes, use the converted unit
+      displayUnit = data.convertedUnit;
+
+      // Add conversion note
+      notes = `${notes} (Converted from ${data.quantity / data.conversionFactor} ${data.originalUnit})`.trim();
     }
 
-    // Map frontend data to database format
+    // For pack/box materials, handle the conversion to base units
+    if (conversionInfo.isConvertible && (rawMaterial.unit === "PACKS" || rawMaterial.unit === "BOXES")) {
+      const baseQuantity = quantity * conversionInfo.conversionFactor;
+      const individualItemCost = unitCost / conversionInfo.conversionFactor;
+
+      notes = `${notes} (${quantity} ${rawMaterial.unit} = ${baseQuantity} ${conversionInfo.baseUnit}, Pack cost: $${unitCost.toFixed(2)}, Individual cost: $${individualItemCost.toFixed(4)})`.trim();
+
+      // Store in base units
+      quantity = baseQuantity;
+    }
+
+    // Prepare update data
     const dbData = {};
     if (data.rawMaterialId !== undefined) dbData.raw_material_id = data.rawMaterialId;
-    if (quantity !== undefined) dbData.quantity = new Decimal(quantity);
-    if (unitCost !== undefined) dbData.unit_cost = new Decimal(unitCost);
-    if (totalCost !== undefined) dbData.total_cost = new Decimal(totalCost);
+    if (data.quantity !== undefined) dbData.quantity = new Decimal(quantity);
+    if (data.unitCost !== undefined) dbData.unit_cost = new Decimal(unitCost);
     if (data.supplier !== undefined) dbData.supplier = data.supplier;
     if (data.batchNumber !== undefined) dbData.batch_number = data.batchNumber;
     if (data.expiryDate !== undefined) dbData.expiry_date = data.expiryDate;
     if (data.receivedDate !== undefined) dbData.received_date = data.receivedDate;
     if (data.receivedBy !== undefined) dbData.received_by = data.receivedBy;
     if (notes !== undefined) dbData.notes = notes;
-
-    // Calculate total cost if quantity or unit cost is being updated (for non-pack materials)
-    if ((dbData.quantity !== undefined || dbData.unit_cost !== undefined) && !totalCost) {
-      const finalQuantity = dbData.quantity ? parseFloat(dbData.quantity.toString()) : parseFloat(existingEntry.quantity.toString());
-      const finalUnitCost = dbData.unit_cost ? parseFloat(dbData.unit_cost.toString()) : parseFloat(existingEntry.unit_cost.toString());
-      dbData.total_cost = new Decimal(finalQuantity * finalUnitCost);
+    if (displayUnit !== (existingEntry.display_unit || rawMaterial.unit)) {
+      dbData.display_unit = displayUnit;
     }
+    if (data.originalUnit !== undefined) dbData.original_unit = data.originalUnit;
+    if (data.convertedUnit !== undefined) dbData.converted_unit = data.convertedUnit;
+
+    // Always update total cost based on current values
+    dbData.total_cost = new Decimal(quantity * unitCost);
 
     const updatedEntry = await prisma().stockEntry.update({
       where: { id },
