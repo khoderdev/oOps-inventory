@@ -19,6 +19,7 @@ export enum SectionType {
 }
 
 export interface SectionInventory extends BaseEntity {
+  packQuantity: number;
   sectionId: number;
   section?: Section;
   rawMaterialId: number;

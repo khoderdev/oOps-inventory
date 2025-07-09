@@ -2,6 +2,7 @@ import type { BaseEntity } from "./common.types";
 import type { SupplierMaterial } from "./suppliers.types";
 
 export interface RawMaterial extends BaseEntity {
+  costPerIndividualUnit: number;
   name: string;
   description?: string | null;
   category: MaterialCategory;
@@ -10,6 +11,8 @@ export interface RawMaterial extends BaseEntity {
   baseUnit?: MeasurementUnit | null;
   unitsPerPack?: number | null;
   unitCost: number;
+  costPerBaseUnit?: number;
+  unitCostPerBaseUnit?: number;
   supplier?: string | null;
   supplierMaterials?: SupplierMaterial[];
   minStockLevel: number;

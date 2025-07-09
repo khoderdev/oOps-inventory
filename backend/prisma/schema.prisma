@@ -51,6 +51,8 @@ model RawMaterial {
   max_stock_level      Decimal              @map("max_stock_level") @db.Decimal(10, 2)
   is_active            Boolean              @default(true) @map("is_active")
   units_per_pack       Int?                 @map("units_per_pack")
+  cost_per_base_unit   Decimal?             @map("cost_per_base_unit") @db.Decimal(10, 2)
+  cost_per_individual_unit Decimal? @map("unit_cost_per_base_unit") @db.Decimal(12, 4)
   base_unit            MeasurementUnit?     @map("base_unit")
   created_at           DateTime             @default(now()) @map("created_at")
   updated_at           DateTime             @updatedAt @map("updated_at")
@@ -58,8 +60,6 @@ model RawMaterial {
   section_consumptions SectionConsumption[]
   section_inventories  SectionInventory[]
   stock_entries        StockEntry[]
-  
-  // New relationships for comprehensive restaurant management
   supplier_materials   SupplierMaterial[]
   purchase_order_items PurchaseOrderItem[]
   recipe_ingredients   RecipeIngredient[]

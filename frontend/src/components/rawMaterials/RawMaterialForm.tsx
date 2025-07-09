@@ -136,7 +136,7 @@ const RawMaterialForm = ({ initialData, onSuccess, onCancel }: RawMaterialFormPr
     }
 
     try {
-      // Convert form data to API format
+      const costPerBaseUnit = isPackOrBox() && formData.unitsPerPack > 0 ? parseFloat((formData.unitCost / formData.unitsPerPack).toFixed(4)) : null;
       const convertToApiFormat = () => {
         return {
           name: formData.name,
@@ -148,7 +148,9 @@ const RawMaterialForm = ({ initialData, onSuccess, onCancel }: RawMaterialFormPr
           minStockLevel: formData.minStockLevel,
           maxStockLevel: formData.maxStockLevel,
           baseUnit: isPackOrBox() ? formData.baseUnit : null,
-          unitsPerPack: isPackOrBox() ? formData.unitsPerPack : null
+          unitsPerPack: isPackOrBox() ? formData.unitsPerPack : null,
+          costPerBaseUnit: costPerBaseUnit,
+          unitCostPerBaseUnit: costPerBaseUnit
         };
       };
 
@@ -228,7 +230,7 @@ const RawMaterialForm = ({ initialData, onSuccess, onCancel }: RawMaterialFormPr
           </>
         )}
 
-        <Select<number> label="Supplier" options={supplierOptions} value={formData.supplierId} onChange={value => handleInputChange("supplierId", value)} error={errors.supplierId} required placeholder="Select a supplier" />
+        <Select label="Supplier" options={supplierOptions} value={formData.supplierId} onChange={value => handleInputChange("supplierId", value)} error={errors.supplierId} required placeholder="Select a supplier" />
 
         {!isPackOrBox() && <div></div>}
 

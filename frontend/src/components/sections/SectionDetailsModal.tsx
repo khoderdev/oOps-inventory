@@ -143,12 +143,12 @@ const SectionDetailsModal = ({ section, isOpen, onClose }: SectionDetailsModalPr
                   {inventory.map(item => {
                     const material = item.rawMaterial as RawMaterial;
                     const isPackOrBox = material?.unit === MeasurementUnit.PACKS || material?.unit === MeasurementUnit.BOXES;
-                    const unitsPerContainer = isPackOrBox ? (material.unitsPerPack || 1) : 1;
-                    const baseUnitName = material?.baseUnit || MeasurementUnit.PIECES;
+                    const packQty = item.packQuantity ?? 0;
+                    const baseQty = item.quantity ?? 0;
+                    const packUnit = material.unit || "PACKS";
+                    const baseUnit = material.baseUnit || "UNITS";
 
-                    // Calculate total bottles
-                    const totalBottles = item.quantity * unitsPerContainer;
-                    const displayText = `${totalBottles} ${baseUnitName}`;
+                    const displayText = isPackOrBox ? `${packQty} ${packUnit} (${baseQty} ${baseUnit})` : `${baseQty} ${material.unit}`;
 
                     return (
                       <div key={item.id} onClick={() => handleEditClick(item)} className="flex items-center justify-between p-4 border rounded-lg dark:bg-gray-900/10 dark:border-gray-800 hover:bg-gray-100 dark:hover:bg-gray-900/20 transition-colors cursor-pointer">
@@ -162,7 +162,7 @@ const SectionDetailsModal = ({ section, isOpen, onClose }: SectionDetailsModalPr
                             <p className="text-sm text-gray-500 dark:text-gray-400">Available</p>
                             {item.reservedQuantity > 0 && (
                               <p className="text-xs text-yellow-600">
-                                {item.reservedQuantity * unitsPerContainer} {baseUnitName} reserved
+                                {item.reservedQuantity} {baseUnit} reserved
                               </p>
                             )}
                           </div>

@@ -42,6 +42,8 @@ const formatMaterialForFrontend = material => ({
   isActive: material.is_active,
   unitsPerPack: material.units_per_pack,
   baseUnit: material.base_unit,
+  costPerBaseUnit: material.cost_per_base_unit ? parseFloat(material.cost_per_base_unit.toString()) : null,
+  costPerIndividualUnit: material.cost_per_individual_unit ? parseFloat(material.cost_per_individual_unit.toString()) : null,
   createdAt: material.created_at,
   updatedAt: material.updated_at
 });
@@ -119,7 +121,6 @@ export const getRawMaterialById = async id => {
  */
 export const createRawMaterial = async materialData => {
   try {
-    // Business validation
     if (!materialData.name || !materialData.category || !materialData.unit) {
       throw new Error("Name, category, and unit are required fields");
     }
@@ -136,10 +137,8 @@ export const createRawMaterial = async materialData => {
 
     logger.info("Creating new raw material:", materialData.name);
 
-    // Convert enum values to uppercase
     const convertedData = convertEnumsToUppercase(materialData);
 
-    // Map frontend data to database format
     const dbData = {
       name: convertedData.name,
       description: convertedData.description,
@@ -151,12 +150,12 @@ export const createRawMaterial = async materialData => {
       max_stock_level: new Decimal(convertedData.maxStockLevel || 0),
       is_active: true,
       units_per_pack: convertedData.unitsPerPack,
-      base_unit: convertedData.baseUnit
+      base_unit: convertedData.baseUnit,
+      cost_per_base_unit: convertedData.costPerBaseUnit ? new Decimal(convertedData.costPerBaseUnit) : undefined,
+      cost_per_individual_unit: convertedData.costPerIndividualUnit ? new Decimal(convertedData.costPerIndividualUnit) : undefined
     };
 
-    const material = await prisma().rawMaterial.create({
-      data: dbData
-    });
+    const material = await prisma().rawMaterial.create({ data: dbData });
 
     logger.info("Raw material created successfully:", material.id);
 
@@ -182,11 +181,8 @@ export const updateRawMaterial = async updateData => {
   try {
     const { id, ...data } = updateData;
 
-    if (!id) {
-      throw new Error("Raw material ID is required");
-    }
+    if (!id) throw new Error("Raw material ID is required");
 
-    // Business validation
     if (data.unitCost && data.unitCost < 0) {
       throw new Error("Unit cost cannot be negative");
     }
@@ -199,10 +195,8 @@ export const updateRawMaterial = async updateData => {
 
     logger.info("Updating raw material:", id);
 
-    // Convert enum values to uppercase
     const convertedData = convertEnumsToUppercase(data);
 
-    // Map frontend data to database format
     const dbData = {};
     if (convertedData.name !== undefined) dbData.name = convertedData.name;
     if (convertedData.description !== undefined) dbData.description = convertedData.description;
@@ -215,6 +209,8 @@ export const updateRawMaterial = async updateData => {
     if (convertedData.isActive !== undefined) dbData.is_active = convertedData.isActive;
     if (convertedData.unitsPerPack !== undefined) dbData.units_per_pack = convertedData.unitsPerPack;
     if (convertedData.baseUnit !== undefined) dbData.base_unit = convertedData.baseUnit;
+    if (convertedData.costPerBaseUnit !== undefined) dbData.cost_per_base_unit = new Decimal(convertedData.costPerBaseUnit);
+    if (convertedData.costPerIndividualUnit !== undefined) dbData.cost_per_individual_unit = new Decimal(convertedData.costPerIndividualUnit);
 
     const material = await prisma().rawMaterial.update({
       where: { id },
@@ -243,17 +239,9 @@ export const updateRawMaterial = async updateData => {
  */
 export const deleteRawMaterial = async id => {
   try {
-    if (!id) {
-      throw new Error("Raw material ID is required");
-    }
-
+    if (!id) throw new Error("Raw material ID is required");
     logger.info("Deleting raw material:", id);
-
-    await prisma().rawMaterial.update({
-      where: { id },
-      data: { is_active: false }
-    });
-
+    await prisma().rawMaterial.update({ where: { id }, data: { is_active: false } });
     logger.info("Raw material deleted successfully:", id);
 
     return {
@@ -278,7 +266,6 @@ export const getLowStockMaterials = async () => {
   try {
     logger.info("Fetching low stock materials");
 
-    // Get materials with current stock levels
     const materials = await prisma().rawMaterial.findMany({
       where: { is_active: true },
       include: {
@@ -293,7 +280,6 @@ export const getLowStockMaterials = async () => {
     });
 
     const lowStockMaterials = materials.filter(material => {
-      // Calculate current stock level
       const totalReceived = material.stock_entries.reduce((sum, entry) => sum + parseFloat(entry.quantity.toString()), 0);
 
       const totalUsed = material.stock_entries.reduce((sum, entry) => sum + entry.stock_movements.reduce((movSum, movement) => movSum + parseFloat(movement.quantity.toString()), 0), 0);
@@ -304,12 +290,10 @@ export const getLowStockMaterials = async () => {
       return currentStock <= minLevel;
     });
 
-    // Sort by urgency (lowest stock percentage first)
     lowStockMaterials.sort((a, b) => {
       const aTotal = a.stock_entries.reduce((sum, entry) => sum + parseFloat(entry.quantity.toString()), 0);
       const aUsed = a.stock_entries.reduce((sum, entry) => sum + entry.stock_movements.reduce((movSum, movement) => movSum + parseFloat(movement.quantity.toString()), 0), 0);
       const aPercentage = (aTotal - aUsed) / parseFloat(a.min_stock_level.toString());
-
       const bTotal = b.stock_entries.reduce((sum, entry) => sum + parseFloat(entry.quantity.toString()), 0);
       const bUsed = b.stock_entries.reduce((sum, entry) => sum + entry.stock_movements.reduce((movSum, movement) => movSum + parseFloat(movement.quantity.toString()), 0), 0);
       const bPercentage = (bTotal - bUsed) / parseFloat(b.min_stock_level.toString());
@@ -332,10 +316,7 @@ export const getLowStockMaterials = async () => {
  */
 export const getMaterialsByCategory = async category => {
   try {
-    if (!category) {
-      throw new Error("Category is required");
-    }
-
+    if (!category) throw new Error("Category is required");
     logger.info("Fetching materials by category:", category);
 
     const materials = await prisma().rawMaterial.findMany({
@@ -361,12 +342,8 @@ export const getMaterialsByCategory = async category => {
  */
 export const validateMaterialAvailability = async (materialId, requiredQuantity) => {
   try {
-    const material = await prisma().rawMaterial.findUnique({
-      where: { id: materialId }
-    });
-    if (!material) {
-      throw new Error("Material not found");
-    }
+    const material = await prisma().rawMaterial.findUnique({ where: { id: materialId } });
+    if (!material) throw new Error("Material not found");
 
     if (!material.is_active) {
       throw new Error("Material is not active");

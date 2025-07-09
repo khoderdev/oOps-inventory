@@ -187,7 +187,7 @@ const StockEntryForm = ({ onSuccess, onCancel, initialData }: ExtendedStockEntry
         ...prev,
         rawMaterialId: materialId,
         supplier: supplierId,
-        unitCost: material.unitCost
+        unitCost: material.costPerBaseUnit || material.unitCost || 0
       }));
     } else {
       setFormData(prev => ({
@@ -372,7 +372,7 @@ const StockEntryForm = ({ onSuccess, onCancel, initialData }: ExtendedStockEntry
             onValueChange={e => handleInputChange("unitCost", parseFloat(e) || 0)}
             error={errors.unitCost}
             placeholder="0.00"
-            helperText={selectedMaterial ? `Cost per ${usingConvertedUnit ? String(convertedUnit).toLowerCase() : selectedMaterial.unit === MeasurementUnit.PACKS || selectedMaterial.unit === MeasurementUnit.BOXES ? String(selectedMaterial.unit).toLowerCase() : "unit"}` : "Will be auto-filled when material is selected"}
+            helperText={selectedMaterial ? `Cost per ${usingConvertedUnit ? String(convertedUnit).toLowerCase() : selectedMaterial.unit === MeasurementUnit.PACKS || selectedMaterial.unit === MeasurementUnit.BOXES ? selectedMaterial.unit.toLowerCase() : selectedMaterial.baseUnit?.toLowerCase() || "unit"}` : "Will be auto-filled when material is selected"}
           />
 
           <div className="space-y-2">
@@ -446,7 +446,7 @@ const StockEntryForm = ({ onSuccess, onCancel, initialData }: ExtendedStockEntry
 
         <Input label="Notes" value={formData.notes} onValueChange={e => handleInputChange("notes", e)} placeholder="Optional notes about this stock entry" />
 
-        {selectedMaterial && !usingConvertedUnit && (selectedMaterial.unit === MeasurementUnit.PACKS || selectedMaterial.unit === MeasurementUnit.BOXES) && formData.quantity > 0 && formData.unitCost > 0 && (
+        {/* {selectedMaterial && !usingConvertedUnit && (selectedMaterial.unit === MeasurementUnit.PACKS || selectedMaterial.unit === MeasurementUnit.BOXES) && formData.quantity > 0 && formData.unitCost > 0 && (
           <div className="bg-blue-50 dark:bg-blue-900/10 p-4 rounded-lg">
             <h4 className="font-medium text-blue-900 dark:text-blue-300 mb-2">Cost Breakdown</h4>
             <div className="space-y-1 text-sm text-blue-700 dark:text-blue-300">
@@ -459,8 +459,8 @@ const StockEntryForm = ({ onSuccess, onCancel, initialData }: ExtendedStockEntry
               {(() => {
                 const packInfo = selectedMaterial as unknown as { unitsPerPack?: number; baseUnit?: string };
                 const unitsPerPack = packInfo.unitsPerPack || 1;
-                const baseUnit = packInfo.baseUnit || "pieces";
-                const individualCost = formData.unitCost / unitsPerPack;
+                const baseUnit = selectedMaterial.baseUnit || "pieces";
+                const individualCost = selectedMaterial.costPerIndividualUnit || formData.unitCost / unitsPerPack;
                 const totalIndividualCost = formData.quantity * unitsPerPack * individualCost;
                 return (
                   <>
@@ -469,6 +469,37 @@ const StockEntryForm = ({ onSuccess, onCancel, initialData }: ExtendedStockEntry
                     </p>
                     <p>
                       Total {baseUnit.toLowerCase()} cost: <strong>${totalIndividualCost.toFixed(2)}</strong>
+                    </p>
+                  </>
+                );
+              })()}
+            </div>
+          </div>
+        )} */}
+        {selectedMaterial && !usingConvertedUnit && (selectedMaterial.unit === MeasurementUnit.PACKS || selectedMaterial.unit === MeasurementUnit.BOXES) && formData.quantity > 0 && formData.unitCost > 0 && (
+          <div className="bg-blue-50 dark:bg-blue-900/10 p-4 rounded-lg">
+            <h4 className="font-medium text-blue-900 dark:text-blue-300 mb-2">Cost Breakdown</h4>
+            <div className="space-y-1 text-sm text-blue-700 dark:text-blue-300">
+              <p>
+                Cost per {selectedMaterial.unit.toLowerCase()}: <strong>{formatUnitCost(formData.unitCost)}</strong>
+              </p>
+              <p>
+                Total {selectedMaterial.unit.toLowerCase()} cost: <strong>${(formData.quantity * formData.unitCost).toFixed(2)}</strong>
+              </p>
+
+              {(() => {
+                const unitsPerPack = selectedMaterial.unitsPerPack || 1;
+                const baseUnit = selectedMaterial.baseUnit?.toLowerCase() || "pieces";
+                const individualCost = selectedMaterial.costPerIndividualUnit || formData.unitCost / unitsPerPack;
+                const totalIndividualCost = formData.quantity * unitsPerPack * individualCost;
+
+                return (
+                  <>
+                    <p>
+                      Cost per {baseUnit}: <strong>{formatUnitCost(individualCost)}</strong>
+                    </p>
+                    <p>
+                      Total {baseUnit} cost: <strong>${totalIndividualCost.toFixed(2)}</strong>
                     </p>
                   </>
                 );
