@@ -7,6 +7,7 @@ import type { SortConfig, StockEntry } from "../../types";
 import { MeasurementUnit } from "../../types";
 import Button from "../ui/Button";
 import Modal from "../ui/Modal";
+import SummaryStatCards from "../ui/SummaryStatCards";
 import Table from "../ui/Table";
 import StockEntryForm from "./StockEntryForm";
 
@@ -247,71 +248,63 @@ const StockEntriesTab = () => {
       : [])
   ];
 
+  const stats = useMemo(() => {
+    const thisMonthCount = stockEntries.filter(entry => {
+      const entryDate = new Date(entry.receivedDate);
+      const thisMonth = new Date();
+      return entryDate.getMonth() === thisMonth.getMonth() && entryDate.getFullYear() === thisMonth.getFullYear();
+    }).length;
+
+    const expiringSoonCount = stockEntries.filter(entry => {
+      if (!entry.expiryDate) return false;
+      const expiry = new Date(entry.expiryDate);
+      const weekFromNow = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+      return expiry <= weekFromNow && expiry >= new Date();
+    }).length;
+
+    return [
+      {
+        id: "ALL",
+        icon: <Package />,
+        title: "Total Entries",
+        value: stockEntries.length,
+        color: "blue"
+      },
+      {
+        id: "MONTH",
+        icon: <Package />,
+        title: "This Month",
+        value: thisMonthCount,
+        color: "green"
+      },
+      {
+        id: "VALUE",
+        icon: <Package />,
+        title: "Total Value",
+        value: `$${stockEntries.reduce((sum, entry) => sum + entry.totalCost, 0).toFixed(2)}`,
+        color: "purple"
+      },
+      {
+        id: "EXPIRING",
+        icon: <Calendar />,
+        title: "Expiring Soon",
+        value: expiringSoonCount,
+        color: "red"
+      }
+    ] as const;
+  }, [stockEntries]);
+
   return (
     <div className="space-y-6">
       {/* Summary Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        {/* Total Entries - resets filters */}
-        <div onClick={() => setActiveStatFilter("ALL")} className={`cursor-pointer transition-all p-4 rounded-lg ${activeStatFilter === "ALL" ? "ring-2 ring-blue-500 bg-blue-100 dark:ring-blue-400 dark:bg-blue-900/20" : "bg-blue-50 dark:bg-blue-900/10"}`}>
-          <div className="flex items-center">
-            <Package className="w-8 h-8 text-blue-600 dark:text-blue-400" />
-            <div className="ml-3">
-              <p className="text-sm font-medium text-blue-600 dark:text-blue-400">Total Entries</p>
-              <p className="text-2xl font-bold text-blue-900 dark:text-blue-300">{stockEntries.length}</p>
-            </div>
-          </div>
-        </div>
-
-        {/* This Month */}
-        <div onClick={() => setActiveStatFilter("MONTH")} className={`cursor-pointer transition-all p-4 rounded-lg ${activeStatFilter === "MONTH" ? "ring-2 ring-green-500 bg-green-100 dark:ring-green-400 dark:bg-green-900/20" : "bg-green-50 dark:bg-green-900/10"}`}>
-          <div className="flex items-center">
-            <Package className="w-8 h-8 text-green-600 dark:text-green-400" />
-            <div className="ml-3">
-              <p className="text-sm font-medium text-green-600 dark:text-green-400">This Month</p>
-              <p className="text-2xl font-bold text-green-900 dark:text-green-300">
-                {
-                  stockEntries.filter(entry => {
-                    const entryDate = new Date(entry.receivedDate);
-                    const thisMonth = new Date();
-                    return entryDate.getMonth() === thisMonth.getMonth() && entryDate.getFullYear() === thisMonth.getFullYear();
-                  }).length
-                }
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Total Value (No Filter) */}
-        <div className="bg-purple-50 dark:bg-purple-900/10 p-4 rounded-lg">
-          <div className="flex items-center">
-            <Package className="w-8 h-8 text-purple-600 dark:text-purple-400" />
-            <div className="ml-3">
-              <p className="text-sm font-medium text-purple-600 dark:text-purple-400">Total Value</p>
-              <p className="text-2xl font-bold text-purple-900 dark:text-purple-300">${stockEntries.reduce((sum, entry) => sum + entry.totalCost, 0).toFixed(2)}</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Expiring Soon */}
-        <div onClick={() => setActiveStatFilter("EXPIRING")} className={`cursor-pointer transition-all p-4 rounded-lg ${activeStatFilter === "EXPIRING" ? "ring-2 ring-red-500 bg-red-100 dark:ring-red-400 dark:bg-red-900/20" : "bg-red-50 dark:bg-red-900/10"}`}>
-          <div className="flex items-center">
-            <Calendar className="w-8 h-8 text-red-600 dark:text-red-400" />
-            <div className="ml-3">
-              <p className="text-sm font-medium text-red-600 dark:text-red-400">Expiring Soon</p>
-              <p className="text-2xl font-bold text-red-900 dark:text-red-300">
-                {
-                  stockEntries.filter(entry => {
-                    if (!entry.expiryDate) return false;
-                    const expiry = new Date(entry.expiryDate);
-                    const weekFromNow = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-                    return expiry <= weekFromNow && expiry >= new Date();
-                  }).length
-                }
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
+      <SummaryStatCards
+        stats={stats}
+        activeId={activeStatFilter}
+        onChange={id => {
+          if (id === "VALUE") return;
+          setActiveStatFilter(id as typeof activeStatFilter);
+        }}
+      />
 
       {/* Table */}
       <Table data={filteredData as unknown as Record<string, unknown>[]} columns={columns} loading={isLoading} emptyMessage="No stock entries found." sortConfig={sortConfig} onSort={handleSort} />

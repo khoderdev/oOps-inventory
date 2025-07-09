@@ -8,6 +8,7 @@ import { MeasurementUnit } from "../../types";
 import Button from "../ui/Button";
 import Input from "../ui/Input";
 import Select from "../ui/Select";
+import SummaryStatCards from "../ui/SummaryStatCards";
 import Table from "../ui/Table";
 
 const StockLevelsTab = () => {
@@ -15,7 +16,7 @@ const StockLevelsTab = () => {
   const [categoryFilter, setCategoryFilter] = useState("");
   const [stockFilter, setStockFilter] = useState<"all" | "low" | "available">("all");
   const [sortConfig] = useState<SortConfig>({ field: "rawMaterial.name", order: "asc" });
-
+  const [activeStatFilter, setActiveStatFilter] = useState<"total" | "low" | "available" | "value">("total");
   const { data: stockLevels = [], isLoading } = useStockLevels();
   const { data: rawMaterials = [] } = useRawMaterials({ isActive: true });
 
@@ -190,51 +191,51 @@ const StockLevelsTab = () => {
     }
   ];
 
+  const stats = useMemo(() => {
+    return [
+      {
+        id: "total" as const,
+        title: "Total Items",
+        value: stockLevels.length,
+        icon: <Package />,
+        color: "blue"
+      },
+      {
+        id: "low" as const,
+        title: "Low Stock",
+        value: stockLevels.filter(l => l.isLowStock).length,
+        icon: <AlertTriangle />,
+        color: "red"
+      },
+      {
+        id: "available" as const,
+        title: "Available",
+        value: stockLevels.filter(l => l.availableUnitsQuantity > 0).length,
+        icon: <Package />,
+        color: "green"
+      },
+      {
+        id: "value" as const,
+        title: "Total Value",
+        value: `$${calculateTotalValue().toFixed(2)}`,
+        icon: <Package />,
+        color: "purple"
+      }
+    ] as const;
+  }, [stockLevels]);
+
   return (
     <div className="space-y-6">
       {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-blue-50 dark:bg-blue-900/10 p-4 rounded-lg">
-          <div className="flex items-center">
-            <Package className="w-8 h-8 text-blue-600 dark:text-blue-400" />
-            <div className="ml-3">
-              <p className="text-sm font-medium text-blue-600 dark:text-blue-400">Total Items</p>
-              <p className="text-2xl font-bold text-blue-900 dark:text-blue-300">{stockLevels.length}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-red-50 dark:bg-red-900/10 p-4 rounded-lg">
-          <div className="flex items-center">
-            <AlertTriangle className="w-8 h-8 text-red-600 dark:text-red-400" />
-            <div className="ml-3">
-              <p className="text-sm font-medium text-red-600 dark:text-red-400">Low Stock</p>
-              <p className="text-2xl font-bold text-red-900 dark:text-red-300">{stockLevels.filter(level => level.isLowStock).length}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-green-50 dark:bg-green-900/10 p-4 rounded-lg">
-          <div className="flex items-center">
-            <Package className="w-8 h-8 text-green-600 dark:text-green-400" />
-            <div className="ml-3">
-              <p className="text-sm font-medium text-green-600 dark:text-green-400">Available</p>
-              <p className="text-2xl font-bold text-green-900 dark:text-green-300">{stockLevels.filter(level => level.availableUnitsQuantity > 0).length}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-purple-50 dark:bg-purple-900/10 p-4 rounded-lg">
-          <div className="flex items-center">
-            <Package className="w-8 h-8 text-purple-600 dark:text-purple-400" />
-            <div className="ml-3">
-              <p className="text-sm font-medium text-purple-600 dark:text-purple-400">Total Value</p>
-              <p className="text-2xl font-bold text-purple-900 dark:text-purple-300">${calculateTotalValue().toFixed(2)}</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
+      <SummaryStatCards
+        stats={stats}
+        activeId={activeStatFilter}
+        onChange={id => {
+          if (id === "value") return;
+          setActiveStatFilter(id);
+          setStockFilter(id as "all" | "low" | "available"); // sync to actual data filter
+        }}
+      />
       {/* Filters */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Input placeholder="Search materials..." value={searchTerm} onValueChange={setSearchTerm} leftIcon={<Search className="w-4 h-4" />} />
