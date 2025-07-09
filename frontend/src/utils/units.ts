@@ -250,3 +250,9 @@ export const roundToUnitPrecision = (value: number, unit: MeasurementUnit): numb
   const precision = getUnitPrecision(unit);
   return Math.round(value * Math.pow(10, precision)) / Math.pow(10, precision);
 };
+
+export const unitConversionMap: Record<string, string[]> = {
+  KG: ["GRAMS"],
+  GRAMS: ["KG"],
+  PACKS: ["PIECES", "BOTTLES", "BOXES"]
+};

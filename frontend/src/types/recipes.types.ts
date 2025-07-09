@@ -29,6 +29,7 @@ export interface RecipeIngredient {
   created_at: string;
   updated_at: string;
   raw_material?: {
+    costPerBaseUnit: number;
     id: number;
     name: string;
     unit: string;

@@ -16,25 +16,13 @@ const SectionDetailsModal = ({ section, isOpen, onClose }: SectionDetailsModalPr
   const [showConsumptionModal, setShowConsumptionModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedInventoryItem, setSelectedInventoryItem] = useState<SectionInventory | null>(null);
-  const { data: inventory = [], refetch } = useSectionInventory(section?.id || "");
-  const { data: consumption = [], refetch: refetchConsumption } = useSectionConsumption(section?.id || "");
+  const { data: inventory = [], refetch } = useSectionInventory(section?.id.toString() || "");
+  const { data: consumption = [], refetch: refetchConsumption } = useSectionConsumption(section?.id.toString() || "");
 
   if (!section) return null;
 
   const getManagerName = (section: Section) => {
-    if (section.manager) {
-      // Check if firstName and lastName are available
-      if (section.manager.firstName && section.manager.lastName) {
-        return `${section.manager.firstName} ${section.manager.lastName}`;
-      }
-      // Fall back to name if available
-      if (section.manager.name) {
-        return section.manager.name;
-      }
-      // Fall back to email
-      return section.manager.email;
-    }
-    return `Manager ${section.managerId}`;
+    return section.manager?.username;
   };
 
   const tabs = [

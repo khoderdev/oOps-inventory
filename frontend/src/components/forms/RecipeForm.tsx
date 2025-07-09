@@ -1,6 +1,7 @@
 import { Plus, Trash2 } from "lucide-react";
 import React, { useEffect, useMemo, useState } from "react";
 import type { CreateRecipeRequest, RawMaterial, Recipe, RecipeIngredient } from "../../types";
+import { unitConversionMap } from "../../utils/units";
 import { Button, Input, Select } from "../ui";
 
 interface RecipeFormProps {
@@ -183,12 +184,21 @@ export const RecipeForm: React.FC<RecipeFormProps> = ({ recipe, onSubmit, onCanc
     const material = materials.find(rm => rm.id === rawMaterialId);
     if (!material) return [];
 
-    // Create a Set to ensure unique values
-    const units = new Set<string>();
-    if (material.baseUnit) units.add(material.baseUnit);
-    if (material.unit) units.add(material.unit);
+    // Collect base units (like in your original code)
+    const unitsSet = new Set<string>();
+    if (material.unit) unitsSet.add(material.unit);
+    if (material.baseUnit) unitsSet.add(material.baseUnit);
 
-    return Array.from(units);
+    // Add convertible units from the map for each unit found
+    const unitsArray = Array.from(unitsSet);
+    unitsArray.forEach(unit => {
+      const convertibleUnits = unitConversionMap[unit];
+      if (convertibleUnits) {
+        convertibleUnits.forEach(cu => unitsSet.add(cu));
+      }
+    });
+
+    return Array.from(unitsSet);
   };
 
   return (
@@ -226,11 +236,14 @@ export const RecipeForm: React.FC<RecipeFormProps> = ({ recipe, onSubmit, onCanc
           <div className="space-y-4">
             {formData.ingredients.map((ingredient, index) => (
               <div key={index} className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_auto_auto] gap-4 items-end">
                   {/* Ingredient Selection */}
-                  <div>
+                  <div className="min-w-0">
+                    {" "}
+                    {/* Added min-w-0 to prevent flex item overflow */}
                     <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-200">Ingredient *</label>
                     <Select
+                      className="w-full"
                       value={ingredient.raw_material_id?.toString() || ""}
                       onChange={value => {
                         handleIngredientChange(index, "raw_material_id", value ? parseInt(value) : "0");
@@ -246,16 +259,22 @@ export const RecipeForm: React.FC<RecipeFormProps> = ({ recipe, onSubmit, onCanc
                     </Select>
                     {ingredientErrors[index]?.raw_material_id && <p className="text-sm text-red-600 mt-1 dark:text-red-400">{ingredientErrors[index]?.raw_material_id}</p>}
                   </div>
+
                   {/* Quantity */}
-                  <div>
+                  <div className="w-auto min-w-[7rem]">
+                    {" "}
+                    {/* Changed to w-auto with min-width */}
                     <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-200">Quantity *</label>
-                    <Input type="number" value={ingredient.quantity || ""} onValueChange={value => handleIngredientChange(index, "quantity", parseFloat(value) || 0)} min="0" step="0.01" />
+                    <Input className="w-full" type="number" value={ingredient.quantity || ""} onValueChange={value => handleIngredientChange(index, "quantity", parseFloat(value) || 0)} min="0" step="0.01" />
                     {ingredientErrors[index]?.quantity && <p className="text-sm text-red-600 mt-1 dark:text-red-400">{ingredientErrors[index]?.quantity}</p>}
                   </div>
+
                   {/* Unit */}
-                  <div>
+                  <div className="w-auto min-w-[8rem]">
+                    {" "}
+                    {/* Changed to w-auto with min-width */}
                     <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-200">Unit *</label>
-                    <Select value={ingredient.baseUnit} onChange={value => handleIngredientChange(index, "baseUnit", value)} placeholder="Select unit" disabled={!ingredient.raw_material_id}>
+                    <Select className="w-full" value={ingredient.baseUnit} onChange={value => handleIngredientChange(index, "baseUnit", value)} placeholder="Select unit" disabled={!ingredient.raw_material_id}>
                       {ingredient.raw_material_id &&
                         getAvailableUnits(ingredient.raw_material_id).map(baseUnit => (
                           <Select.Item key={baseUnit} value={baseUnit}>
@@ -265,8 +284,9 @@ export const RecipeForm: React.FC<RecipeFormProps> = ({ recipe, onSubmit, onCanc
                     </Select>
                     {ingredientErrors[index]?.baseUnit && <p className="text-sm text-red-600 mt-1 dark:text-red-400">{ingredientErrors[index]?.baseUnit}</p>}
                   </div>
+
                   {/* Delete Button */}
-                  <div className="flex items-end space-x-2">
+                  <div className="flex justify-end">
                     <Button type="button" variant="ghost" size="sm" onClick={() => removeIngredient(index)} className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300">
                       <Trash2 className="h-4 w-4" />
                     </Button>

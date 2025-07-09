@@ -11,19 +11,10 @@ interface SectionCardProps {
 }
 
 const SectionCard = ({ section, onView, onEdit }: SectionCardProps) => {
-  const { data: inventory = [] } = useSectionInventory(section.id);
+  const { data: inventory = [] } = useSectionInventory(section.id.toString());
 
   const getManagerName = (section: Section) => {
-    if (section.manager) {
-      if (section.manager.firstName && section.manager.lastName) {
-        return `${section.manager.firstName} ${section.manager.lastName}`;
-      }
-      if (section.manager.name) {
-        return section.manager.name;
-      }
-      return section.manager.email;
-    }
-    return `Manager ${section.managerId}`;
+    return section.manager?.username;
   };
 
   const getSectionIcon = (type: string) => {
