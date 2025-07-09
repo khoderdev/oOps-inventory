@@ -1,4 +1,5 @@
 import prisma from "../config/prisma.js";
+import { getEffectiveUnitCost } from "../utils/costing.js";
 import logger from "../utils/logger.js";
 
 export const createRecipe = async recipeData => {
@@ -57,8 +58,8 @@ export const calculateRecipeCost = async recipeId => {
     const costBreakdown = [];
 
     for (const ingredient of recipe.ingredients) {
-      const unitCost = parseFloat(ingredient.raw_material.unit_cost);
       const quantity = parseFloat(ingredient.quantity);
+      const unitCost = getEffectiveUnitCost(ingredient);
       const ingredientCost = unitCost * quantity;
 
       totalCost += ingredientCost;
@@ -86,12 +87,10 @@ export const calculateRecipeCost = async recipeId => {
       item.percentage = totalCost > 0 ? (item.totalCost / totalCost) * 100 : 0;
     });
 
-    const costPerServing = totalCost / recipe.serving_size;
-
     // Update recipe with calculated cost
     const updatedRecipe = await prisma().recipe.update({
       where: { id: parseInt(recipeId) },
-      data: { cost_per_serving: costPerServing },
+      data: { cost_per_serving: totalCost },
       include: { ingredients: { include: { raw_material: true } } }
     });
 
@@ -101,7 +100,6 @@ export const calculateRecipeCost = async recipeId => {
         ...updatedRecipe,
         costAnalysis: {
           totalCost,
-          costPerServing,
           breakdown: costBreakdown
         }
       }
@@ -131,7 +129,7 @@ export const getRecipes = async (filters = {}) => {
         where,
         include: {
           ingredients: { include: { raw_material: true } },
-          menu_items: { select: { id: true, name: true, selling_price: true, margin_percentage: true } },
+          menu_items: { select: { id: true, name: true, selling_price: true } },
           creator: { select: { id: true, username: true, first_name: true, last_name: true } }
         },
         orderBy: { created_at: "desc" },
@@ -145,9 +143,10 @@ export const getRecipes = async (filters = {}) => {
     const recipesWithAnalysis = recipes.map(recipe => {
       let totalCost = 0;
       const costBreakdown = recipe.ingredients.map(ingredient => {
-        const unitCost = parseFloat(ingredient.raw_material.unit_cost);
         const quantity = parseFloat(ingredient.quantity);
+        const unitCost = getEffectiveUnitCost(ingredient);
         const ingredientCost = unitCost * quantity;
+
         totalCost += ingredientCost;
 
         return {
@@ -160,13 +159,10 @@ export const getRecipes = async (filters = {}) => {
         };
       });
 
-      const costPerServing = totalCost / recipe.serving_size;
-
       return {
         ...recipe,
         costAnalysis: {
           totalCost,
-          costPerServing,
           breakdown: costBreakdown
         }
       };
@@ -213,8 +209,7 @@ export const createMenuItem = async menuData => {
         recipe_id: menuData.recipe_id ? parseInt(menuData.recipe_id) : null,
         cost_price: costPrice,
         selling_price: sellingPrice,
-        margin_amount: marginAmount,
-        margin_percentage: marginPercentage
+        margin_amount: marginAmount
       },
       include: { recipe: { include: { ingredients: { include: { raw_material: true } } } } }
     });
@@ -288,7 +283,6 @@ export const getMenuEngineering = async (days = 30) => {
         mi.cost_price,
         mi.selling_price,
         mi.margin_amount,
-        mi.margin_percentage,
         COALESCE(SUM(s.quantity), 0) as total_sold,
         COALESCE(SUM(s.total_amount), 0) as total_revenue,
         COALESCE(SUM(s.quantity * mi.cost_price), 0) as total_cost
@@ -296,7 +290,7 @@ export const getMenuEngineering = async (days = 30) => {
       LEFT JOIN sales s ON mi.id = s.menu_item_id 
         AND s.sale_date >= ${startDate}
       WHERE mi.is_available = true
-      GROUP BY mi.id, mi.name, mi.category, mi.cost_price, mi.selling_price, mi.margin_amount, mi.margin_percentage
+      GROUP BY mi.id, mi.name, mi.category, mi.cost_price, mi.selling_price, mi.margin_amount
     `;
 
     if (salesData.length === 0) {
@@ -322,7 +316,7 @@ export const getMenuEngineering = async (days = 30) => {
     // Calculate averages for classification
     const totalSales = salesData.reduce((sum, item) => sum + parseInt(item.total_sold), 0);
     const averageSales = totalSales / salesData.length;
-    const averageMargin = salesData.reduce((sum, item) => sum + parseFloat(item.margin_percentage), 0) / salesData.length;
+    const averageMargin = salesData.reduce((sum, item) => sum + parseFloat(item.margin_amount), 0) / salesData.length;
 
     // Classify menu items using Boston Matrix
     const menuAnalysis = {
@@ -340,13 +334,12 @@ export const getMenuEngineering = async (days = 30) => {
         costPrice: parseFloat(item.cost_price),
         sellingPrice: parseFloat(item.selling_price),
         marginAmount: parseFloat(item.margin_amount),
-        marginPercentage: parseFloat(item.margin_percentage),
         totalSold: parseInt(item.total_sold),
         totalRevenue: parseFloat(item.total_revenue),
         totalCost: parseFloat(item.total_cost),
         profitContribution: parseFloat(item.total_revenue) - parseFloat(item.total_cost),
         isHighSales: parseInt(item.total_sold) >= averageSales,
-        isHighMargin: parseFloat(item.margin_percentage) >= averageMargin
+        isHighMargin: parseFloat(item.margin_amount) >= averageMargin
       };
 
       // Classify item
@@ -491,7 +484,7 @@ export const getRecipeCostVariance = async (recipeId, days = 30) => {
       const material = ingredient.raw_material;
       const stockEntries = material.stock_entries;
 
-      const currentUnitCost = parseFloat(material.unit_cost);
+      const currentUnitCost = getEffectiveUnitCost(ingredient);
       const quantity = parseFloat(ingredient.quantity);
 
       let priceHistory = [];
@@ -535,8 +528,8 @@ export const getRecipeCostVariance = async (recipeId, days = 30) => {
         recipe: {
           id: recipe.id,
           name: recipe.name,
-          currentCostPerServing: totalCurrentCost / recipe.serving_size,
-          historicalCostPerServing: totalHistoricalCost / recipe.serving_size
+          currentCostPerServing: totalCurrentCost,
+          historicalCostPerServing: totalHistoricalCost
         },
         variance: {
           totalCurrentCost,

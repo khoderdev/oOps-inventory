@@ -219,7 +219,7 @@ const RawMaterialForm = ({ initialData, onSuccess, onCancel }: RawMaterialFormPr
 
         <Select key={`unit-${formData.unit}`} label="Unit of Measurement" options={unitOptions} value={formData.unit} onChange={value => handleInputChange("unit", value)} required />
 
-        <Input label="Unit Cost" type="number" step="0.01" min="0" value={formData.unitCost} onChange={e => handleInputChange("unitCost", parseFloat(e.target.value) || 0)} error={errors.unitCost} required placeholder="0.00" />
+        <Input label="Unit Cost" type="number" step="any" min="0" value={formData.unitCost} onChange={e => handleInputChange("unitCost", parseFloat(e.target.value) || 0)} error={errors.unitCost} required placeholder="0.00" />
 
         {/* Pack/Box specific fields */}
         {isPackOrBox() && (
@@ -249,7 +249,7 @@ const RawMaterialForm = ({ initialData, onSuccess, onCancel }: RawMaterialFormPr
             Each {getPackLabel()} contains <strong>{formData.unitsPerPack}</strong> {formData.baseUnit.toLowerCase()}
           </p>
           <p className="text-sm text-blue-700 dark:text-blue-100">
-            Cost per {getPackLabel()}: <strong>${formData.unitCost.toFixed(2)}</strong>
+            Cost per {getPackLabel()}: <strong>${formData.unitCost.toFixed(4)}</strong>
           </p>
           <p className="text-sm text-blue-700 dark:text-blue-100">
             Cost per individual {formData.baseUnit.toLowerCase()}: <strong>${(formData.unitCost / formData.unitsPerPack).toFixed(4)}</strong>

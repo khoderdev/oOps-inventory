@@ -122,13 +122,18 @@ export const formatQuantity = (
   }
 ): string => {
   const metadata = getUnitMetadata(unit);
-  const precision = options?.precision ?? metadata.precision;
+
+  // Force 4 decimal places for small units
+  const forceFourDecimalUnits: MeasurementUnit[] = [MeasurementUnit.GRAMS, MeasurementUnit.PIECES, MeasurementUnit.BOTTLES];
+
+  const precision = options?.precision ?? (forceFourDecimalUnits.includes(unit) ? 4 : metadata.precision);
+
   const symbol = options?.showSymbol !== false ? metadata.symbol : metadata.name;
 
   let formattedQuantity = quantity.toFixed(precision);
 
-  // Remove trailing zeros for whole numbers
-  if (precision > 0) {
+  // Remove trailing zeros for non-forced units
+  if (!forceFourDecimalUnits.includes(unit) && precision > 0) {
     formattedQuantity = parseFloat(formattedQuantity).toString();
   }
 
@@ -189,13 +194,13 @@ export const getConsumedUnitLabel = (item: { quantity: number; rawMaterial?: Raw
 
 // Helper function to split quantity and unit for styling
 export const splitQuantityAndUnit = (displayText: string) => {
-  const parts = displayText.split(' ');
+  const parts = displayText.split(" ");
   if (parts.length >= 2) {
     const quantity = parts[0];
-    const unit = parts.slice(1).join(' ');
+    const unit = parts.slice(1).join(" ");
     return { quantity, unit };
   }
-  return { quantity: displayText, unit: '' };
+  return { quantity: displayText, unit: "" };
 };
 
 // Validate unit compatibility

@@ -1,14 +1,8 @@
 export interface Recipe {
   id: number;
   name: string;
-  description?: string;
   category?: string;
-  serving_size: number;
-  prep_time?: number;
-  cook_time?: number;
   instructions?: string;
-  cost_per_serving?: number;
-  margin_percentage?: number;
   is_active: boolean;
   created_by: number;
   created_at: string;
@@ -40,12 +34,12 @@ export interface RecipeIngredient {
     unit: string;
     category: string;
     unit_cost: number;
+    unitsPerPack: number;
   };
 }
 
 export interface RecipeCostAnalysis {
   totalCost: number;
-  costPerServing: number;
   breakdown: CostBreakdownItem[];
 }
 
@@ -54,6 +48,7 @@ export interface CostBreakdownItem {
   materialName: string;
   quantity: number;
   unit: string;
+  baseUnit: string;
   unitCost: number;
   totalCost: number;
   percentage: number;
@@ -62,17 +57,14 @@ export interface CostBreakdownItem {
 export interface MenuItem {
   id: number;
   name: string;
-  description?: string;
   category: MenuCategory;
   recipe_id?: number;
   cost_price: number;
   selling_price: number;
   margin_amount: number;
-  margin_percentage: number;
   is_available: boolean;
   is_popular: boolean;
   allergens?: string;
-  nutritional_info?: string;
   created_at: string;
   updated_at: string;
   recipe?: Recipe;
@@ -136,19 +128,13 @@ export interface MenuRecommendation {
   category: string;
   action: string;
   priority: "HIGH" | "MEDIUM" | "LOW";
-  description: string;
   items: string[];
 }
 
 export interface CreateRecipeRequest {
   name: string;
-  description?: string;
   category?: string;
-  serving_size: number;
-  prep_time?: number;
-  cook_time?: number;
   instructions?: string;
-  margin_percentage?: number;
   ingredients: CreateRecipeIngredient[];
 }
 
@@ -160,7 +146,6 @@ export interface CreateRecipeIngredient {
 
 export interface CreateMenuItemRequest {
   name: string;
-  description?: string;
   category: MenuCategory;
   recipe_id?: number;
   cost_price?: number;

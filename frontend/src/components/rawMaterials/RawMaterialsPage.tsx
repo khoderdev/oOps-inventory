@@ -193,7 +193,18 @@ const RawMaterialsPage = () => {
         minSize: 90,
         maxSize: 140,
         enableSorting: true,
-        cell: ({ getValue }) => <span className="font-mono text-sm font-medium text-green-600 dark:text-green-400">${(getValue() as number).toFixed(2)}</span>,
+        cell: ({ row }) => {
+          const material = row.original;
+          const unit = material.unit;
+          const cost = material.unitCost;
+          const smallUnits = ["GRAMS", "PIECES", "BOTTLES"];
+          const isSmallUnit = smallUnits.includes(unit);
+          const formatted = isSmallUnit
+            ? `$${Math.ceil(cost * 10000) / 10000}` // Rounded up to 4 digits
+            : `$${cost.toFixed(2)}`;
+
+          return <span className="font-mono text-sm font-medium text-green-600 dark:text-green-400">{formatted}</span>;
+        },
         meta: {
           align: "right"
         }

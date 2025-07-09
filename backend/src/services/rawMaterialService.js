@@ -125,11 +125,11 @@ export const createRawMaterial = async materialData => {
       throw new Error("Name, category, and unit are required fields");
     }
 
-    if (materialData.unitCost && materialData.unitCost < 0) {
+    if (materialData.unitCost !== undefined && materialData.unitCost < 0) {
       throw new Error("Unit cost cannot be negative");
     }
 
-    if (materialData.minStockLevel && materialData.maxStockLevel) {
+    if (materialData.minStockLevel !== undefined && materialData.maxStockLevel !== undefined) {
       if (materialData.minStockLevel > materialData.maxStockLevel) {
         throw new Error("Minimum stock level cannot be greater than maximum stock level");
       }
@@ -183,11 +183,17 @@ export const updateRawMaterial = async updateData => {
 
     if (!id) throw new Error("Raw material ID is required");
 
-    if (data.unitCost && data.unitCost < 0) {
+    const existingMaterial = await prisma().rawMaterial.findUnique({ where: { id } });
+
+    if (!existingMaterial) {
+      throw new Error(`Raw material with ID ${id} not found`);
+    }
+
+    if (data.unitCost !== undefined && data.unitCost < 0) {
       throw new Error("Unit cost cannot be negative");
     }
 
-    if (data.minStockLevel && data.maxStockLevel) {
+    if (data.minStockLevel !== undefined && data.maxStockLevel !== undefined) {
       if (data.minStockLevel > data.maxStockLevel) {
         throw new Error("Minimum stock level cannot be greater than maximum stock level");
       }
@@ -209,8 +215,8 @@ export const updateRawMaterial = async updateData => {
     if (convertedData.isActive !== undefined) dbData.is_active = convertedData.isActive;
     if (convertedData.unitsPerPack !== undefined) dbData.units_per_pack = convertedData.unitsPerPack;
     if (convertedData.baseUnit !== undefined) dbData.base_unit = convertedData.baseUnit;
-    if (convertedData.costPerBaseUnit !== undefined) dbData.cost_per_base_unit = new Decimal(convertedData.costPerBaseUnit);
-    if (convertedData.costPerIndividualUnit !== undefined) dbData.cost_per_individual_unit = new Decimal(convertedData.costPerIndividualUnit);
+    if (convertedData.costPerBaseUnit != null) dbData.cost_per_base_unit = new Decimal(convertedData.costPerBaseUnit);
+    if (convertedData.costPerIndividualUnit != null) dbData.cost_per_individual_unit = new Decimal(convertedData.costPerIndividualUnit);
 
     const material = await prisma().rawMaterial.update({
       where: { id },

@@ -15,13 +15,8 @@ export const RecipeForm: React.FC<RecipeFormProps> = ({ recipe, onSubmit, onCanc
   const materials = useMemo(() => (Array.isArray(rawMaterials) ? rawMaterials : []), [rawMaterials]);
   const [formData, setFormData] = useState<CreateRecipeRequest>({
     name: "",
-    description: "",
     category: "",
-    serving_size: 1,
-    prep_time: 0,
-    cook_time: 0,
     instructions: "",
-    margin_percentage: 30,
     ingredients: []
   });
 
@@ -32,13 +27,8 @@ export const RecipeForm: React.FC<RecipeFormProps> = ({ recipe, onSubmit, onCanc
     if (recipe) {
       setFormData({
         name: recipe.name,
-        description: recipe.description || "",
         category: recipe.category || "",
-        serving_size: recipe.serving_size,
-        prep_time: recipe.prep_time || 0,
-        cook_time: recipe.cook_time || 0,
         instructions: recipe.instructions || "",
-        margin_percentage: recipe.margin_percentage || 30,
         ingredients: recipe.ingredients.map(ing => ({
           raw_material_id: ing.raw_material_id,
           quantity: ing.quantity,
@@ -60,10 +50,6 @@ export const RecipeForm: React.FC<RecipeFormProps> = ({ recipe, onSubmit, onCanc
 
     if (!formData.name.trim()) {
       newErrors.name = "Recipe name is required";
-    }
-
-    if (formData.serving_size <= 0) {
-      newErrors.serving_size = "Serving size must be greater than 0";
     }
 
     let hasIngredientErrors = false;
@@ -193,11 +179,6 @@ export const RecipeForm: React.FC<RecipeFormProps> = ({ recipe, onSubmit, onCanc
     console.log("Raw materials data:", materials);
   }, [materials]);
 
-  // const getAvailableUnits = (rawMaterialId: number): string[] => {
-  //   const material = materials.find(rm => rm.id === rawMaterialId);
-  //   return Array.isArray(material?.baseUnit) ? material.baseUnit : [];
-  // };
-
   const getAvailableUnits = (rawMaterialId: number): string[] => {
     const material = materials.find(rm => rm.id === rawMaterialId);
     if (!material) return [];
@@ -223,34 +204,6 @@ export const RecipeForm: React.FC<RecipeFormProps> = ({ recipe, onSubmit, onCanc
           <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-200">Category</label>
           <Input type="text" value={formData.category || ""} onValueChange={value => handleInputChange("category", value)} placeholder="e.g., Appetizer, Main Course" />
         </div>
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-200">Description</label>
-        <Input type="text" value={formData.description || ""} onValueChange={value => handleInputChange("description", value)} placeholder="Brief description of the recipe" />
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-200">Serving Size *</label>
-          <Input type="number" value={formData.serving_size} onValueChange={value => handleInputChange("serving_size", parseInt(value) || 1)} min="1" required />
-          {errors.serving_size && <p className="text-sm text-red-600 mt-1 dark:text-red-400">{errors.serving_size}</p>}
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-200">Prep Time (minutes)</label>
-          <Input type="number" value={formData.prep_time || ""} onValueChange={value => handleInputChange("prep_time", parseInt(value) || 0)} min="0" />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-200">Cook Time (minutes)</label>
-          <Input type="number" value={formData.cook_time || ""} onValueChange={value => handleInputChange("cook_time", parseInt(value) || 0)} min="0" />
-        </div>
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-200">Margin Percentage (%)</label>
-        <Input type="number" value={formData.margin_percentage || ""} onValueChange={value => handleInputChange("margin_percentage", parseFloat(value) || 0)} min="0" max="100" step="0.1" />
       </div>
 
       {/* Ingredients Section */}
@@ -331,7 +284,7 @@ export const RecipeForm: React.FC<RecipeFormProps> = ({ recipe, onSubmit, onCanc
           className="block w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:border-blue-500 dark:focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400 disabled:cursor-not-allowed disabled:bg-gray-50 dark:disabled:bg-gray-800 disabled:opacity-50"
           value={formData.instructions || ""}
           onChange={e => handleInputChange("instructions", e.target.value)}
-          rows={6}
+          rows={3}
           placeholder="Step-by-step cooking instructions"
         />
       </div>

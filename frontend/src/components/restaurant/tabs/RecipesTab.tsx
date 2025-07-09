@@ -5,6 +5,7 @@ import { useRawMaterials } from "../../../hooks/useRawMaterials";
 import { useCreateRecipe, useDeleteRecipe, useMenuEngineering, useRecipeCost, useRecipes, useUpdateRecipe } from "../../../hooks/useRecipes";
 import { MenuCategoryLabels, type CreateRecipeRequest, type MenuCategory, type Recipe, type RecipeFilters } from "../../../types";
 import type { MenuItemAnalysis, RecipeIngredient } from "../../../types/recipes.types";
+import { getEffectiveUnitCost } from "../../../utils/costing";
 import { formatCurrency } from "../../../utils/quantity";
 import { RecipeForm } from "../../forms/RecipeForm";
 import { Button, Modal, Table } from "../../ui";
@@ -95,7 +96,8 @@ export const RecipesTab: React.FC = () => {
 
   const calculateTotalCost = (ingredients: RecipeIngredient[]) => {
     return ingredients.reduce((total, ing) => {
-      return total + ing.quantity * (ing.raw_material?.unit_cost || 0);
+      const unitCost = getEffectiveUnitCost(ing);
+      return total + ing.quantity * unitCost;
     }, 0);
   };
 
@@ -111,15 +113,15 @@ export const RecipesTab: React.FC = () => {
         enableSorting: true,
         cell: ({ row, getValue }) => {
           const name = getValue() as string;
-          const description = row.original.description;
+          const instruction = row.original.instructions;
           return (
             <div className="min-w-0">
               <div className="font-medium text-gray-900 dark:text-gray-100 truncate" title={name}>
                 {name}
               </div>
-              {description && (
-                <div className="text-sm text-gray-500 dark:text-gray-400 truncate max-w-xs" title={description}>
-                  {description}
+              {instruction && (
+                <div className="text-sm text-gray-500 dark:text-gray-400 truncate max-w-xs" title={instruction}>
+                  {instruction}
                 </div>
               )}
             </div>
@@ -140,34 +142,7 @@ export const RecipesTab: React.FC = () => {
           return renderCategoryBadge(category);
         }
       },
-      {
-        id: "serving_size",
-        header: "Servings",
-        accessorKey: "serving_size",
-        size: 100,
-        minSize: 80,
-        maxSize: 120,
-        enableSorting: true,
-        meta: { align: "center" },
-        cell: ({ getValue }) => {
-          const size = getValue() as number;
-          return <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{size} portions</span>;
-        }
-      },
-      {
-        id: "prep_time",
-        header: "Prep Time",
-        accessorKey: "prep_time",
-        size: 100,
-        minSize: 80,
-        maxSize: 120,
-        enableSorting: true,
-        meta: { align: "center" },
-        cell: ({ getValue }) => {
-          const time = getValue() as number;
-          return <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{time} min</span>;
-        }
-      },
+
       {
         id: "ingredients",
         header: "Ingredients",
@@ -291,12 +266,7 @@ export const RecipesTab: React.FC = () => {
             <div className="flex flex-col sm:flex-row justify-between gap-4 pb-4 border-b border-gray-200 dark:border-gray-700">
               <div>
                 <h3 className="text-xl font-bold text-gray-900 dark:text-white">{modalState.selectedRecipe.name}</h3>
-                <div className="flex items-center gap-2 mt-1">
-                  {renderCategoryBadge(modalState.selectedRecipe.category as MenuCategory)}
-                  <span className="text-sm text-gray-500 dark:text-gray-400">
-                    {modalState.selectedRecipe.prep_time} min prep • {modalState.selectedRecipe.cook_time || "--"} min cook
-                  </span>
-                </div>
+                <div className="flex items-center gap-2 mt-1">{renderCategoryBadge(modalState.selectedRecipe.category as MenuCategory)}</div>
               </div>
               <div className="flex gap-2">
                 <Button
@@ -327,18 +297,8 @@ export const RecipesTab: React.FC = () => {
               </div>
             </div>
 
-            {/* Description Section */}
-            <div className="space-y-2">
-              <h4 className="text-lg font-semibold text-gray-900 dark:text-white">Description</h4>
-              <div className="prose prose-sm max-w-none text-gray-700 dark:text-gray-300">{modalState.selectedRecipe.description || <span className="text-gray-400 italic">No description provided</span>}</div>
-            </div>
-
             {/* Key Metrics Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded-lg">
-                <p className="text-sm text-gray-500 dark:text-gray-400">Servings</p>
-                <p className="text-xl font-semibold text-gray-900 dark:text-white">{modalState.selectedRecipe.serving_size}</p>
-              </div>
               <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded-lg">
                 <p className="text-sm text-gray-500 dark:text-gray-400">Ingredients</p>
                 <p className="text-xl font-semibold text-gray-900 dark:text-white">{modalState.selectedRecipe.ingredients.length}</p>
@@ -346,10 +306,6 @@ export const RecipesTab: React.FC = () => {
               <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded-lg">
                 <p className="text-sm text-gray-500 dark:text-gray-400">Total Cost</p>
                 <p className="text-xl font-semibold text-gray-900 dark:text-white">${calculateTotalCost(modalState.selectedRecipe.ingredients).toFixed(2)}</p>
-              </div>
-              <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded-lg">
-                <p className="text-sm text-gray-500 dark:text-gray-400">Cost Per Serving</p>
-                <p className="text-xl font-semibold text-gray-900 dark:text-white">${(calculateTotalCost(modalState.selectedRecipe.ingredients) / modalState.selectedRecipe.serving_size).toFixed(2)}</p>
               </div>
             </div>
 
@@ -371,7 +327,7 @@ export const RecipesTab: React.FC = () => {
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200 dark:bg-gray-800 dark:divide-gray-700">
                     {modalState.selectedRecipe.ingredients.map((ingredient, index) => {
-                      const unitCost = ingredient.raw_material?.unit_cost ? parseFloat(ingredient.raw_material.unit_cost.toString()) : 0;
+                      const unitCost = getEffectiveUnitCost(ingredient);
                       const totalCost = ingredient.quantity * unitCost;
 
                       return (
@@ -524,7 +480,6 @@ export const RecipesTab: React.FC = () => {
                     <div className="flex items-start justify-between">
                       <div>
                         <h5 className="font-medium text-gray-900">{rec.category}</h5>
-                        <p className="text-sm text-gray-600 mt-1">{rec.description}</p>
                       </div>
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${rec.priority === "HIGH" ? "bg-red-100 text-red-800" : rec.priority === "MEDIUM" ? "bg-yellow-100 text-yellow-800" : "bg-green-100 text-green-800"}`}>{rec.priority}</span>
                     </div>
@@ -653,16 +608,8 @@ const RecipeCostCard: React.FC<{ recipe: Recipe }> = ({ recipe }) => {
           <span className="text-sm font-medium text-gray-900">{formatCurrency(costData?.totalCost || 0)}</span>
         </div>
         <div className="flex justify-between">
-          <span className="text-sm text-gray-500">Cost per Serving</span>
-          <span className="text-sm font-medium text-gray-900">{formatCurrency((costData?.totalCost || 0) / recipe.serving_size)}</span>
-        </div>
-        <div className="flex justify-between">
           <span className="text-sm text-gray-500">Ingredients</span>
           <span className="text-sm font-medium text-gray-900">{recipe.ingredients?.length || 0} items</span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-sm text-gray-500">Prep Time</span>
-          <span className="text-sm font-medium text-gray-900">{recipe.prep_time} min</span>
         </div>
       </div>
 

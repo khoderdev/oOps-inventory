@@ -1,70 +1,48 @@
 import type { ColumnDef, Row } from "@tanstack/react-table";
-import { Calendar, Edit, Package, Search, Trash2, Truck } from "lucide-react";
+import { Calendar, Edit, Package, Trash2, Truck } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useApp } from "../../hooks/useApp";
-import { useRawMaterials } from "../../hooks/useRawMaterials";
 import { useDeleteStockEntry, useStockEntries } from "../../hooks/useStock";
 import type { SortConfig, StockEntry } from "../../types";
 import { MeasurementUnit } from "../../types";
 import Button from "../ui/Button";
-import Input from "../ui/Input";
 import Modal from "../ui/Modal";
-import Select from "../ui/Select";
 import Table from "../ui/Table";
 import StockEntryForm from "./StockEntryForm";
 
 const StockEntriesTab = () => {
   const { state } = useApp();
-  const [searchTerm, setSearchTerm] = useState("");
-  const [supplierFilter, setSupplierFilter] = useState("");
-  const [materialFilter, setMaterialFilter] = useState("");
   const [sortConfig, setSortConfig] = useState<SortConfig>({ field: "receivedDate", order: "desc" });
   const [editingEntry, setEditingEntry] = useState<StockEntry | null>(null);
+  const [activeStatFilter, setActiveStatFilter] = useState<"ALL" | "MONTH" | "EXPIRING">("ALL");
 
   const { data: stockEntries = [], isLoading } = useStockEntries();
-  const { data: rawMaterials = [] } = useRawMaterials(); // Remove isActive filter to include all materials
   const deleteMutation = useDeleteStockEntry();
 
-  // Get unique suppliers
-  const suppliers = [...new Set(stockEntries.map(entry => entry.supplier).filter(Boolean))];
-  const supplierOptions = suppliers.map(supplier => ({
-    value: supplier!,
-    label: supplier!
-  }));
-
-  const materialOptions = rawMaterials.map(material => ({
-    value: material.id,
-    label: material.name
-  }));
-
   const filteredData = useMemo(() => {
-    const filtered = stockEntries.filter(entry => {
-      // Search filter
-      if (searchTerm) {
-        const searchLower = searchTerm.toLowerCase();
-        if (!entry.supplier?.toLowerCase().includes(searchLower) && !entry.batchNumber?.toLowerCase().includes(searchLower) && !entry.notes?.toLowerCase().includes(searchLower)) {
-          return false;
-        }
-      }
+    let filtered = stockEntries;
 
-      // Supplier filter
-      if (supplierFilter && entry.supplier !== supplierFilter) {
-        return false;
-      }
+    // Stat box filter
+    if (activeStatFilter === "MONTH") {
+      const thisMonth = new Date();
+      filtered = filtered.filter(entry => {
+        const entryDate = new Date(entry.receivedDate);
+        return entryDate.getMonth() === thisMonth.getMonth() && entryDate.getFullYear() === thisMonth.getFullYear();
+      });
+    } else if (activeStatFilter === "EXPIRING") {
+      const weekFromNow = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+      const today = new Date();
+      filtered = filtered.filter(entry => {
+        if (!entry.expiryDate) return false;
+        const expiry = new Date(entry.expiryDate);
+        return expiry <= weekFromNow && expiry >= today;
+      });
+    }
 
-      // Material filter
-      if (materialFilter && entry.rawMaterialId !== materialFilter) {
-        return false;
-      }
-
-      return true;
-    });
-
-    // Sort
+    // Sorting
     filtered.sort((a, b) => {
       const aValue = (a as unknown as Record<string, unknown>)[sortConfig.field] as string | number | undefined;
       const bValue = (b as unknown as Record<string, unknown>)[sortConfig.field] as string | number | undefined;
-
       if (aValue != null && bValue != null) {
         if (aValue < bValue) return sortConfig.order === "asc" ? -1 : 1;
         if (aValue > bValue) return sortConfig.order === "asc" ? 1 : -1;
@@ -73,7 +51,7 @@ const StockEntriesTab = () => {
     });
 
     return filtered;
-  }, [stockEntries, searchTerm, supplierFilter, materialFilter, sortConfig]);
+  }, [stockEntries, sortConfig, activeStatFilter]);
 
   const handleSort = (field: string) => {
     setSortConfig(prev => ({
@@ -141,40 +119,53 @@ const StockEntriesTab = () => {
         return `${row.original.quantity} ${row.original.convertedUnit}`;
       }
     },
-
     {
       accessorKey: "unitCost",
       header: "Unit Cost",
       cell: ({ row }) => {
         const material = row.original.rawMaterial;
-        if (!material) return `$${row.original.unitCost.toFixed(2)}`;
-        const isPackOrBox = material.unit.toUpperCase() === MeasurementUnit.PACKS.toUpperCase() || material.unit.toUpperCase() === MeasurementUnit.BOXES.toUpperCase();
+        const unitCost = row.original.unitCost;
+
+        if (!material) return `$${unitCost.toFixed(2)}`;
+
+        const unit = material.unit?.toUpperCase();
+        const isPackOrBox = unit === MeasurementUnit.PACKS || unit === MeasurementUnit.BOXES;
+        const smallUnits = ["GRAMS", "PIECES", "BOTTLES"];
+        const isSmallUnit = smallUnits.includes(unit);
+
+        // Handle PACKS or BOXES
         if (isPackOrBox) {
           const packInfo = material as unknown as { unitsPerPack?: number; baseUnit?: string };
           const unitsPerPack = packInfo.unitsPerPack || 1;
           const baseUnit = packInfo.baseUnit || "pieces";
-          if (packInfo.unitsPerPack && packInfo.unitsPerPack > 1) {
-            const individualCost = row.original.unitCost / unitsPerPack;
+
+          if (unitsPerPack > 1) {
+            const individualCost = unitCost / unitsPerPack;
             return (
               <div>
                 <div className="font-medium">
-                  ${row.original.unitCost.toFixed(2)} per {material.unit.toLowerCase()}
+                  ${unitCost.toFixed(2)} per {unit.toLowerCase()}
                 </div>
                 <div className="text-xs text-gray-500">
-                  ${individualCost.toFixed(4)} per {baseUnit.toLowerCase()}
+                  ${individualCost.toFixed(2)} per {baseUnit.toLowerCase()}
                 </div>
               </div>
             );
           } else {
             return (
               <div>
-                <div className="font-medium">${row.original.unitCost.toFixed(2)}</div>
+                <div className="font-medium">${unitCost.toFixed(2)}</div>
                 <div className="text-xs text-gray-500">Pack info not set</div>
               </div>
             );
           }
         }
-        return `$${row.original.unitCost.toFixed(2)}`;
+        // Use 4 decimal places for small units like GRAMS/PIECES
+        if (isSmallUnit) {
+          return <span className="font-mono text-sm font-medium text-green-600 dark:text-green-400">${unitCost.toFixed(4)}</span>;
+        }
+        // Default
+        return <span className="font-mono text-sm font-medium text-green-600 dark:text-green-400">${unitCost.toFixed(2)}</span>;
       }
     },
 
@@ -235,18 +226,6 @@ const StockEntriesTab = () => {
       header: "Received Date",
       cell: ({ row }) => new Date(row.original.receivedDate).toLocaleDateString()
     },
-    {
-      accessorKey: "expiryDate",
-      header: "Expiry Date",
-      cell: ({ row }) => {
-        if (!row.original.expiryDate) return "-";
-        const expiry = new Date(row.original.expiryDate);
-        const isExpired = expiry < new Date();
-        const isExpiringSoon = expiry < new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-
-        return <span className={`text-sm ${isExpired ? "text-red-600 font-medium" : isExpiringSoon ? "text-yellow-600 font-medium" : "text-gray-900 dark:text-white"}`}>{expiry.toLocaleDateString()}</span>;
-      }
-    },
 
     ...(state.user?.role === "MANAGER" || state.user?.role === "ADMIN"
       ? [
@@ -272,7 +251,8 @@ const StockEntriesTab = () => {
     <div className="space-y-6">
       {/* Summary Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-blue-50 dark:bg-blue-900/10 p-4 rounded-lg">
+        {/* Total Entries - resets filters */}
+        <div onClick={() => setActiveStatFilter("ALL")} className={`cursor-pointer transition-all p-4 rounded-lg ${activeStatFilter === "ALL" ? "ring-2 ring-blue-500 bg-blue-100 dark:ring-blue-400 dark:bg-blue-900/20" : "bg-blue-50 dark:bg-blue-900/10"}`}>
           <div className="flex items-center">
             <Package className="w-8 h-8 text-blue-600 dark:text-blue-400" />
             <div className="ml-3">
@@ -282,7 +262,8 @@ const StockEntriesTab = () => {
           </div>
         </div>
 
-        <div className="bg-green-50 dark:bg-green-900/10 p-4 rounded-lg">
+        {/* This Month */}
+        <div onClick={() => setActiveStatFilter("MONTH")} className={`cursor-pointer transition-all p-4 rounded-lg ${activeStatFilter === "MONTH" ? "ring-2 ring-green-500 bg-green-100 dark:ring-green-400 dark:bg-green-900/20" : "bg-green-50 dark:bg-green-900/10"}`}>
           <div className="flex items-center">
             <Package className="w-8 h-8 text-green-600 dark:text-green-400" />
             <div className="ml-3">
@@ -300,6 +281,7 @@ const StockEntriesTab = () => {
           </div>
         </div>
 
+        {/* Total Value (No Filter) */}
         <div className="bg-purple-50 dark:bg-purple-900/10 p-4 rounded-lg">
           <div className="flex items-center">
             <Package className="w-8 h-8 text-purple-600 dark:text-purple-400" />
@@ -310,7 +292,8 @@ const StockEntriesTab = () => {
           </div>
         </div>
 
-        <div className="bg-red-50 dark:bg-red-900/10 p-4 rounded-lg">
+        {/* Expiring Soon */}
+        <div onClick={() => setActiveStatFilter("EXPIRING")} className={`cursor-pointer transition-all p-4 rounded-lg ${activeStatFilter === "EXPIRING" ? "ring-2 ring-red-500 bg-red-100 dark:ring-red-400 dark:bg-red-900/20" : "bg-red-50 dark:bg-red-900/10"}`}>
           <div className="flex items-center">
             <Calendar className="w-8 h-8 text-red-600 dark:text-red-400" />
             <div className="ml-3">
@@ -328,17 +311,6 @@ const StockEntriesTab = () => {
             </div>
           </div>
         </div>
-      </div>
-
-      {/* Filters */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Input placeholder="Search entries..." value={searchTerm} onValueChange={e => setSearchTerm(e)} leftIcon={<Search className="w-4 h-4" />} />
-
-        <Select placeholder="Filter by supplier" options={[{ value: "", label: "All Suppliers" }, ...supplierOptions]} value={supplierFilter} onChange={e => setSupplierFilter(e)} />
-
-        <Select placeholder="Filter by material" options={[{ value: "", label: "All Materials" }, ...materialOptions]} value={materialFilter} onChange={e => setMaterialFilter(e)} />
-
-        <div></div>
       </div>
 
       {/* Table */}

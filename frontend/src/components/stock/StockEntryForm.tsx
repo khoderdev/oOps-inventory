@@ -340,7 +340,7 @@ const StockEntryForm = ({ onSuccess, onCancel, initialData }: ExtendedStockEntry
 
   const formatUnitCost = (cost: number): string => {
     if (cost < 0.01) {
-      return `${(cost * 100).toFixed(2)}¢`;
+      return `${(cost * 100).toFixed(2)} cents`;
     } else if (cost < 0.1) {
       return `$${cost.toFixed(4)}`;
     } else {
@@ -366,7 +366,7 @@ const StockEntryForm = ({ onSuccess, onCancel, initialData }: ExtendedStockEntry
           <Input
             label="Unit Cost"
             type="number"
-            step="0.001"
+            step="any"
             min="0"
             value={formData.unitCost}
             onValueChange={e => handleInputChange("unitCost", parseFloat(e) || 0)}
@@ -444,70 +444,6 @@ const StockEntryForm = ({ onSuccess, onCancel, initialData }: ExtendedStockEntry
           <div></div>
         </div>
 
-        <Input label="Notes" value={formData.notes} onValueChange={e => handleInputChange("notes", e)} placeholder="Optional notes about this stock entry" />
-
-        {/* {selectedMaterial && !usingConvertedUnit && (selectedMaterial.unit === MeasurementUnit.PACKS || selectedMaterial.unit === MeasurementUnit.BOXES) && formData.quantity > 0 && formData.unitCost > 0 && (
-          <div className="bg-blue-50 dark:bg-blue-900/10 p-4 rounded-lg">
-            <h4 className="font-medium text-blue-900 dark:text-blue-300 mb-2">Cost Breakdown</h4>
-            <div className="space-y-1 text-sm text-blue-700 dark:text-blue-300">
-              <p>
-                Cost per {selectedMaterial.unit.toLowerCase()}: <strong>{formatUnitCost(formData.unitCost)}</strong>
-              </p>
-              <p>
-                Total {selectedMaterial.unit.toLowerCase()} cost: <strong>${(formData.quantity * formData.unitCost).toFixed(2)}</strong>
-              </p>
-              {(() => {
-                const packInfo = selectedMaterial as unknown as { unitsPerPack?: number; baseUnit?: string };
-                const unitsPerPack = packInfo.unitsPerPack || 1;
-                const baseUnit = selectedMaterial.baseUnit || "pieces";
-                const individualCost = selectedMaterial.costPerIndividualUnit || formData.unitCost / unitsPerPack;
-                const totalIndividualCost = formData.quantity * unitsPerPack * individualCost;
-                return (
-                  <>
-                    <p>
-                      Cost per {baseUnit.toLowerCase()}: <strong>{formatUnitCost(individualCost)}</strong>
-                    </p>
-                    <p>
-                      Total {baseUnit.toLowerCase()} cost: <strong>${totalIndividualCost.toFixed(2)}</strong>
-                    </p>
-                  </>
-                );
-              })()}
-            </div>
-          </div>
-        )} */}
-        {selectedMaterial && !usingConvertedUnit && (selectedMaterial.unit === MeasurementUnit.PACKS || selectedMaterial.unit === MeasurementUnit.BOXES) && formData.quantity > 0 && formData.unitCost > 0 && (
-          <div className="bg-blue-50 dark:bg-blue-900/10 p-4 rounded-lg">
-            <h4 className="font-medium text-blue-900 dark:text-blue-300 mb-2">Cost Breakdown</h4>
-            <div className="space-y-1 text-sm text-blue-700 dark:text-blue-300">
-              <p>
-                Cost per {selectedMaterial.unit.toLowerCase()}: <strong>{formatUnitCost(formData.unitCost)}</strong>
-              </p>
-              <p>
-                Total {selectedMaterial.unit.toLowerCase()} cost: <strong>${(formData.quantity * formData.unitCost).toFixed(2)}</strong>
-              </p>
-
-              {(() => {
-                const unitsPerPack = selectedMaterial.unitsPerPack || 1;
-                const baseUnit = selectedMaterial.baseUnit?.toLowerCase() || "pieces";
-                const individualCost = selectedMaterial.costPerIndividualUnit || formData.unitCost / unitsPerPack;
-                const totalIndividualCost = formData.quantity * unitsPerPack * individualCost;
-
-                return (
-                  <>
-                    <p>
-                      Cost per {baseUnit}: <strong>{formatUnitCost(individualCost)}</strong>
-                    </p>
-                    <p>
-                      Total {baseUnit} cost: <strong>${totalIndividualCost.toFixed(2)}</strong>
-                    </p>
-                  </>
-                );
-              })()}
-            </div>
-          </div>
-        )}
-
         {formData.quantity > 0 && formData.unitCost > 0 && (
           <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
             <div className="flex justify-between items-center">
@@ -524,6 +460,52 @@ const StockEntryForm = ({ onSuccess, onCancel, initialData }: ExtendedStockEntry
           </div>
         )}
 
+        {selectedMaterial && !usingConvertedUnit && formData.quantity > 0 && formData.unitCost > 0 && (
+          <div className="bg-blue-50 dark:bg-blue-900/10 p-4 sm:p-6 rounded-xl shadow-sm border border-blue-100 dark:border-blue-800 mt-4">
+            <h4 className="text-base sm:text-lg font-semibold text-blue-900 dark:text-blue-300 mb-4">Cost Breakdown</h4>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-3 gap-x-6 text-sm text-blue-800 dark:text-blue-200">
+              <div className="flex justify-between lg:max-w-[200px]">
+                <p className="mb-1 font-medium text-blue-700 dark:text-blue-200">Total {selectedMaterial.unit.toLowerCase()}</p>
+                <p className="font-mono font-bold text-blue-900 dark:text-blue-100">{formData.quantity}</p>
+              </div>
+              <div className="flex justify-between lg:max-w-[200px]">
+                <p className="mb-1 font-medium text-blue-700 dark:text-blue-200">Cost per {selectedMaterial.unit.toLowerCase()}</p>
+                <p className="font-mono font-bold text-blue-900 dark:text-blue-100">{formatUnitCost(formData.unitCost)}</p>
+              </div>
+              <div className="flex justify-between lg:max-w-[200px]">
+                <p className="mb-1 font-medium text-blue-700 dark:text-blue-200">Total {selectedMaterial.unit.toLowerCase()} cost</p>
+                <p className="font-mono font-bold text-blue-900 dark:text-blue-100">${(formData.quantity * formData.unitCost).toFixed(2)}</p>
+              </div>
+
+              {/* Base unit cost breakdown */}
+              {(() => {
+                const unitsPerPack = selectedMaterial.unitsPerPack || 1;
+                const baseUnit = selectedMaterial.baseUnit?.toLowerCase() || "pieces";
+                const individualCost = selectedMaterial.costPerIndividualUnit || formData.unitCost / unitsPerPack;
+                const totalIndividualCost = formData.quantity * unitsPerPack * individualCost;
+
+                return (
+                  <>
+                    <div className="flex justify-between lg:max-w-[200px]">
+                      <p className="mb-1 font-medium text-blue-700 dark:text-blue-200">Total {baseUnit}</p>
+                      <p className="font-mono font-bold text-blue-900 dark:text-blue-100">{formData.quantity * unitsPerPack}</p>
+                    </div>
+                    <div className="flex justify-between lg:max-w-[200px]">
+                      <p className="mb-1 font-medium text-blue-700 dark:text-blue-200">Cost per {baseUnit}</p>
+                      <p className="font-mono font-bold text-blue-900 dark:text-blue-100">{formatUnitCost(individualCost)}</p>
+                    </div>
+                    <div className="flex justify-between lg:max-w-[200px]">
+                      <p className="mb-1 font-medium text-blue-700 dark:text-blue-200">Total {baseUnit} cost</p>
+                      <p className="font-mono font-bold text-blue-900 dark:text-blue-100">${totalIndividualCost.toFixed(2)}</p>
+                    </div>
+                  </>
+                );
+              })()}
+            </div>
+          </div>
+        )}
+
         <div className="flex justify-end space-x-3 pt-6">
           <Button type="button" variant="outline" onClick={onCancel}>
             Cancel
@@ -535,7 +517,7 @@ const StockEntryForm = ({ onSuccess, onCancel, initialData }: ExtendedStockEntry
       </form>
 
       <Modal isOpen={showCreateModal} onClose={() => !createSupplier.isPending && setShowCreateModal(false)} title="Add New Supplier" size="lg">
-        <div className="p-6">
+        <div className="max-h-[calc(100vh-20rem)] overflow-y-auto">
           <SupplierForm onSubmit={handleCreateSupplier} onCancel={() => !createSupplier.isPending && setShowCreateModal(false)} isLoading={createSupplier.isPending} />
         </div>
       </Modal>

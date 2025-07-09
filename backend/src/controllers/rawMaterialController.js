@@ -99,16 +99,6 @@ export const updateRawMaterial = asyncHandler(async (req, res) => {
     });
   }
 
-  // TODO: Add validation schema
-  // const validation = validateData(updateRawMaterialSchema, req.body);
-  // if (!validation.isValid) {
-  //   return res.status(400).json({
-  //     success: false,
-  //     error: "Validation failed",
-  //     details: validation.errors
-  //   });
-  // }
-
   const result = await rawMaterialService.updateRawMaterial({ id: materialId, ...req.body });
 
   if (!result.success) {

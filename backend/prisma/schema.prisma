@@ -45,14 +45,14 @@ model RawMaterial {
   description          String?
   category             MaterialCategory
   unit                 MeasurementUnit
-  unit_cost            Decimal              @map("unit_cost") @db.Decimal(10, 2)
+  unit_cost            Decimal              @map("unit_cost") @db.Decimal(10, 5)
   supplier             String?
   min_stock_level      Decimal              @map("min_stock_level") @db.Decimal(10, 2)
   max_stock_level      Decimal              @map("max_stock_level") @db.Decimal(10, 2)
   is_active            Boolean              @default(true) @map("is_active")
   units_per_pack       Int?                 @map("units_per_pack")
-  cost_per_base_unit   Decimal?             @map("cost_per_base_unit") @db.Decimal(10, 2)
-  cost_per_individual_unit Decimal? @map("unit_cost_per_base_unit") @db.Decimal(12, 4)
+  cost_per_base_unit      Decimal?  @map("cost_per_base_unit") @db.Decimal(10, 5)
+  cost_per_individual_unit Decimal? @map("cost_per_individual_unit") @db.Decimal(12, 5)
   base_unit            MeasurementUnit?     @map("base_unit")
   created_at           DateTime             @default(now()) @map("created_at")
   updated_at           DateTime             @updatedAt @map("updated_at")
@@ -138,7 +138,7 @@ model SectionConsumption {
 
 model StockEntry {
   quantity        Decimal         @db.Decimal(10, 2)
-  unit_cost       Decimal         @map("unit_cost") @db.Decimal(10, 2)
+  unit_cost       Decimal         @map("unit_cost") @db.Decimal(10, 6)
   total_cost      Decimal         @map("total_cost") @db.Decimal(10, 6)
   supplier        String?
   batch_number    String?         @map("batch_number")
@@ -322,14 +322,12 @@ model PurchaseOrder {
   subtotal        Decimal         @db.Decimal(10, 2)
   tax_amount      Decimal         @default(0) @map("tax_amount") @db.Decimal(10, 2)
   discount_amount Decimal         @default(0) @map("discount_amount") @db.Decimal(10, 2)
-  total_amount    Decimal         @map("total_amount") @db.Decimal(10, 2)
+  total_amount    Decimal         @map("total_amount") @db.Decimal(10, 5)
   notes           String?
   approved_by     Int?            @map("approved_by")
   created_by      Int             @map("created_by")
   created_at      DateTime        @default(now()) @map("created_at")
   updated_at      DateTime        @updatedAt @map("updated_at")
-  
-  // Relationships
   supplier        Supplier        @relation(fields: [supplier_id], references: [id])
   creator         User            @relation("PurchaseOrderCreatedBy", fields: [created_by], references: [id])
   approver        User?           @relation("PurchaseOrderApprovedBy", fields: [approved_by], references: [id])
@@ -349,8 +347,8 @@ model PurchaseOrderItem {
   raw_material_id   Int           @map("raw_material_id")
   quantity_ordered  Decimal       @map("quantity_ordered") @db.Decimal(10, 2)
   quantity_received Decimal       @default(0) @map("quantity_received") @db.Decimal(10, 2)
-  unit_cost         Decimal       @map("unit_cost") @db.Decimal(10, 2)
-  line_total        Decimal       @map("line_total") @db.Decimal(10, 2)
+  unit_cost         Decimal       @map("unit_cost") @db.Decimal(10, 5)
+  line_total        Decimal       @map("line_total") @db.Decimal(10, 5)
   notes             String?
   created_at        DateTime      @default(now()) @map("created_at")
   updated_at        DateTime      @updatedAt @map("updated_at")
@@ -389,12 +387,8 @@ model Recipe {
   name            String
   description     String?
   category        String?
-  serving_size    Int             @default(1) @map("serving_size")
-  prep_time       Int?            @map("prep_time") // minutes
-  cook_time       Int?            @map("cook_time") // minutes
   instructions    String?
-  cost_per_serving Decimal?       @map("cost_per_serving") @db.Decimal(10, 2)
-  margin_percentage Decimal?      @map("margin_percentage") @db.Decimal(5, 2)
+  cost_per_serving Decimal?       @map("cost_per_serving") @db.Decimal(10, 5)
   is_active       Boolean         @default(true) @map("is_active")
   created_by      Int             @map("created_by")
   created_at      DateTime        @default(now()) @map("created_at")
@@ -418,7 +412,7 @@ model RecipeIngredient {
   quantity        Decimal     @db.Decimal(10, 3)
   unit            MeasurementUnit
   baseUnit        MeasurementUnit? @map("base_unit")
-  cost_per_unit   Decimal?    @map("cost_per_unit") @db.Decimal(10, 2)
+  cost_per_unit   Decimal?    @map("cost_per_unit") @db.Decimal(10, 5)
   notes           String?
   created_at      DateTime    @default(now()) @map("created_at")
   updated_at      DateTime    @updatedAt @map("updated_at")
@@ -439,10 +433,9 @@ model MenuItem {
   description     String?
   category        MenuCategory
   recipe_id       Int?            @map("recipe_id")
-  cost_price      Decimal         @map("cost_price") @db.Decimal(10, 2)
-  selling_price   Decimal         @map("selling_price") @db.Decimal(10, 2)
-  margin_amount   Decimal         @map("margin_amount") @db.Decimal(10, 2)
-  margin_percentage Decimal       @map("margin_percentage") @db.Decimal(5, 2)
+  cost_price      Decimal         @map("cost_price") @db.Decimal(10, 5)
+  selling_price   Decimal         @map("selling_price") @db.Decimal(10, 5)
+  margin_amount   Decimal         @map("margin_amount") @db.Decimal(10, 5)
   is_available    Boolean         @default(true) @map("is_available")
   is_popular      Boolean         @default(false) @map("is_popular")
   allergens       String?         // JSON array of allergens
@@ -465,8 +458,8 @@ model Sale {
   order_number    String      @map("order_number")
   menu_item_id    Int         @map("menu_item_id")
   quantity        Int
-  unit_price      Decimal     @map("unit_price") @db.Decimal(10, 2)
-  total_amount    Decimal     @map("total_amount") @db.Decimal(10, 2)
+  unit_price      Decimal     @map("unit_price") @db.Decimal(10, 5)
+  total_amount    Decimal     @map("total_amount") @db.Decimal(10, 5)
   sale_date       DateTime    @map("sale_date")
   section_id      Int?        @map("section_id") // Which section prepared it
   served_by       Int?        @map("served_by")
@@ -490,9 +483,9 @@ model Budget {
   period_type     BudgetPeriod    @map("period_type")
   start_date      DateTime        @map("start_date")
   end_date        DateTime        @map("end_date")
-  total_budget    Decimal         @map("total_budget") @db.Decimal(12, 2)
-  allocated_amount Decimal        @default(0) @map("allocated_amount") @db.Decimal(12, 2)
-  spent_amount    Decimal         @default(0) @map("spent_amount") @db.Decimal(12, 2)
+  total_budget    Decimal         @map("total_budget") @db.Decimal(12, 5)
+  allocated_amount Decimal        @default(0) @map("allocated_amount") @db.Decimal(12, 5)
+  spent_amount    Decimal         @default(0) @map("spent_amount") @db.Decimal(12, 5)
   is_active       Boolean         @default(true) @map("is_active")
   created_by      Int             @map("created_by")
   created_at      DateTime        @default(now()) @map("created_at")
@@ -512,8 +505,8 @@ model BudgetAllocation {
   id              Int             @id @default(autoincrement())
   budget_id       Int             @map("budget_id")
   category        MaterialCategory
-  allocated_amount Decimal        @map("allocated_amount") @db.Decimal(10, 2)
-  spent_amount    Decimal         @default(0) @map("spent_amount") @db.Decimal(10, 2)
+  allocated_amount Decimal        @map("allocated_amount") @db.Decimal(10, 5)
+  spent_amount    Decimal         @default(0) @map("spent_amount") @db.Decimal(10, 5)
   notes           String?
   created_at      DateTime        @default(now()) @map("created_at")
   updated_at      DateTime        @updatedAt @map("updated_at")
