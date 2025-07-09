@@ -1,4 +1,4 @@
-import { Check, Plus, X } from "lucide-react";
+import { Check, Plus, X, ArrowRightLeft } from "lucide-react";
 import React, { useEffect, useMemo, useState } from "react";
 import { useApp } from "../../hooks/useApp";
 import { useRawMaterials } from "../../hooks/useRawMaterials";
@@ -35,6 +35,10 @@ const StockEntryForm = ({ onSuccess, onCancel, initialData }: ExtendedStockEntry
     receivedDate: new Date().toISOString().split("T")[0],
     notes: ""
   });
+  
+  // State to track if we're using a converted unit
+  const [usingConvertedUnit, setUsingConvertedUnit] = useState(false);
+  const [convertedUnit, setConvertedUnit] = useState("");
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [showNewSupplierInput, setShowNewSupplierInput] = useState(false);
@@ -244,6 +248,107 @@ const StockEntryForm = ({ onSuccess, onCancel, initialData }: ExtendedStockEntry
   };
 
   const selectedMaterial = rawMaterials.find(m => m.id === Number(formData.rawMaterialId));
+  
+  // Determine if unit conversion is available for the selected material
+  const canConvertUnit = useMemo(() => {
+    if (!selectedMaterial) return false;
+    
+    // Check if the material has a unit that can be converted
+    return [
+      MeasurementUnit.KG,
+      MeasurementUnit.LITERS,
+      MeasurementUnit.PACKS,
+      MeasurementUnit.BOXES
+    ].includes(selectedMaterial.unit as MeasurementUnit);
+  }, [selectedMaterial]);
+  
+  // Get the appropriate conversion unit based on the material's unit
+  const getConversionUnit = (unit: MeasurementUnit): string => {
+    let result: string;
+    
+    switch (unit) {
+      case MeasurementUnit.KG:
+        result = "GRAMS";
+        break;
+      case MeasurementUnit.LITERS:
+        result = "MILLILITERS";
+        break;
+      case MeasurementUnit.PACKS:
+      case MeasurementUnit.BOXES: {
+        const packInfo = selectedMaterial as unknown as { baseUnit?: string };
+        result = packInfo.baseUnit?.toUpperCase() || "PIECES";
+        break;
+      }
+      default:
+        result = String(unit);
+    }
+    
+    return result;
+  };
+  
+  // Get conversion factor for unit conversion
+  const getConversionFactor = (fromUnit: MeasurementUnit): number => {
+    let factor: number;
+    
+    switch (fromUnit) {
+      case MeasurementUnit.KG:
+        factor = 1000; // 1 KG = 1000 grams
+        break;
+      case MeasurementUnit.LITERS:
+        factor = 1000; // 1 L = 1000 ml
+        break;
+      case MeasurementUnit.PACKS:
+      case MeasurementUnit.BOXES: {
+        const packInfo = selectedMaterial as unknown as { unitsPerPack?: number; unitsPerBox?: number };
+        factor = packInfo.unitsPerPack || packInfo.unitsPerBox || 1;
+        break;
+      }
+      default:
+        factor = 1;
+    }
+    
+    return factor;
+  };
+  
+  // Handle unit conversion
+  const handleUnitConversion = () => {
+    if (!selectedMaterial) return;
+    
+    if (!usingConvertedUnit) {
+      // Convert to smaller unit
+      const factor = getConversionFactor(selectedMaterial.unit as MeasurementUnit);
+      const convertedQuantity = formData.quantity * factor;
+      const convertedUnitCost = formData.unitCost / factor;
+      const newUnit = getConversionUnit(selectedMaterial.unit as MeasurementUnit);
+      
+      setFormData(prev => ({
+        ...prev,
+        quantity: convertedQuantity,
+        unitCost: convertedUnitCost
+      }));
+      setConvertedUnit(newUnit);
+      setUsingConvertedUnit(true);
+    } else {
+      // Convert back to original unit
+      const factor = getConversionFactor(selectedMaterial.unit as MeasurementUnit);
+      const originalQuantity = formData.quantity / factor;
+      const originalUnitCost = formData.unitCost * factor;
+      
+      setFormData(prev => ({
+        ...prev,
+        quantity: originalQuantity,
+        unitCost: originalUnitCost
+      }));
+      setConvertedUnit("");
+      setUsingConvertedUnit(false);
+    }
+  };
+  
+  // Reset conversion state when material changes
+  useEffect(() => {
+    setUsingConvertedUnit(false);
+    setConvertedUnit("");
+  }, [formData.rawMaterialId]);
 
   return (
     <>
@@ -251,9 +356,47 @@ const StockEntryForm = ({ onSuccess, onCancel, initialData }: ExtendedStockEntry
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <Select label="Raw Material" options={materialOptions} value={formData.rawMaterialId} onChange={value => value && handleMaterialChange(value)} error={errors.rawMaterialId} required placeholder="Select a material" />
 
-          <Input label="Quantity" type="number" min="0" step="0.01" value={formData.quantity} onValueChange={e => handleInputChange("quantity", parseFloat(e) || 0)} error={errors.quantity} required helperText={selectedMaterial ? `Unit: ${selectedMaterial.unit}` : undefined} />
+          <div className="space-y-2">
+            <Input 
+              label="Quantity" 
+              type="number" 
+              min="0" 
+              step="0.01" 
+              value={formData.quantity} 
+              onValueChange={e => handleInputChange("quantity", parseFloat(e) || 0)} 
+              error={errors.quantity} 
+              required 
+              helperText={selectedMaterial ? `Unit: ${usingConvertedUnit ? String(convertedUnit) : String(selectedMaterial.unit)}` : undefined} 
+            />
+            {canConvertUnit && selectedMaterial && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleUnitConversion}
+                leftIcon={<ArrowRightLeft className="w-3 h-3" />}
+                className="w-full mt-1"
+              >
+                {usingConvertedUnit 
+                  ? `Convert back to ${selectedMaterial.unit}` 
+                  : `Convert to ${String(getConversionUnit(selectedMaterial.unit as MeasurementUnit)).toLowerCase()}`}
+              </Button>
+            )}
+          </div>
 
-          <Input label="Unit Cost" type="number" step="0.01" min="0" value={formData.unitCost} onValueChange={e => handleInputChange("unitCost", parseFloat(e) || 0)} error={errors.unitCost} placeholder="0.00" helperText={selectedMaterial ? `Auto-filled from material (${selectedMaterial.unit === MeasurementUnit.PACKS || selectedMaterial.unit === MeasurementUnit.BOXES ? `Cost per ${selectedMaterial.unit.toLowerCase()}` : "Unit cost"})` : "Will be auto-filled when material is selected"} />
+          <Input 
+            label="Unit Cost" 
+            type="number" 
+            step="0.01" 
+            min="0" 
+            value={formData.unitCost} 
+            onValueChange={e => handleInputChange("unitCost", parseFloat(e) || 0)} 
+            error={errors.unitCost} 
+            placeholder="0.00" 
+            helperText={selectedMaterial 
+              ? `Cost per ${usingConvertedUnit ? String(convertedUnit).toLowerCase() : (selectedMaterial.unit === MeasurementUnit.PACKS || selectedMaterial.unit === MeasurementUnit.BOXES ? String(selectedMaterial.unit).toLowerCase() : "unit")}` 
+              : "Will be auto-filled when material is selected"} 
+          />
 
           <div className="space-y-2">
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -326,7 +469,7 @@ const StockEntryForm = ({ onSuccess, onCancel, initialData }: ExtendedStockEntry
 
         <Input label="Notes" value={formData.notes} onValueChange={e => handleInputChange("notes", e)} placeholder="Optional notes about this stock entry" />
 
-        {selectedMaterial && (selectedMaterial.unit === MeasurementUnit.PACKS || selectedMaterial.unit === MeasurementUnit.BOXES) && formData.quantity > 0 && formData.unitCost > 0 && (
+        {selectedMaterial && !usingConvertedUnit && (selectedMaterial.unit === MeasurementUnit.PACKS || selectedMaterial.unit === MeasurementUnit.BOXES) && formData.quantity > 0 && formData.unitCost > 0 && (
           <div className="bg-blue-50 dark:bg-blue-900/10 p-4 rounded-lg">
             <h4 className="font-medium text-blue-900 dark:text-blue-300 mb-2">Cost Breakdown</h4>
             <div className="space-y-1 text-sm text-blue-700 dark:text-blue-300">
@@ -358,10 +501,18 @@ const StockEntryForm = ({ onSuccess, onCancel, initialData }: ExtendedStockEntry
         )}
 
         {formData.quantity > 0 && formData.unitCost > 0 && (
+
           <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
             <div className="flex justify-between items-center">
               <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Total Cost:</span>
-              <span className="text-lg font-bold text-gray-900 dark:text-white">${(formData.quantity * formData.unitCost).toFixed(2)}</span>
+              <span className="text-lg font-bold text-gray-900 dark:text-white">
+                ${(formData.quantity * formData.unitCost).toFixed(2)}
+                {usingConvertedUnit && selectedMaterial && (
+                  <span className="text-xs font-normal text-gray-500 dark:text-gray-400 ml-2">
+                    ({String(convertedUnit).toLowerCase()})
+                  </span>
+                )}
+              </span>
             </div>
           </div>
         )}
