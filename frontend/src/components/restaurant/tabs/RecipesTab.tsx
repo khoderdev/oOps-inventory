@@ -1,30 +1,104 @@
 import type { ColumnDef } from "@tanstack/react-table";
+import { Calculator, ClipboardList, Pencil } from "lucide-react";
 import React, { useMemo, useState } from "react";
 import { useRawMaterials } from "../../../hooks/useRawMaterials";
-import { useCreateRecipe, useMenuEngineering, useRecipeCost, useRecipes, useUpdateRecipe } from "../../../hooks/useRecipes";
+import { useCreateRecipe, useDeleteRecipe, useMenuEngineering, useRecipeCost, useRecipes, useUpdateRecipe } from "../../../hooks/useRecipes";
 import { MenuCategoryLabels, type CreateRecipeRequest, type MenuCategory, type Recipe, type RecipeFilters } from "../../../types";
-import type { MenuItemAnalysis } from "../../../types/recipes.types";
+import type { MenuItemAnalysis, RecipeIngredient } from "../../../types/recipes.types";
 import { formatCurrency } from "../../../utils/quantity";
 import { RecipeForm } from "../../forms/RecipeForm";
 import { Button, Modal, Table } from "../../ui";
 
 export const RecipesTab: React.FC = () => {
   const [filters, setFilters] = useState<RecipeFilters>({});
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
   const [viewMode, setViewMode] = useState<"recipes" | "menu-engineering" | "costing">("recipes");
+
+  // Modal states
+  const [modalState, setModalState] = useState<{
+    create: boolean;
+    edit: boolean;
+    view: boolean;
+    selectedRecipe: Recipe | null;
+  }>({
+    create: false,
+    edit: false,
+    view: false,
+    selectedRecipe: null
+  });
 
   const { data: recipesData, isLoading } = useRecipes(filters);
   const { data: menuEngineering } = useMenuEngineering(30);
   const { data: rawMaterialsData } = useRawMaterials({});
   const createRecipe = useCreateRecipe();
   const updateRecipe = useUpdateRecipe();
-
+  const deleteRecipe = useDeleteRecipe();
   const recipes = recipesData?.recipes || [];
   const rawMaterials = rawMaterialsData || [];
 
-  // Define table columns with proper TanStack Table ColumnDef types
+  // Modal handlers
+  const openCreateModal = () => setModalState(prev => ({ ...prev, create: true }));
+  const openEditModal = (recipe: Recipe) => setModalState({ create: false, edit: true, view: false, selectedRecipe: recipe });
+  const openViewModal = (recipe: Recipe) => setModalState({ create: false, edit: false, view: true, selectedRecipe: recipe });
+
+  const closeAllModals = () =>
+    setModalState({
+      create: false,
+      edit: false,
+      view: false,
+      selectedRecipe: null
+    });
+
+  const handleCreateRecipe = async (data: CreateRecipeRequest) => {
+    try {
+      await createRecipe.mutateAsync(data);
+      closeAllModals();
+    } catch (error) {
+      console.error("Failed to create recipe:", error);
+    }
+  };
+
+  const handleUpdateRecipe = async (data: CreateRecipeRequest) => {
+    if (!modalState.selectedRecipe) return;
+
+    try {
+      await updateRecipe.mutateAsync({ id: modalState.selectedRecipe.id, data });
+      closeAllModals();
+    } catch (error) {
+      console.error("Failed to update recipe:", error);
+    }
+  };
+
+  const handleDeleteRecipe = async (id: number) => {
+    const confirmed = window.confirm("Are you sure you want to delete this recipe?");
+    if (!confirmed) return;
+
+    try {
+      await deleteRecipe.mutateAsync(id);
+    } catch (error) {
+      console.error("Failed to delete recipe:", error);
+    }
+  };
+
+  const renderCategoryBadge = (category: MenuCategory) => {
+    const label = MenuCategoryLabels[category] || category;
+    const colors = {
+      APPETIZER: "bg-orange-100 text-orange-800",
+      MAIN_COURSE: "bg-blue-100 text-blue-800",
+      DESSERT: "bg-pink-100 text-pink-800",
+      BEVERAGE: "bg-green-100 text-green-800",
+      SIDE_DISH: "bg-purple-100 text-purple-800",
+      SAUCE: "bg-yellow-100 text-yellow-800"
+    };
+
+    return <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${colors[category as keyof typeof colors] || "bg-gray-100 text-gray-800"}`}>{label}</span>;
+  };
+
+  const calculateTotalCost = (ingredients: RecipeIngredient[]) => {
+    return ingredients.reduce((total, ing) => {
+      return total + ing.quantity * (ing.raw_material?.unit_cost || 0);
+    }, 0);
+  };
+
   const recipeColumns = useMemo<ColumnDef<Recipe>[]>(
     () => [
       {
@@ -131,70 +205,23 @@ export const RecipesTab: React.FC = () => {
         id: "actions",
         header: "Actions",
         accessorKey: "id",
-        size: 140,
-        minSize: 120,
-        maxSize: 160,
+        size: 160,
         enableSorting: false,
         meta: { align: "center" },
-        cell: ({ row }) => {
-          return (
-            <div className="flex items-center justify-center space-x-2">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  setSelectedRecipe(row.original);
-                  setShowEditModal(true);
-                }}
-                className="text-xs"
-              >
-                Edit
-              </Button>
-              <Button size="sm" variant="ghost" className="text-xs">
-                View
-              </Button>
-            </div>
-          );
-        }
+        cell: ({ row }) => (
+          <div className="flex items-center justify-center space-x-2">
+            <Button size="sm" variant="outline" onClick={() => openEditModal(row.original)} className="text-xs">
+              Edit
+            </Button>
+            <Button size="sm" variant="secondary" className="text-xs" onClick={() => handleDeleteRecipe(row.original.id)}>
+              Delete
+            </Button>
+          </div>
+        )
       }
     ],
     []
   );
-
-  const handleCreateRecipe = async (data: CreateRecipeRequest) => {
-    try {
-      await createRecipe.mutateAsync(data);
-      setShowCreateModal(false);
-    } catch (error) {
-      console.error("Failed to create recipe:", error);
-    }
-  };
-
-  const handleUpdateRecipe = async (data: CreateRecipeRequest) => {
-    if (!selectedRecipe) return;
-
-    try {
-      await updateRecipe.mutateAsync({ id: selectedRecipe.id, data });
-      setShowEditModal(false);
-      setSelectedRecipe(null);
-    } catch (error) {
-      console.error("Failed to update recipe:", error);
-    }
-  };
-
-  const renderCategoryBadge = (category: MenuCategory) => {
-    const label = MenuCategoryLabels[category] || category;
-    const colors = {
-      APPETIZER: "bg-orange-100 text-orange-800",
-      MAIN_COURSE: "bg-blue-100 text-blue-800",
-      DESSERT: "bg-pink-100 text-pink-800",
-      BEVERAGE: "bg-green-100 text-green-800",
-      SIDE_DISH: "bg-purple-100 text-purple-800",
-      SAUCE: "bg-yellow-100 text-yellow-800"
-    };
-
-    return <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${colors[category as keyof typeof colors] || "bg-gray-100 text-gray-800"}`}>{label}</span>;
-  };
 
   const renderRecipesView = () => (
     <div className="space-y-6">
@@ -210,7 +237,7 @@ export const RecipesTab: React.FC = () => {
           <Button variant="outline" size="sm" onClick={() => setViewMode("costing")}>
             💰 Recipe Costing
           </Button>
-          <Button onClick={() => setShowCreateModal(true)} size="sm">
+          <Button onClick={openCreateModal} size="sm">
             + Create Recipe
           </Button>
         </div>
@@ -235,7 +262,7 @@ export const RecipesTab: React.FC = () => {
             <input type="text" value={filters.search || ""} onChange={e => setFilters({ ...filters, search: e.target.value })} placeholder="Search recipes..." className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" />
           </div>
           <div className="flex items-end">
-            <Button variant="outline" onClick={() => setFilters({})} className="w-full">
+            <Button variant="outline" onClick={() => setFilters({ ...filters, category: undefined, search: "" })} className="w-full">
               Clear Filters
             </Button>
           </div>
@@ -249,10 +276,146 @@ export const RecipesTab: React.FC = () => {
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 dark:border-blue-400"></div>
           </div>
         ) : (
-          <Table data={recipes} columns={recipeColumns} enableColumnResizing={true} enableSorting={true} maxHeight="600px" stickyHeader={true} emptyMessage="No recipes found. Create your first recipe to get started." />
+          <Table data={recipes} columns={recipeColumns} enableColumnResizing={true} enableSorting={true} maxHeight="600px" stickyHeader={true} emptyMessage="No recipes found. Create your first recipe to get started." onRowClick={openViewModal} />
         )}
       </div>
     </div>
+  );
+
+  const renderRecipeDetailsModal = () => (
+    <Modal isOpen={modalState.view} onClose={closeAllModals} title={`Recipe Details: ${modalState.selectedRecipe?.name}`} size="xl">
+      <div className="p-6 space-y-6">
+        {modalState.selectedRecipe ? (
+          <>
+            {/* Header Section */}
+            <div className="flex flex-col sm:flex-row justify-between gap-4 pb-4 border-b border-gray-200 dark:border-gray-700">
+              <div>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white">{modalState.selectedRecipe.name}</h3>
+                <div className="flex items-center gap-2 mt-1">
+                  {renderCategoryBadge(modalState.selectedRecipe.category as MenuCategory)}
+                  <span className="text-sm text-gray-500 dark:text-gray-400">
+                    {modalState.selectedRecipe.prep_time} min prep • {modalState.selectedRecipe.cook_time || "--"} min cook
+                  </span>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setModalState(prev => ({
+                      ...prev,
+                      view: false,
+                      edit: true
+                    }));
+                  }}
+                >
+                  <Pencil className="w-4 h-4 mr-2" />
+                  Edit
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setViewMode("costing");
+                    closeAllModals();
+                  }}
+                >
+                  <Calculator className="w-4 h-4 mr-2" />
+                  Cost Analysis
+                </Button>
+              </div>
+            </div>
+
+            {/* Description Section */}
+            <div className="space-y-2">
+              <h4 className="text-lg font-semibold text-gray-900 dark:text-white">Description</h4>
+              <div className="prose prose-sm max-w-none text-gray-700 dark:text-gray-300">{modalState.selectedRecipe.description || <span className="text-gray-400 italic">No description provided</span>}</div>
+            </div>
+
+            {/* Key Metrics Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded-lg">
+                <p className="text-sm text-gray-500 dark:text-gray-400">Servings</p>
+                <p className="text-xl font-semibold text-gray-900 dark:text-white">{modalState.selectedRecipe.serving_size}</p>
+              </div>
+              <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded-lg">
+                <p className="text-sm text-gray-500 dark:text-gray-400">Ingredients</p>
+                <p className="text-xl font-semibold text-gray-900 dark:text-white">{modalState.selectedRecipe.ingredients.length}</p>
+              </div>
+              <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded-lg">
+                <p className="text-sm text-gray-500 dark:text-gray-400">Total Cost</p>
+                <p className="text-xl font-semibold text-gray-900 dark:text-white">${calculateTotalCost(modalState.selectedRecipe.ingredients).toFixed(2)}</p>
+              </div>
+              <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded-lg">
+                <p className="text-sm text-gray-500 dark:text-gray-400">Cost Per Serving</p>
+                <p className="text-xl font-semibold text-gray-900 dark:text-white">${(calculateTotalCost(modalState.selectedRecipe.ingredients) / modalState.selectedRecipe.serving_size).toFixed(2)}</p>
+              </div>
+            </div>
+
+            {/* Ingredients Section */}
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <h4 className="text-lg font-semibold text-gray-900 dark:text-white">Ingredients</h4>
+                <span className="text-sm text-gray-500 dark:text-gray-400">{modalState.selectedRecipe.ingredients.reduce((sum, ing) => sum + ing.quantity, 0)} total units</span>
+              </div>
+              <div className="border rounded-lg overflow-hidden dark:border-gray-700">
+                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                  <thead className="bg-gray-50 dark:bg-gray-700">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Ingredient</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Quantity</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Unit Cost</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Total Cost</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200 dark:bg-gray-800 dark:divide-gray-700">
+                    {modalState.selectedRecipe.ingredients.map((ingredient, index) => {
+                      const unitCost = ingredient.raw_material?.unit_cost ? parseFloat(ingredient.raw_material.unit_cost.toString()) : 0;
+                      const totalCost = ingredient.quantity * unitCost;
+
+                      return (
+                        <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                          <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{ingredient.raw_material?.name || "Unknown"}</td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                            {ingredient.quantity} {ingredient.baseUnit}
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">${unitCost.toFixed(4)}</td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">${totalCost.toFixed(2)}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Instructions Section */}
+            {modalState.selectedRecipe.instructions && (
+              <div className="space-y-3">
+                <h4 className="text-lg font-semibold text-gray-900 dark:text-white">Instructions</h4>
+                <ol className="list-decimal list-inside space-y-2 text-gray-700 dark:text-gray-300">
+                  {modalState.selectedRecipe.instructions
+                    .split("\n")
+                    .filter(Boolean)
+                    .map((step, i) => (
+                      <li key={i} className="pl-2">
+                        {step}
+                      </li>
+                    ))}
+                </ol>
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <ClipboardList className="w-12 h-12 text-gray-400 mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white">No recipe selected</h3>
+            <p className="text-gray-500 dark:text-gray-400 mt-1">Select a recipe to view its details</p>
+          </div>
+        )}
+      </div>
+    </Modal>
   );
 
   const renderMenuEngineeringView = () => (
@@ -425,35 +588,21 @@ export const RecipesTab: React.FC = () => {
       {renderContent()}
 
       {/* Create Recipe Modal */}
-      <Modal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)} title="Create New Recipe" size="lg">
+      <Modal isOpen={modalState.create} onClose={closeAllModals} title="Create New Recipe" size="lg">
         <div className="p-6">
-          <RecipeForm onSubmit={handleCreateRecipe} onCancel={() => setShowCreateModal(false)} isLoading={createRecipe.isPending} rawMaterials={rawMaterials} />
+          <RecipeForm onSubmit={handleCreateRecipe} onCancel={closeAllModals} isLoading={createRecipe.isPending} rawMaterials={rawMaterials} />
         </div>
       </Modal>
 
       {/* Edit Recipe Modal */}
-      <Modal
-        isOpen={showEditModal}
-        onClose={() => {
-          setShowEditModal(false);
-          setSelectedRecipe(null);
-        }}
-        title={`Edit ${selectedRecipe?.name}`}
-        size="lg"
-      >
+      <Modal isOpen={modalState.edit} onClose={closeAllModals} title={`Edit ${modalState.selectedRecipe?.name}`} size="lg">
         <div className="p-6">
-          <RecipeForm
-            recipe={selectedRecipe}
-            onSubmit={handleUpdateRecipe}
-            onCancel={() => {
-              setShowEditModal(false);
-              setSelectedRecipe(null);
-            }}
-            isLoading={updateRecipe.isPending}
-            rawMaterials={rawMaterials}
-          />
+          <RecipeForm recipe={modalState.selectedRecipe} onSubmit={handleUpdateRecipe} onCancel={closeAllModals} isLoading={updateRecipe.isPending} rawMaterials={rawMaterials} />
         </div>
       </Modal>
+
+      {/* View Recipe Details Modal */}
+      {renderRecipeDetailsModal()}
     </>
   );
 };

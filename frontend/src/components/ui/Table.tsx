@@ -14,9 +14,10 @@ interface TableProps<T extends object> {
   enableSorting?: boolean;
   maxHeight?: string;
   stickyHeader?: boolean;
+  onRowClick?: (row: T) => void;
 }
 
-function Table<T extends object>({ data, columns, loading = false, emptyMessage = "No data available", className, enableColumnResizing = true, enableSorting = true, maxHeight = "500px", stickyHeader = true }: TableProps<T>) {
+function Table<T extends object>({ data, columns, loading = false, emptyMessage = "No data available", className, enableColumnResizing = true, enableSorting = true, maxHeight = "500px", stickyHeader = true, onRowClick }: TableProps<T>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [isResizing, setIsResizing] = React.useState(false);
   const [resizingColumnId, setResizingColumnId] = React.useState<string | null>(null);
@@ -222,7 +223,7 @@ function Table<T extends object>({ data, columns, loading = false, emptyMessage 
               </tr>
             ) : (
               table.getRowModel().rows.map((row, index) => (
-                <tr key={row.id} className={clsx("transition-colors duration-150 ease-in-out", "hover:bg-gray-50 dark:hover:bg-gray-700", "border-b border-gray-100 dark:border-gray-700 last:border-b-0", index % 2 === 0 ? "bg-white dark:bg-gray-800" : "bg-gray-50/30 dark:bg-gray-800/50")}>
+                <tr key={row.id} onClick={() => onRowClick?.(row.original)} className={clsx("cursor-pointer transition-colors duration-150 ease-in-out", "hover:bg-gray-50 dark:hover:bg-gray-700", "border-b border-gray-100 dark:border-gray-700 last:border-b-0", index % 2 === 0 ? "bg-white dark:bg-gray-800" : "bg-gray-50/30 dark:bg-gray-800/50")}>
                   {row.getVisibleCells().map(cell => {
                     const columnMeta = cell.column.columnDef.meta as { align?: "left" | "center" | "right" } | undefined;
 

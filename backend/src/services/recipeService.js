@@ -1,46 +1,6 @@
 import prisma from "../config/prisma.js";
 import logger from "../utils/logger.js";
 
-/**
- * Create a new recipe with ingredients
- */
-// export const createRecipe = async recipeData => {
-//   try {
-//     const { ingredients, ...recipe } = recipeData;
-
-//     const newRecipe = await prisma().recipe.create({
-//       data: {
-//         ...recipe,
-//         ingredients: {
-//           create: ingredients.map(ingredient => ({
-//             raw_material_id: ingredient.raw_material_id,
-//             quantity: parseFloat(ingredient.quantity),
-//             baseUnit: ingredient.baseUnit
-//           }))
-//         }
-//       },
-//       include: { ingredients: { include: { raw_material: true } } }
-//     });
-
-//     // Calculate recipe cost
-//     const updatedRecipe = await calculateRecipeCost(newRecipe.id);
-
-//     logger.info(`Recipe created: ${newRecipe.name}`);
-
-//     return {
-//       success: true,
-//       data: updatedRecipe.data,
-//       message: "Recipe created successfully"
-//     };
-//   } catch (error) {
-//     logger.error("Error creating recipe:", error);
-//     return {
-//       success: false,
-//       message: error.message
-//     };
-//   }
-// };
-
 export const createRecipe = async recipeData => {
   try {
     const { ingredients, ...recipe } = recipeData;
@@ -52,8 +12,8 @@ export const createRecipe = async recipeData => {
           create: ingredients.map(ingredient => ({
             raw_material_id: ingredient.raw_material_id,
             quantity: parseFloat(ingredient.quantity),
-            unit: ingredient.baseUnit, // Use baseUnit for the unit field
-            baseUnit: ingredient.baseUnit // Also store baseUnit separately if needed
+            unit: ingredient.baseUnit,
+            baseUnit: ingredient.baseUnit
           }))
         }
       },
@@ -79,9 +39,6 @@ export const createRecipe = async recipeData => {
   }
 };
 
-/**
- * Calculate recipe cost based on current material prices
- */
 export const calculateRecipeCost = async recipeId => {
   try {
     const recipe = await prisma().recipe.findUnique({
@@ -271,6 +228,42 @@ export const createMenuItem = async menuData => {
     };
   } catch (error) {
     logger.error("Error creating menu item:", error);
+    return {
+      success: false,
+      message: error.message
+    };
+  }
+};
+
+/**
+ * Hard delete a recipe and its related ingredients
+ */
+export const deleteRecipe = async id => {
+  try {
+    const recipeId = parseInt(id);
+
+    // Ensure the recipe exists
+    const existing = await prisma().recipe.findUnique({ where: { id: recipeId } });
+    if (!existing) {
+      return { success: false, message: "Recipe not found" };
+    }
+
+    // Delete ingredients first (if cascade is not configured)
+    await prisma().recipeIngredient.deleteMany({
+      where: { recipe_id: recipeId }
+    });
+
+    // Delete the recipe
+    await prisma().recipe.delete({
+      where: { id: recipeId }
+    });
+
+    return {
+      success: true,
+      message: "Recipe deleted successfully"
+    };
+  } catch (error) {
+    logger.error("Error deleting recipe:", error);
     return {
       success: false,
       message: error.message

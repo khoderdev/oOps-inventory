@@ -26,26 +26,6 @@ export const createRecipe = asyncHandler(async (req, res) => {
   });
 });
 
-// export const createRecipe = asyncHandler(async (req, res) => {
-//   const result = await recipeService.createRecipe({
-//     ...req.body,
-//     created_by: req.user.id
-//   });
-
-//   if (!result.success) {
-//     return res.status(400).json({
-//       success: false,
-//       error: result.message
-//     });
-//   }
-
-//   res.status(201).json({
-//     success: true,
-//     data: result.data,
-//     message: result.message
-//   });
-// });
-
 export const getRecipes = asyncHandler(async (req, res) => {
   const result = await recipeService.getRecipes(req.query);
 
@@ -171,11 +151,17 @@ export const updateRecipe = asyncHandler(async (req, res) => {
 export const deleteRecipe = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
-  // For now, we'll implement a basic soft delete
-  // In a full implementation, you'd update the is_active field
+  const result = await recipeService.deleteRecipe(parseInt(id));
+
+  if (!result.success) {
+    return res.status(400).json({
+      success: false,
+      error: result.message
+    });
+  }
 
   res.json({
     success: true,
-    message: "Recipe delete functionality to be implemented"
+    message: result.message
   });
 });
