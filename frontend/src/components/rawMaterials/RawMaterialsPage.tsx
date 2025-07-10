@@ -3,7 +3,6 @@ import { useCallback, useContext, useMemo, useState } from "react";
 import { AppContext } from "../../contexts/AppContext";
 import useFloatingButtonVisibility from "../../hooks/useFloatingButtonVisibility";
 import { useDeleteRawMaterial, useRawMaterials } from "../../hooks/useRawMaterials";
-import { useStockLevels } from "../../hooks/useStock";
 import { MaterialCategory, type RawMaterial, type SortConfig, type User } from "../../types";
 import Button from "../ui/Button";
 import Modal from "../ui/Modal";
@@ -19,19 +18,24 @@ export const RawMaterialsPage = () => {
   const [editingMaterial, setEditingMaterial] = useState<RawMaterial | null>(null);
   const [sortConfig] = useState<SortConfig>({ field: "name", order: "asc" });
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
-
   const {
     state: { user }
   } = useContext(AppContext) as { state: { user: User } };
   const { data: rawMaterials = [], isLoading } = useRawMaterials();
-  const { data: stockLevels = [] } = useStockLevels();
   const deleteMutation = useDeleteRawMaterial();
-
-  const categoryOptions = Object.values(MaterialCategory).map(category => ({
-    value: category,
-    label: category.charAt(0).toUpperCase() + category.slice(1).replace("_", " ")
-  }));
-
+  const categoryOptions = Object.values(MaterialCategory).map(category => ({ value: category, label: category.charAt(0).toUpperCase() + category.slice(1).replace("_", " ") }));
+  const activeCount = rawMaterials.filter(material => material.isActive).length;
+  const lowStockCount = rawMaterials.filter(material => material.quantity < material.reorderLevel).length;
+  const categoryBreakdown = rawMaterials.reduce(
+    (acc, material) => {
+      if (!acc[material.category]) {
+        acc[material.category] = 0;
+      }
+      acc[material.category]++;
+      return acc;
+    },
+    {} as Record<MaterialCategory, number>
+  );
   const statusOptions: Array<{ value: "all" | "active" | "inactive"; label: string }> = [
     { value: "all", label: "All Materials" },
     { value: "active", label: "Active Only" },
@@ -81,37 +85,6 @@ export const RawMaterialsPage = () => {
     [deleteMutation]
   );
 
-  const getStockStatus = useCallback(
-    (materialId: string) => {
-      const stockLevel = stockLevels.find(level => level.rawMaterial?.id === parseInt(materialId));
-      if (!stockLevel) return { status: "no-stock", quantity: 0, unit: "" };
-
-      return {
-        status: stockLevel.isLowStock ? "low" : "normal",
-        quantity: stockLevel.availableUnitsQuantity,
-        unit: stockLevel.rawMaterial?.unit || "",
-        isLowStock: stockLevel.isLowStock
-      };
-    },
-    [stockLevels]
-  );
-
-  // Calculate stats
-  const activeCount = rawMaterials.filter(m => m.isActive).length;
-  const lowStockCount = rawMaterials.filter(m => {
-    const stock = getStockStatus(m.id.toString());
-    return stock.isLowStock;
-  }).length;
-  const categoryBreakdown = rawMaterials.reduce(
-    (acc, material) => {
-      if (material.isActive) {
-        acc[material.category] = (acc[material.category] || 0) + 1;
-      }
-      return acc;
-    },
-    {} as Record<string, number>
-  );
-
   const floating = true;
   const { visible: isVisible } = useFloatingButtonVisibility({
     minScrollDistance: 200,
@@ -128,8 +101,7 @@ export const RawMaterialsPage = () => {
       )}
 
       {/* Stats Cards */}
-      <RawMaterialsStats totalMaterials={rawMaterials.length} activeCount={activeCount} lowStockCount={lowStockCount} categoryCount={Object.keys(categoryBreakdown).length} />
-
+      <RawMaterialsStats total={rawMaterials.length} active={activeCount} lowStock={lowStockCount} categories={Object.keys(categoryBreakdown).length} />
       {/* Filters */}
       <RawMaterialsFilters searchTerm={searchTerm} setSearchTerm={setSearchTerm} categoryFilter={categoryFilter} setCategoryFilter={setCategoryFilter} statusFilter={statusFilter} setStatusFilter={setStatusFilter} categoryOptions={categoryOptions} statusOptions={statusOptions} />
 

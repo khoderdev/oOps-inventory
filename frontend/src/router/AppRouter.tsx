@@ -4,7 +4,7 @@ import ErrorPage from "../components/common/ErrorPage";
 import CostControlPage from "../components/costControl/CostControlPage";
 import DashboardPage from "../components/dashboard/DashboardPage";
 import Layout from "../components/layout/Layout";
-import RawMaterialsPage from "../components/rawMaterials/RawMaterialsPage";
+import { RawMaterialsPage } from "../components/rawMaterials/RawMaterialsPage";
 import ReportsPage from "../components/reports/ReportsPage";
 import { RestaurantManagementPage } from "../components/restaurant/RestaurantManagementPage";
 import SectionsPage from "../components/sections/SectionsPage";

@@ -1,30 +1,19 @@
 import type { ColumnDef } from "@tanstack/react-table";
-import { AlertTriangle, Filter, Package, Search } from "lucide-react";
+import { AlertTriangle, Package } from "lucide-react";
 import { useMemo, useState } from "react";
-import { useRawMaterials } from "../../hooks/useRawMaterials";
 import { useStockLevels } from "../../hooks/useStock";
-import type { MaterialCategory, SortConfig, StockLevel } from "../../types";
+import type { SortConfig, StockLevel } from "../../types";
 import { MeasurementUnit } from "../../types";
-import Button from "../ui/Button";
-import Input from "../ui/Input";
-import Select from "../ui/Select";
 import SummaryStatCards from "../ui/SummaryStatCards";
 import Table from "../ui/Table";
 
 const StockLevelsTab = () => {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("");
+  const [searchTerm] = useState("");
+  const [categoryFilter] = useState("");
   const [stockFilter, setStockFilter] = useState<"all" | "low" | "available">("all");
   const [sortConfig] = useState<SortConfig>({ field: "rawMaterial.name", order: "asc" });
   const [activeStatFilter, setActiveStatFilter] = useState<"total" | "low" | "available" | "value">("total");
   const { data: stockLevels = [], isLoading } = useStockLevels();
-  const { data: rawMaterials = [] } = useRawMaterials({ isActive: true });
-
-  const categories = [...new Set(rawMaterials.map(m => m.category))];
-  const categoryOptions = categories.map(category => ({
-    value: category,
-    label: category.charAt(0).toUpperCase() + category.slice(1).replace("_", " ")
-  }));
 
   const filteredData = useMemo(() => {
     const filtered = stockLevels.filter(level => {
@@ -233,31 +222,9 @@ const StockLevelsTab = () => {
         onChange={id => {
           if (id === "value") return;
           setActiveStatFilter(id);
-          setStockFilter(id as "all" | "low" | "available"); // sync to actual data filter
+          setStockFilter(id as "all" | "low" | "available");
         }}
       />
-      {/* Filters */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Input placeholder="Search materials..." value={searchTerm} onValueChange={setSearchTerm} leftIcon={<Search className="w-4 h-4" />} />
-
-        <Select placeholder="Filter by category" options={[{ value: "", label: "All Categories" }, ...categoryOptions]} value={categoryFilter} onChange={value => setCategoryFilter(value as MaterialCategory | "")} />
-
-        <Select
-          placeholder="Stock status"
-          options={[
-            { value: "all", label: "All Items" },
-            { value: "low", label: "Low Stock Only" },
-            { value: "available", label: "Available Only" }
-          ]}
-          value={stockFilter}
-          onChange={value => setStockFilter(value as "all" | "low" | "available")}
-        />
-
-        <Button variant="outline" leftIcon={<Filter className="w-4 h-4" />}>
-          More Filters
-        </Button>
-      </div>
-
       {/* Table */}
       <Table data={filteredData as unknown as Record<string, unknown>[]} columns={columns as unknown as ColumnDef<Record<string, unknown>>[]} loading={isLoading} emptyMessage="No stock levels found." />
     </div>
