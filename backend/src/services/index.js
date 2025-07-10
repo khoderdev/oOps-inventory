@@ -8,4 +8,5 @@ export * from "./recipeService.js";
 export * from "./SectionInventory.js";
 export * from "./sectionsService.js";
 export * from "./stockService.js";
+export * from "./supplierService.js";
 export * from "./userService.js";
