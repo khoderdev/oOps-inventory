@@ -118,13 +118,6 @@ export interface SectionFilters {
   managerId?: number;
 }
 
-export interface SectionConsumptionFilters {
-  rawMaterialId?: number;
-  fromDate?: Date;
-  toDate?: Date;
-  sectionId?: number;
-}
-
 // REQUEST TYPES
 export interface ConsumptionRequest {
   sectionId: number;
@@ -141,4 +134,38 @@ export interface InventoryUpdateRequest {
   quantity: number;
   updatedBy: string;
   notes?: string | null;
+}
+
+// Add to your existing types
+export interface RecipeConsumption extends BaseEntity {
+  recipeId: number;
+  recipe?: Recipe;
+  sectionId: number;
+  section?: Section;
+  consumedBy: number;
+  user?: User;
+  consumedDate: Date;
+  orderId?: string | null;
+  notes?: string | null;
+  ingredients: {
+    rawMaterialId: number;
+    rawMaterial?: RawMaterial;
+    quantity: number;
+  }[];
+}
+
+// Add to your input types
+export interface RecordRecipeConsumptionInput {
+  recipeId: number;
+  sectionId: number;
+  consumedBy: number;
+  orderId?: string | null;
+  notes?: string | null;
+}
+
+// Add to your filter types
+export interface RecipeConsumptionFilters {
+  sectionId?: string;
+  fromDate?: Date;
+  toDate?: Date;
 }

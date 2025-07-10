@@ -1,5 +1,24 @@
 import { apiClient } from "../lib/api";
-import { type ApiResponse, type ConsumptionRequest, type CreateSectionAssignmentInput, type CreateSectionInput, type CreateSectionRecipeAssignmentInput, type InventoryUpdateRequest, type RawMaterial, type RemoveSectionRecipeAssignmentInput, type Section, type SectionConsumption, type SectionConsumptionFilters, type SectionFilters, type SectionInventory, type SectionRecipe, type UpdateSectionInput } from "../types";
+import {
+  type ApiResponse,
+  type ConsumptionRequest,
+  type CreateSectionAssignmentInput,
+  type CreateSectionInput,
+  type CreateSectionRecipeAssignmentInput,
+  type InventoryUpdateRequest,
+  type RawMaterial,
+  type RecipeConsumption,
+  type RecipeConsumptionFilters,
+  type RecordRecipeConsumptionInput,
+  type RemoveSectionRecipeAssignmentInput,
+  type Section,
+  type SectionConsumption,
+  type SectionConsumptionFilters,
+  type SectionFilters,
+  type SectionInventory,
+  type SectionRecipe,
+  type UpdateSectionInput
+} from "../types";
 
 export class SectionsAPI {
   static async create(data: CreateSectionInput): Promise<ApiResponse<Section>> {
@@ -242,6 +261,53 @@ export class SectionsAPI {
         data: [],
         success: false,
         message: error instanceof Error ? error.message : "Failed to fetch section consumption"
+      };
+    }
+  }
+
+  // Add these new methods to your SectionsAPI class
+  static async recordRecipeConsumption(data: RecordRecipeConsumptionInput): Promise<ApiResponse<boolean>> {
+    try {
+      const response = await apiClient.post<{ success: boolean; message: string }>(`/sections/${data.sectionId}/consume-recipe`, data);
+      return {
+        data: response.success,
+        success: response.success,
+        message: response.message
+      };
+    } catch (error) {
+      return {
+        data: false,
+        success: false,
+        message: error instanceof Error ? error.message : "Failed to record recipe consumption"
+      };
+    }
+  }
+
+  static async getRecipeConsumption(recipeId: string, filters?: RecipeConsumptionFilters): Promise<ApiResponse<RecipeConsumption[]>> {
+    try {
+      let endpoint = `/recipes/${recipeId}/consumption`;
+      const params = new URLSearchParams();
+
+      if (filters?.sectionId) {
+        params.append("sectionId", filters.sectionId);
+      }
+      if (filters?.fromDate) {
+        params.append("fromDate", filters.fromDate.toString());
+      }
+      if (filters?.toDate) {
+        params.append("toDate", filters.toDate.toString());
+      }
+
+      if (params.toString()) {
+        endpoint += `?${params.toString()}`;
+      }
+
+      return await apiClient.get<RecipeConsumption[]>(endpoint);
+    } catch (error) {
+      return {
+        data: [],
+        success: false,
+        message: error instanceof Error ? error.message : "Failed to fetch recipe consumption"
       };
     }
   }

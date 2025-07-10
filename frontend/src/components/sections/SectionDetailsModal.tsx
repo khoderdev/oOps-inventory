@@ -9,6 +9,7 @@ import Button from "../ui/Button";
 import Modal from "../ui/Modal";
 import ConsumptionModal from "./ConsumptionModal";
 import RecipeAssignmentModal from "./RecipeAssignmentModal";
+import RecipesConsumptionModal from "./RecipesConsumptionModal";
 import SectionInventoryEditModal from "./SectionInventoryEditModal";
 import StockAssignmentModal from "./StockAssignmentModal";
 
@@ -26,6 +27,7 @@ const SectionDetailsModal = ({ section, isOpen, onClose }: SectionDetailsModalPr
   const [showRecipeDetailsModal, setShowRecipeDetailsModal] = useState(false);
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
   const removeRecipeMutation = useRemoveRecipeFromSection();
+  const [showRecipeConsumptionModal, setShowRecipeConsumptionModal] = useState(false);
 
   const handleRecipeClick = (recipe: Recipe) => {
     setSelectedRecipe(recipe);
@@ -270,12 +272,28 @@ const SectionDetailsModal = ({ section, isOpen, onClose }: SectionDetailsModalPr
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {assignedRecipes.map(assignment => (
                     <div key={assignment.id} className="p-4 border rounded-lg dark:bg-gray-900/10 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-900/20 transition-colors cursor-pointer relative group" onClick={() => assignment.recipe && handleRecipeClick(assignment.recipe)}>
-                      <div className="flex justify-between items-start">
+                      <div className="flex justify-between items-start h-[75px]">
                         <div>
                           <h4 className="font-medium text-gray-900 dark:text-gray-300">{assignment.recipe?.name}</h4>
                           <p className="text-sm text-gray-500 dark:text-gray-400 capitalize">{assignment.recipe?.category}</p>
                         </div>
-                        {assignment.recipe?.servingCost && <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">{assignment.recipe.servingCost} serving cost</span>}
+
+                        <div className="flex flex-col space-y-2 h-full justify-between items-end">
+                          {assignment.recipe?.servingCost && <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">{assignment.recipe.servingCost} serving cost</span>}
+                          <Button
+                            onClick={e => {
+                              e.stopPropagation();
+                              setSelectedRecipe(assignment.recipe);
+                              setShowRecipeConsumptionModal(true);
+                            }}
+                            leftIcon={<Plus className="w-4 h-4" />}
+                            size="sm"
+                            variant="outline"
+                            className="w-fit px-2 py-1 text-center text-xs rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
+                          >
+                            Use
+                          </Button>
+                        </div>
                       </div>
                       <button
                         className="absolute top-2 right-2 p-1 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
@@ -390,6 +408,22 @@ const SectionDetailsModal = ({ section, isOpen, onClose }: SectionDetailsModalPr
             setSelectedInventoryItem(null);
           }}
           onSuccess={handleEditSuccess}
+        />
+      )}
+
+      {selectedRecipe && (
+        <RecipesConsumptionModal
+          section={section}
+          recipe={selectedRecipe}
+          isOpen={showRecipeConsumptionModal}
+          onClose={() => {
+            setShowRecipeConsumptionModal(false);
+            setSelectedRecipe(null);
+          }}
+          onSuccess={() => {
+            refetch();
+            refetchConsumption();
+          }}
         />
       )}
     </>

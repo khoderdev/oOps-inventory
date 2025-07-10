@@ -1,13 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { SectionsAPI } from "../data/sections.api";
-import { SectionType, type CreateSectionAssignmentInput, type CreateSectionInput, type CreateSectionRecipeAssignmentInput, type RemoveSectionRecipeAssignmentInput, type UpdateSectionInput } from "../types";
+import { SectionType, type CreateSectionAssignmentInput, type CreateSectionInput, type CreateSectionRecipeAssignmentInput, type RecipeConsumptionFilters, type RecordRecipeConsumptionInput, type RemoveSectionRecipeAssignmentInput, type UpdateSectionInput } from "../types";
 
 const QUERY_KEYS = {
   sections: "sections",
   section: (id: string) => ["section", id],
   sectionInventory: (sectionId: string) => ["sectionInventory", sectionId],
   sectionConsumption: (sectionId: string) => ["sectionConsumption", sectionId],
-  sectionRecipes: (sectionId: string) => ["sectionRecipes", sectionId]
+  sectionRecipes: (sectionId: string) => ["sectionRecipes", sectionId],
+  recipeConsumption: (recipeId: string) => ["recipeConsumption", recipeId]
 } as const;
 
 // Get all sections
@@ -83,6 +84,44 @@ export const useSectionConsumption = (
   });
 };
 
+// Add these new hooks to your existing hooks
+export const useRecordRecipeConsumption = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: RecordRecipeConsumptionInput) => SectionsAPI.recordRecipeConsumption(data),
+    onSuccess: (response, variables) => {
+      if (response.success) {
+        // Invalidate relevant queries
+        queryClient.invalidateQueries({
+          queryKey: [QUERY_KEYS.sectionInventory(variables.sectionId.toString())]
+        });
+        queryClient.invalidateQueries({
+          queryKey: [QUERY_KEYS.sectionConsumption(variables.sectionId.toString())]
+        });
+        queryClient.invalidateQueries({
+          queryKey: [QUERY_KEYS.recipeConsumption(variables.recipeId.toString())]
+        });
+        queryClient.invalidateQueries({ queryKey: ["stockLevels"] });
+      }
+    }
+  });
+};
+
+export const useRecipeConsumption = (recipeId: string, filters?: RecipeConsumptionFilters) => {
+  return useQuery({
+    queryKey: [QUERY_KEYS.recipeConsumption(recipeId), filters],
+    queryFn: () =>
+      SectionsAPI.getRecipeConsumption(recipeId, {
+        ...filters,
+        fromDate: filters?.fromDate?.toISOString(),
+        toDate: filters?.toDate?.toISOString()
+      }),
+    select: response => response.data,
+    enabled: !!recipeId,
+    staleTime: 2 * 60 * 1000
+  });
+};
+
 // Create section mutation
 export const useCreateSection = () => {
   const queryClient = useQueryClient();
@@ -105,7 +144,7 @@ export const useUpdateSection = () => {
     onSuccess: (response, variables) => {
       if (response.success) {
         // Update specific item in cache
-        queryClient.setQueryData(QUERY_KEYS.section(variables.id), { data: response.data });
+        queryClient.setQueryData(QUERY_KEYS.section(variables.id.toString()), { data: response.data });
         // Invalidate lists
         queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.sections] });
       }
