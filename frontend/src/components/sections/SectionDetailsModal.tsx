@@ -1,8 +1,8 @@
-import { Minus, Package, Plus, Utensils } from "lucide-react";
+import { Minus, Package, Plus, Trash2, Utensils } from "lucide-react";
 import { useState } from "react";
-import { useRecipes } from "../../hooks/useRecipes";
-import { useSectionConsumption, useSectionInventory, useSectionRecipes } from "../../hooks/useSections";
-import type { RawMaterial, Section, SectionDetailsModalProps, SectionInventory } from "../../types";
+import { useApp } from "../../hooks/useApp";
+import { useRemoveRecipeFromSection, useSectionConsumption, useSectionInventory, useSectionRecipes } from "../../hooks/useSections";
+import type { RawMaterial, Recipe, Section, SectionDetailsModalProps, SectionInventory } from "../../types";
 import { MeasurementUnit } from "../../types";
 import { splitQuantityAndUnit } from "../../utils/units";
 import Button from "../ui/Button";
@@ -13,6 +13,7 @@ import SectionInventoryEditModal from "./SectionInventoryEditModal";
 import StockAssignmentModal from "./StockAssignmentModal";
 
 const SectionDetailsModal = ({ section, isOpen, onClose }: SectionDetailsModalProps) => {
+  const { state } = useApp();
   const [activeTab, setActiveTab] = useState<"inventory" | "consumption" | "recipes">("inventory");
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [showConsumptionModal, setShowConsumptionModal] = useState(false);
@@ -20,12 +21,36 @@ const SectionDetailsModal = ({ section, isOpen, onClose }: SectionDetailsModalPr
   const [selectedInventoryItem, setSelectedInventoryItem] = useState<SectionInventory | null>(null);
   const { data: inventory = [], refetch } = useSectionInventory(section?.id.toString() || "");
   const { data: consumption = [], refetch: refetchConsumption } = useSectionConsumption(section?.id.toString() || "");
-  const { data: assignedRecipes = [], refetch: refetchAssignedRecipes } = useSectionRecipes(section?.id.toString() || "");
+  const { data: assignedRecipes = [], refetch: refetchAssignedRecipes, isError: isAssignedRecipesError, error: assignedRecipesError } = useSectionRecipes(section?.id.toString() || "");
   const [showRecipeAssignModal, setShowRecipeAssignModal] = useState(false);
+  const [showRecipeDetailsModal, setShowRecipeDetailsModal] = useState(false);
+  const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
+  const removeRecipeMutation = useRemoveRecipeFromSection();
 
-  // Add recipes data hook
-  const { data: recipesData } = useRecipes({ search: "" });
-  const recipes = recipesData?.recipes || [];
+  const handleRecipeClick = (recipe: Recipe) => {
+    setSelectedRecipe(recipe);
+    setShowRecipeDetailsModal(true);
+  };
+
+  const handleRemoveRecipe = async (assignmentId: number) => {
+    try {
+      const removedBy = state?.user?.id;
+      if (!removedBy) throw new Error("Missing removedBy user ID");
+
+      console.log("Removing recipe assignment with ID:", assignmentId);
+      console.log("Removing recipe assignment with removedBy:", removedBy);
+
+      await removeRecipeMutation.mutateAsync({
+        assignmentId,
+        removedBy,
+        notes: "Optional reason here"
+      });
+
+      refetchAssignedRecipes();
+    } catch (error) {
+      console.error("Error removing recipe:", error);
+    }
+  };
 
   const handleRecipeAssignSuccess = () => {
     refetchAssignedRecipes();
@@ -228,7 +253,14 @@ const SectionDetailsModal = ({ section, isOpen, onClose }: SectionDetailsModalPr
                 </Button>
               </div>
 
-              {assignedRecipes.length === 0 ? (
+              {isAssignedRecipesError ? (
+                <div className="text-center py-8 text-red-500">
+                  Error loading recipes: {assignedRecipesError.message}
+                  <Button variant="outline" size="sm" onClick={() => refetchAssignedRecipes()} className="mt-2">
+                    Retry
+                  </Button>
+                </div>
+              ) : !assignedRecipes || assignedRecipes.length === 0 ? (
                 <div className="text-center py-8">
                   <Utensils className="w-12 h-12 text-gray-400 mx-auto mb-4 dark:text-gray-400" />
                   <p className="text-gray-600 dark:text-gray-400">No recipes assigned to this section</p>
@@ -237,7 +269,7 @@ const SectionDetailsModal = ({ section, isOpen, onClose }: SectionDetailsModalPr
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {assignedRecipes.map(assignment => (
-                    <div key={assignment.id} className="p-4 border rounded-lg dark:bg-gray-900/10 dark:border-gray-800">
+                    <div key={assignment.id} className="p-4 border rounded-lg dark:bg-gray-900/10 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-900/20 transition-colors cursor-pointer relative group" onClick={() => assignment.recipe && handleRecipeClick(assignment.recipe)}>
                       <div className="flex justify-between items-start">
                         <div>
                           <h4 className="font-medium text-gray-900 dark:text-gray-300">{assignment.recipe?.name}</h4>
@@ -245,11 +277,85 @@ const SectionDetailsModal = ({ section, isOpen, onClose }: SectionDetailsModalPr
                         </div>
                         {assignment.recipe?.servingCost && <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">{assignment.recipe.servingCost} serving cost</span>}
                       </div>
+                      <button
+                        className="absolute top-2 right-2 p-1 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={e => {
+                          e.stopPropagation();
+                          handleRemoveRecipe(Number(assignment.id));
+                        }}
+                        disabled={removeRecipeMutation.isPending}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
                   ))}
                 </div>
               )}
             </div>
+          )}
+          {selectedRecipe && (
+            <Modal
+              isOpen={showRecipeDetailsModal}
+              onClose={() => {
+                setShowRecipeDetailsModal(false);
+                setSelectedRecipe(null);
+              }}
+              title={selectedRecipe.name}
+              size="lg"
+            >
+              <div className="space-y-6">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Category</p>
+                    <p className="text-gray-900 dark:text-gray-300 capitalize">{selectedRecipe.category}</p>
+                  </div>
+                  {selectedRecipe.servingCost && (
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">Serving Cost</p>
+                      <p className="text-gray-900 dark:text-gray-300">${selectedRecipe.servingCost}</p>
+                    </div>
+                  )}
+                </div>
+
+                {selectedRecipe.description && (
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Description</p>
+                    <p className="text-gray-900 dark:text-gray-300">{selectedRecipe.description}</p>
+                  </div>
+                )}
+
+                <div>
+                  <h4 className="text-sm font-medium text-gray-600 mb-2">Ingredients</h4>
+                  <div className="space-y-2">
+                    {Array.isArray(selectedRecipe.ingredients) &&
+                      selectedRecipe.ingredients.map((ingredient, index) => (
+                        <div key={index} className="flex justify-between py-2 border-b dark:border-gray-800">
+                          <span className="text-gray-900 dark:text-gray-300">{ingredient.raw_material?.name}</span>
+                          <span className="text-gray-600 dark:text-gray-400">
+                            {ingredient.quantity} {ingredient.raw_material?.unit}
+                          </span>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+
+                {selectedRecipe.costAnalysis && (
+                  <div className="bg-gray-50 p-4 rounded-lg dark:bg-gray-900/10">
+                    <h4 className="text-sm font-medium text-gray-600 mb-2">Cost Analysis</h4>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-sm text-gray-600">Total Cost</p>
+                        <p className="font-medium text-gray-900 dark:text-gray-300">${selectedRecipe.costAnalysis.totalCost.toFixed(2)}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600">Per Serving</p>
+                        <p className="font-medium text-gray-900 dark:text-gray-300">${selectedRecipe.costAnalysis.perServingCost.toFixed(2)}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </Modal>
           )}
         </div>
       </Modal>
@@ -258,7 +364,7 @@ const SectionDetailsModal = ({ section, isOpen, onClose }: SectionDetailsModalPr
       <StockAssignmentModal section={section} isOpen={showAssignModal} onClose={() => setShowAssignModal(false)} onSuccess={handleAssignSuccess} />
 
       {/* Recipe Assignment Modal */}
-      <RecipeAssignmentModal section={section} recipes={recipes} isOpen={showRecipeAssignModal} onClose={() => setShowRecipeAssignModal(false)} onSuccess={handleRecipeAssignSuccess} />
+      <RecipeAssignmentModal section={section} recipes={assignedRecipes} isOpen={showRecipeAssignModal} onClose={() => setShowRecipeAssignModal(false)} onSuccess={handleRecipeAssignSuccess} />
 
       {/* Consumption Modal */}
       {selectedInventoryItem && (

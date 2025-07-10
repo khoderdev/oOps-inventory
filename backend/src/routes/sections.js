@@ -39,8 +39,8 @@ router.post("/:id/assign-recipe", requireManager, assignRecipeToSection);
 // GET /api/sections/:id/recipes - Get section recipe assignments
 router.get("/:id/recipes", getSectionRecipes);
 
-// DELETE /api/sections/recipes/:assignmentId - Remove recipe assignment from section (Manager only)
-router.delete("/recipes/:assignmentId", requireManager, removeSectionRecipe);
+// POST /api/sections/:assignmentId/remove-recipe - Remove recipe assignment from section (Manager only)
+router.post("/:assignmentId/remove-recipe", removeSectionRecipe);
 
 // PUT /api/sections/inventory/:inventoryId - Update section inventory assignment (Manager only)
 router.put("/inventory/:inventoryId", requireManager, updateSectionInventory);

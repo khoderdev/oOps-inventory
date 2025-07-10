@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { SectionsAPI } from "../data/sections.api";
-import { SectionType, type CreateSectionAssignmentInput, type CreateSectionInput, type CreateSectionRecipeAssignmentInput, type UpdateSectionInput } from "../types";
+import { SectionType, type CreateSectionAssignmentInput, type CreateSectionInput, type CreateSectionRecipeAssignmentInput, type RemoveSectionRecipeAssignmentInput, type UpdateSectionInput } from "../types";
 
 const QUERY_KEYS = {
   sections: "sections",
@@ -155,6 +155,24 @@ export const useAssignRecipeToSection = () => {
         // Invalidate section inventory
         queryClient.invalidateQueries({
           queryKey: QUERY_KEYS.sectionInventory(variables.sectionId.toString())
+        });
+        // Invalidate recipes (they might have changed)
+        queryClient.invalidateQueries({ queryKey: ["recipes"] });
+      }
+    }
+  });
+};
+
+// Remove recipe from section mutation
+export const useRemoveRecipeFromSection = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: RemoveSectionRecipeAssignmentInput) => SectionsAPI.removeRecipeAssignment(data),
+    onSuccess: (response, variables) => {
+      if (response.success) {
+        // Invalidate section inventory
+        queryClient.invalidateQueries({
+          queryKey: QUERY_KEYS.sectionInventory(variables.assignmentId.toString())
         });
         // Invalidate recipes (they might have changed)
         queryClient.invalidateQueries({ queryKey: ["recipes"] });

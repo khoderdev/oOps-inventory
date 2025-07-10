@@ -113,8 +113,16 @@ export const assignRecipeToSection = async assignmentData => {
 // Get section recipe assignments
 export const getSectionRecipeAssignments = async sectionId => {
   try {
-    const assignments = await prisma().sectionRecipe.findMany({ where: { section_id: parseInt(sectionId) }, include: { recipe: { select: { id: true, name: true, category: true, instructions: true, serving_cost: true, is_active: true, created_at: true, updated_at: true } }, assigned_by_user: true }, orderBy: { assigned_at: "desc" } });
-    return { data: assignments.map(formatSectionRecipeAssignmentForFrontend), success: true, message: "Section recipe assignments retrieved successfully" };
+    const assignments = await prisma().sectionRecipe.findMany({
+      where: { section_id: parseInt(sectionId) },
+      include: { recipe: { include: { ingredients: { include: { raw_material: true } } } }, assigned_by_user: true },
+      orderBy: { assigned_at: "desc" }
+    });
+    return {
+      data: assignments.map(formatSectionRecipeAssignmentForFrontend),
+      success: true,
+      message: "Section recipe assignments retrieved successfully"
+    };
   } catch (error) {
     throw new Error("Failed to retrieve section recipe assignments");
   }

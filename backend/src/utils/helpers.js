@@ -92,6 +92,7 @@ export const formatRecipeForFrontend = recipe => ({
   id: recipe.id,
   name: recipe.name,
   category: recipe.category,
+  ingredients: recipe.ingredients,
   instructions: recipe.instructions,
   isActive: recipe.is_active,
   createdAt: recipe.created_at,

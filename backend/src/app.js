@@ -39,7 +39,7 @@ const limiter = rateLimit({
   legacyHeaders: false
 });
 
-app.use(limiter);
+// app.use(limiter);
 
 // Body parsing middleware
 app.use(express.json({ limit: "10mb" }));

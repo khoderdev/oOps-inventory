@@ -1,4 +1,7 @@
+import type { ReactNode } from "react";
+
 export interface Recipe {
+  description: ReactNode;
   id: number;
   name: string;
   category?: string;
@@ -41,6 +44,7 @@ export interface RecipeIngredient {
 }
 
 export interface RecipeCostAnalysis {
+  perServingCost: number;
   totalCost: number;
   breakdown: CostBreakdownItem[];
 }

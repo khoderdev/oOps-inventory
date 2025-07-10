@@ -3,7 +3,7 @@ import { useContext, useState } from "react";
 import { AppContext } from "../../contexts/AppContext";
 import useFloatingButtonVisibility from "../../hooks/useFloatingButtonVisibility";
 import { useSections } from "../../hooks/useSections";
-import type { Section, User } from "../../types";
+import { SectionType, type Section, type User } from "../../types";
 import Button from "../ui/Button";
 import Modal from "../ui/Modal";
 import SectionCard from "./SectionCard";
@@ -54,7 +54,7 @@ const SectionsPage = () => {
             <Building2 className="w-8 h-8 text-green-600 dark:text-green-400" />
             <div className="ml-4">
               <p className="text-sm font-medium text-green-600 dark:text-green-400">Kitchen Sections</p>
-              <p className="text-2xl font-bold text-green-900 dark:text-green-300">{activeSections.filter(s => s.type === "kitchen").length}</p>
+              <p className="text-2xl font-bold text-green-900 dark:text-green-300">{activeSections.filter(s => s.type === SectionType.KITCHEN).length}</p>
             </div>
           </div>
         </div>
@@ -64,7 +64,7 @@ const SectionsPage = () => {
             <Package className="w-8 h-8 text-purple-600 dark:text-purple-400" />
             <div className="ml-4">
               <p className="text-sm font-medium text-purple-600 dark:text-purple-400">Bar Sections</p>
-              <p className="text-2xl font-bold text-purple-900 dark:text-purple-300">{activeSections.filter(s => s.type === "bar").length}</p>
+              <p className="text-2xl font-bold text-purple-900 dark:text-purple-300">{activeSections.filter(s => s.type === SectionType.BAR).length}</p>
             </div>
           </div>
         </div>
@@ -74,7 +74,7 @@ const SectionsPage = () => {
             <Activity className="w-8 h-8 text-yellow-600 dark:text-yellow-400" />
             <div className="ml-4">
               <p className="text-sm font-medium text-yellow-600 dark:text-yellow-400">Storage Sections</p>
-              <p className="text-2xl font-bold text-yellow-900 dark:text-yellow-300">{activeSections.filter(s => s.type === "storage").length}</p>
+              <p className="text-2xl font-bold text-yellow-900 dark:text-yellow-300">{activeSections.filter(s => s.type === SectionType.STORAGE).length}</p>
             </div>
           </div>
         </div>

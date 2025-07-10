@@ -8,7 +8,7 @@ import Select from "../ui/Select";
 
 interface RecipeAssignmentModalProps {
   section: Section | null;
-  recipes: Recipe[] | undefined;
+  recipes: Recipe[];
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
@@ -20,7 +20,6 @@ const RecipeAssignmentModal = ({ section, recipes, isOpen, onClose, onSuccess }:
   const { state } = useApp();
   const assignMutation = useAssignRecipeToSection();
 
-  // Reset form when modal opens/closes
   useEffect(() => {
     if (isOpen) {
       setSelectedRecipeId("");
@@ -28,11 +27,10 @@ const RecipeAssignmentModal = ({ section, recipes, isOpen, onClose, onSuccess }:
     }
   }, [isOpen]);
 
-  const recipeOptions =
-    recipes?.map(recipe => ({
-      value: String(recipe.id),
-      label: recipe.name
-    })) || [];
+  const recipeOptions = recipes.map(recipe => ({
+    value: String(recipe.id),
+    label: recipe.name
+  }));
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -109,7 +107,7 @@ const RecipeAssignmentModal = ({ section, recipes, isOpen, onClose, onSuccess }:
                 </div>
                 <div>
                   <p className="font-medium text-blue-900 dark:text-blue-300">Ingredients:</p>
-                  <p className="text-blue-700 dark:text-blue-100 font-bold">{selectedRecipe.ingredients.length}</p>
+                  <p className="text-blue-700 dark:text-blue-100 font-bold"> {selectedRecipe.ingredients ? selectedRecipe.ingredients.length : 0}</p>
                 </div>
                 {selectedRecipe.costAnalysis && (
                   <div className="col-span-2">

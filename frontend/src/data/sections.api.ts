@@ -1,5 +1,5 @@
 import { apiClient } from "../lib/api";
-import { type ApiResponse, type ConsumptionRequest, type CreateSectionAssignmentInput, type CreateSectionInput, type CreateSectionRecipeAssignmentInput, type InventoryUpdateRequest, type RawMaterial, type Section, type SectionConsumption, type SectionConsumptionFilters, type SectionFilters, type SectionInventory, type SectionRecipe, type UpdateSectionInput } from "../types";
+import { type ApiResponse, type ConsumptionRequest, type CreateSectionAssignmentInput, type CreateSectionInput, type CreateSectionRecipeAssignmentInput, type InventoryUpdateRequest, type RawMaterial, type RemoveSectionRecipeAssignmentInput, type Section, type SectionConsumption, type SectionConsumptionFilters, type SectionFilters, type SectionInventory, type SectionRecipe, type UpdateSectionInput } from "../types";
 
 export class SectionsAPI {
   static async create(data: CreateSectionInput): Promise<ApiResponse<Section>> {
@@ -139,6 +139,27 @@ export class SectionsAPI {
         data: false,
         success: false,
         message: error instanceof Error ? error.message : "Failed to assign recipe to section"
+      };
+    }
+  }
+
+  static async removeRecipeAssignment(data: RemoveSectionRecipeAssignmentInput): Promise<ApiResponse<boolean>> {
+    try {
+      const { assignmentId, removedBy, notes } = data;
+      const response = await apiClient.post<{ success: boolean; message: string }>(`/sections/${assignmentId}/remove-recipe`, { removedBy, notes });
+      console.log("Removing recipe assignment with ID:", assignmentId);
+      console.log("Removing recipe assignment with removedBy:", removedBy);
+
+      return {
+        data: response.success,
+        success: response.success,
+        message: response.message
+      };
+    } catch (error) {
+      return {
+        data: false,
+        success: false,
+        message: error instanceof Error ? error.message : "Failed to remove recipe from section"
       };
     }
   }

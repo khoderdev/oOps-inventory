@@ -188,9 +188,24 @@ export const getSectionRecipes = asyncHandler(async (req, res) => {
  */
 export const removeSectionRecipe = asyncHandler(async (req, res) => {
   const { assignmentId } = req.params;
-  const { removedBy, notes } = req.body;
+  const { removedBy, notes } = req.body || {};
 
-  const result = await sectionsService.removeRecipeAssignment(parseInt(assignmentId, 10), removedBy, notes);
+  const parsedId = parseInt(assignmentId, 10);
+  if (isNaN(parsedId)) {
+    return res.status(400).json({
+      success: false,
+      error: "Invalid or missing assignmentId in URL."
+    });
+  }
+
+  if (!removedBy) {
+    return res.status(400).json({
+      success: false,
+      error: "Missing 'removedBy' in request body."
+    });
+  }
+
+  const result = await sectionsService.removeRecipeAssignment(parsedId, removedBy, notes);
 
   if (!result.success) {
     return res.status(400).json({

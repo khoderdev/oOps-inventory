@@ -91,6 +91,19 @@ export interface CreateSectionRecipeAssignmentInput {
   notes?: string | null;
 }
 
+export interface RemoveSectionRecipeAssignmentInput {
+  assignmentId: number;
+  removedBy: number | string;
+  notes?: string | null;
+}
+
+export interface SectionRecipeAssignment {
+  id: number;
+  sectionId: number;
+  recipeId: number;
+  serving_cost: number;
+}
+
 // COMPONENT PROPS
 export interface SectionDetailsModalProps {
   section: Section | null;
