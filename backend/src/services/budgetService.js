@@ -9,9 +9,9 @@ export const createBudget = async budgetData => {
     const { allocations, ...budget } = budgetData;
 
     // Validate that allocations sum up to total budget
-    const totalAllocated = allocations.reduce((sum, allocation) => sum + parseFloat(allocation.allocated_amount), 0);
+    const totalAllocated = allocations?.reduce((sum, allocation) => sum + parseFloat(allocation.allocated_amount), 0) || 0;
 
-    if (Math.abs(totalAllocated - parseFloat(budget.total_budget)) > 0.01) {
+    if (allocations?.length > 0 && Math.abs(totalAllocated - parseFloat(budget.total_budget)) > 0.01) {
       return {
         success: false,
         message: "Budget allocations must sum up to total budget amount"

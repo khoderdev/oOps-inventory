@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import type { Budget, BudgetPeriod, CreateBudgetRequest } from "../../types";
 import { BudgetPeriodLabels } from "../../types";
-import { Button } from "../ui";
+import { Button, Input, Select } from "../ui";
 
 interface BudgetFormProps {
   budget?: Budget | null;
@@ -78,48 +78,51 @@ export const BudgetForm: React.FC<BudgetFormProps> = ({ budget, onSubmit, onCanc
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Budget Name *</label>
-          <input type="text" value={formData.name} onChange={e => handleInputChange("name", e.target.value)} placeholder="e.g., Q1 2024 Operations Budget" className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" required />
+          <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">Budget Name *</label>
+          <Input value={formData.name} onChange={e => handleInputChange("name", e.target.value)} placeholder="e.g., Q1 2024 Operations Budget" required />
           {errors.name && <p className="text-sm text-red-600 mt-1">{errors.name}</p>}
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Period Type *</label>
-          <select value={formData.period_type} onChange={e => handleInputChange("period_type", e.target.value as BudgetPeriod)} className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" required>
-            {Object.entries(BudgetPeriodLabels).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
+          <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">Period Type *</label>
+          <Select
+            value={formData.period_type}
+            onChange={value => handleInputChange("period_type", value as BudgetPeriod)}
+            options={Object.entries(BudgetPeriodLabels).map(([value, label]) => ({
+              value: value as BudgetPeriod,
+              label
+            }))}
+            required
+          />
         </div>
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-        <textarea value={formData.description || ""} onChange={e => handleInputChange("description", e.target.value)} rows={2} className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" placeholder="Optional description of the budget" />
+        <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">Description</label>
+        <Input value={formData.description || ""} onChange={e => handleInputChange("description", e.target.value)} placeholder="Optional description of the budget" />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Start Date *</label>
-          <input type="date" value={formData.start_date} onChange={e => handleInputChange("start_date", e.target.value)} className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" required />
-          {errors.start_date && <p className="text-sm text-red-600 mt-1">{errors.start_date}</p>}
+          <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">Start Date *</label>
+          <Input type="date" value={formData.start_date} onChange={e => handleInputChange("start_date", e.target.value)} required />
+          {errors.start_date && <p className="text-sm text-red-600 mt-1 dark:text-red-400">{errors.start_date}</p>}
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">End Date *</label>
-          <input type="date" value={formData.end_date} onChange={e => handleInputChange("end_date", e.target.value)} className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" required />
+          <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">End Date *</label>
+          <Input type="date" value={formData.end_date} onChange={e => handleInputChange("end_date", e.target.value)} required />
+          {errors.end_date && <p className="text-sm text-red-600 mt-1 dark:text-red-400">{errors.end_date}</p>}
         </div>
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Total Budget *</label>
-        <input type="number" value={formData.total_budget} onChange={e => handleInputChange("total_budget", parseFloat(e.target.value) || 0)} placeholder="0.00" min="0" step="0.01" className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" required />
-        {errors.total_budget && <p className="text-sm text-red-600 mt-1">{errors.total_budget}</p>}
+        <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">Total Budget *</label>
+        <Input type="number" value={formData.total_budget} onChange={e => handleInputChange("total_budget", parseFloat(e.target.value) || 0)} placeholder="0.00" min="0" step="0.01" required />
+        {errors.total_budget && <p className="text-sm text-red-600 mt-1 dark:text-red-400">{errors.total_budget}</p>}
       </div>
 
-      <div className="flex justify-end gap-3 pt-6 border-t">
+      <div className="flex justify-end gap-3 pt-6 border-t dark:border-gray-600">
         <Button type="button" variant="outline" onClick={onCancel}>
           Cancel
         </Button>

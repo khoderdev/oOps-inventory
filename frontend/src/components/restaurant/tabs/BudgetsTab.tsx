@@ -1,52 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import type { ColumnDef } from "@tanstack/react-table";
 import React, { useState } from "react";
 import { useBudgetAnalytics, useBudgetRecommendations, useBudgets, useBudgetSpending, useBudgetVariance, useCreateBudget, useUpdateBudget } from "../../../hooks/useBudgets";
 import type { Budget, BudgetFilters, BudgetPeriod, CreateBudgetRequest } from "../../../types";
 import { BudgetPeriodLabels } from "../../../types";
 import { formatCurrency } from "../../../utils/quantity";
 import { BudgetForm } from "../../forms/BudgetForm";
-import { Button, Modal } from "../../ui";
-
-// Custom Table component for the specific interface used in this component
-interface TableColumn {
-  header: string;
-  accessor: string;
-  cell?: (value: unknown, row: unknown) => React.ReactNode;
-}
-
-interface CustomTableProps {
-  columns: TableColumn[];
-  data: unknown[];
-}
-
-const CustomTable: React.FC<CustomTableProps> = ({ columns, data }) => {
-  return (
-    <div className="overflow-x-auto">
-      <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-        <thead className="bg-gray-50 dark:bg-gray-700">
-          <tr>
-            {columns.map(column => (
-              <th key={column.accessor} className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                {column.header}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody className="bg-white divide-y divide-gray-200 dark:bg-gray-900 dark:divide-gray-700">
-          {data.map((row, index) => (
-            <tr key={index}>
-              {columns.map(column => (
-                <td key={column.accessor} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
-                  {column.cell ? column.cell((row as Record<string, unknown>)[column.accessor], row as unknown as Record<string, unknown>) : String((row as Record<string, unknown>)[column.accessor] || "-")}
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-};
+import { Button, Modal, Table } from "../../ui";
 
 export const BudgetsTab: React.FC = () => {
   const [filters, setFilters] = useState<BudgetFilters>({});
@@ -157,86 +117,7 @@ export const BudgetsTab: React.FC = () => {
       </div>
 
       {/* Budgets Table */}
-      <div className="bg-white rounded-lg shadow dark:bg-gray-800 dark:shadow-gray-700">
-        {isLoading ? (
-          <div className="flex items-center justify-center h-64">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 dark:border-blue-400"></div>
-          </div>
-        ) : (
-          <CustomTable
-            columns={[
-              {
-                header: "Budget Name",
-                accessor: "name",
-                cell: (value: unknown, row: unknown) => {
-                  const budget = row as Budget;
-                  return (
-                    <div>
-                      <div className="font-medium text-gray-900 dark:text-gray-100">{String(value)}</div>
-                      {budget.description && <div className="text-sm text-gray-500 dark:text-gray-400 truncate max-w-xs">{budget.description}</div>}
-                    </div>
-                  );
-                }
-              },
-              {
-                header: "Period",
-                accessor: "period_type",
-                cell: (period: unknown) => renderPeriodBadge(period as BudgetPeriod)
-              },
-              {
-                header: "Start Date",
-                accessor: "start_date",
-                cell: (date: unknown) => new Date(String(date)).toLocaleDateString()
-              },
-              {
-                header: "End Date",
-                accessor: "end_date",
-                cell: (date: unknown) => new Date(String(date)).toLocaleDateString()
-              },
-              {
-                header: "Total Budget",
-                accessor: "total_budget",
-                cell: (amount: unknown) => formatCurrency(Number(amount))
-              },
-              {
-                header: "Spending",
-                accessor: "id",
-                cell: (id: unknown) => <BudgetSpendingCell budgetId={Number(id)} />
-              },
-              {
-                header: "Status",
-                accessor: "is_active",
-                cell: (isActive: unknown) => renderStatusBadge(Boolean(isActive))
-              },
-              {
-                header: "Actions",
-                accessor: "actions",
-                cell: (id: unknown, row: unknown) => {
-                  const budget = row as Budget;
-                  return (
-                    <div className="flex space-x-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          setSelectedBudget(budget);
-                          setShowEditModal(true);
-                        }}
-                      >
-                        Edit
-                      </Button>
-                      <Button size="sm" variant="ghost">
-                        View
-                      </Button>
-                    </div>
-                  );
-                }
-              }
-            ]}
-            data={budgets}
-          />
-        )}
-      </div>
+      <Table data={budgets} columns={budgetColumns} loading={isLoading} emptyMessage="No budgets found" className="bg-white rounded-lg shadow dark:bg-gray-800 dark:shadow-gray-700" maxHeight="calc(100vh - 300px)" stickyHeader />
     </div>
   );
 
@@ -316,36 +197,7 @@ export const BudgetsTab: React.FC = () => {
               <h4 className="text-lg font-medium text-gray-900 dark:text-gray-100">Budget Performance</h4>
             </div>
             <div className="p-6">
-              <CustomTable
-                columns={[
-                  { header: "Budget", accessor: "name" },
-                  { header: "Period", accessor: "period", cell: (period: unknown) => renderPeriodBadge(period as BudgetPeriod) },
-                  { header: "Allocated", accessor: "allocated", cell: (value: unknown) => formatCurrency(Number(value)) },
-                  { header: "Spent", accessor: "spent", cell: (value: unknown) => formatCurrency(Number(value)) },
-                  {
-                    header: "Utilization",
-                    accessor: "utilization",
-                    cell: (value: unknown) => {
-                      const utilization = Number(value);
-                      return <span className={`text-sm font-medium ${utilization > 100 ? "text-red-600 dark:text-red-400" : utilization > 90 ? "text-yellow-600 dark:text-yellow-400" : "text-green-600 dark:text-green-400"}`}>{utilization.toFixed(1)}%</span>;
-                    }
-                  },
-                  {
-                    header: "Variance",
-                    accessor: "variance",
-                    cell: (value: unknown) => {
-                      const variance = Number(value);
-                      return (
-                        <span className={`text-sm font-medium ${variance < 0 ? "text-red-600 dark:text-red-400" : "text-green-600 dark:text-green-400"}`}>
-                          {variance > 0 ? "+" : ""}
-                          {formatCurrency(variance)}
-                        </span>
-                      );
-                    }
-                  }
-                ]}
-                data={((analytics as unknown as Record<string, unknown>)?.budgetPerformance as unknown[]) || []}
-              />
+              <Table data={((analytics as unknown as Record<string, unknown>)?.budgetPerformance as unknown[]) || []} columns={analyticsColumns} emptyMessage="No analytics data available" className="bg-white rounded-lg shadow dark:bg-gray-800 dark:border-gray-700" maxHeight="400px" stickyHeader />
             </div>
           </div>
         </>
@@ -397,6 +249,141 @@ export const BudgetsTab: React.FC = () => {
         return renderBudgetsView();
     }
   };
+
+  // Add these column definitions at the top of the BudgetsTab component
+
+  const budgetColumns: ColumnDef<Budget>[] = [
+    {
+      accessorKey: "name",
+      header: "Budget Name",
+      cell: ({ row }) => {
+        const budget = row.original;
+        return (
+          <div>
+            <div className="font-medium text-gray-900 dark:text-gray-100">{budget.name}</div>
+            {budget.description && <div className="text-sm text-gray-500 dark:text-gray-400 truncate max-w-xs">{budget.description}</div>}
+          </div>
+        );
+      },
+      size: 200
+    },
+    {
+      accessorKey: "period_type",
+      header: "Period",
+      cell: ({ getValue }) => renderPeriodBadge(getValue() as BudgetPeriod),
+      size: 120
+    },
+    {
+      accessorKey: "start_date",
+      header: "Start Date",
+      cell: ({ getValue }) => new Date(String(getValue())).toLocaleDateString(),
+      size: 120
+    },
+    {
+      accessorKey: "end_date",
+      header: "End Date",
+      cell: ({ getValue }) => new Date(String(getValue())).toLocaleDateString(),
+      size: 120
+    },
+    {
+      accessorKey: "total_budget",
+      header: "Total Budget",
+      cell: ({ getValue }) => formatCurrency(Number(getValue())),
+      size: 120,
+      meta: { align: "right" }
+    },
+    {
+      accessorKey: "id",
+      header: "Spending",
+      cell: ({ getValue }) => <BudgetSpendingCell budgetId={Number(getValue())} />,
+      size: 150,
+      meta: { align: "right" }
+    },
+    {
+      accessorKey: "is_active",
+      header: "Status",
+      cell: ({ getValue }) => renderStatusBadge(Boolean(getValue())),
+      size: 100
+    },
+    {
+      id: "actions",
+      header: "Actions",
+      cell: ({ row }) => {
+        const budget = row.original;
+        return (
+          <div className="flex space-x-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                setSelectedBudget(budget);
+                setShowEditModal(true);
+              }}
+            >
+              Edit
+            </Button>
+            <Button size="sm" variant="ghost">
+              View
+            </Button>
+          </div>
+        );
+      },
+      size: 150
+    }
+  ];
+
+  const analyticsColumns: ColumnDef<unknown>[] = [
+    {
+      accessorKey: "name",
+      header: "Budget",
+      size: 200
+    },
+    {
+      accessorKey: "period",
+      header: "Period",
+      cell: ({ getValue }) => renderPeriodBadge(getValue() as BudgetPeriod),
+      size: 120
+    },
+    {
+      accessorKey: "allocated",
+      header: "Allocated",
+      cell: ({ getValue }) => formatCurrency(Number(getValue())),
+      size: 120,
+      meta: { align: "right" }
+    },
+    {
+      accessorKey: "spent",
+      header: "Spent",
+      cell: ({ getValue }) => formatCurrency(Number(getValue())),
+      size: 120,
+      meta: { align: "right" }
+    },
+    {
+      accessorKey: "utilization",
+      header: "Utilization",
+      cell: ({ getValue }) => {
+        const utilization = Number(getValue());
+        return <span className={`text-sm font-medium ${utilization > 100 ? "text-red-600 dark:text-red-400" : utilization > 90 ? "text-yellow-600 dark:text-yellow-400" : "text-green-600 dark:text-green-400"}`}>{utilization.toFixed(1)}%</span>;
+      },
+      size: 120,
+      meta: { align: "right" }
+    },
+    {
+      accessorKey: "variance",
+      header: "Variance",
+      cell: ({ getValue }) => {
+        const variance = Number(getValue());
+        return (
+          <span className={`text-sm font-medium ${variance < 0 ? "text-red-600 dark:text-red-400" : "text-green-600 dark:text-green-400"}`}>
+            {variance > 0 ? "+" : ""}
+            {formatCurrency(variance)}
+          </span>
+        );
+      },
+      size: 120,
+      meta: { align: "right" }
+    }
+  ];
 
   return (
     <>
@@ -460,10 +447,10 @@ const BudgetVarianceCard: React.FC<{ budget: Budget }> = ({ budget }) => {
   const renderPeriodBadge = (period: BudgetPeriod) => {
     const label = BudgetPeriodLabels[period] || period;
     const colors = {
-      WEEKLY: "bg-blue-100 text-blue-800",
-      MONTHLY: "bg-green-100 text-green-800",
-      QUARTERLY: "bg-purple-100 text-purple-800",
-      YEARLY: "bg-orange-100 text-orange-800"
+      WEEKLY: "bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-200",
+      MONTHLY: "bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-200",
+      QUARTERLY: "bg-purple-100 text-purple-800 dark:bg-purple-800 dark:text-purple-200",
+      YEARLY: "bg-orange-100 text-orange-800 dark:bg-orange-800 dark:text-orange-200"
     };
 
     return <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${colors[period] || "bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200"}`}>{label}</span>;

@@ -180,9 +180,9 @@ export const BudgetPeriodLabels: Record<BudgetPeriod, string> = {
 };
 
 export const BudgetStatusColors = {
-  OVER_BUDGET: "bg-red-100 text-red-800 border-red-200",
-  UNDER_UTILIZED: "bg-yellow-100 text-yellow-800 border-yellow-200",
-  ON_TRACK: "bg-green-100 text-green-800 border-green-200"
+  OVER_BUDGET: "bg-red-100 text-red-800 border-red-200 dark:bg-red-800 dark:text-red-100 dark:border-red-600",
+  UNDER_UTILIZED: "bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-800 dark:text-yellow-100 dark:border-yellow-600",
+  ON_TRACK: "bg-green-100 text-green-800 border-green-200 dark:bg-green-800 dark:text-green-100 dark:border-green-600"
 };
 
 export const BudgetStatusLabels = {
@@ -192,9 +192,9 @@ export const BudgetStatusLabels = {
 };
 
 export const PriorityColors = {
-  HIGH: "bg-red-100 text-red-800",
-  MEDIUM: "bg-yellow-100 text-yellow-800",
-  LOW: "bg-blue-100 text-blue-800"
+  HIGH: "bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100 dark:border-red-600",
+  MEDIUM: "bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100 dark:border-yellow-600",
+  LOW: "bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100 dark:border-blue-600"
 };
 
 // Material categories for budget allocation
