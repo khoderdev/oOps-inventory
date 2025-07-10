@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useApp } from "../../hooks/useApp";
 import { useRecipes } from "../../hooks/useRecipes";
 import { useAssignRecipeToSection } from "../../hooks/useSections";
-import type { Section } from "../../types";
+import type { Recipe, Section } from "../../types";
 import Button from "../ui/Button";
 import Modal from "../ui/Modal";
 import Select from "../ui/Select";
@@ -12,22 +12,28 @@ interface RecipeAssignmentModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  assignedRecipes: { id: number; recipe?: Recipe }[];
 }
 
-const RecipeAssignmentModal = ({ section, isOpen, onClose, onSuccess }: RecipeAssignmentModalProps) => {
+const RecipeAssignmentModal = ({ section, isOpen, onClose, onSuccess, assignedRecipes }: RecipeAssignmentModalProps) => {
   const [selectedRecipeId, setSelectedRecipeId] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const { state } = useApp();
   const assignMutation = useAssignRecipeToSection();
 
   const { data } = useRecipes();
+  const isRecipeAlreadyAssigned = (recipeId: number): boolean => {
+    return assignedRecipes?.some(assignment => assignment.recipe?.id === recipeId);
+  };
+
   const recipeOptions = useMemo(() => {
     if (!data?.recipes) return [];
     return data.recipes.map(recipe => ({
       value: String(recipe.id),
-      label: recipe.name
+      label: recipe.name,
+      disabled: isRecipeAlreadyAssigned(recipe.id)
     }));
-  }, [data]);
+  }, [data, assignedRecipes]);
 
   useEffect(() => {
     if (isOpen) {

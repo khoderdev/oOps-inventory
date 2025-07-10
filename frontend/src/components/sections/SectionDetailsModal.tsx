@@ -364,7 +364,7 @@ const SectionDetailsModal = ({ section, isOpen, onClose }: SectionDetailsModalPr
       <StockAssignmentModal section={section} isOpen={showAssignModal} onClose={() => setShowAssignModal(false)} onSuccess={handleAssignSuccess} />
 
       {/* Recipe Assignment Modal */}
-      <RecipeAssignmentModal section={section} recipes={assignedRecipes} isOpen={showRecipeAssignModal} onClose={() => setShowRecipeAssignModal(false)} onSuccess={handleRecipeAssignSuccess} />
+      <RecipeAssignmentModal section={section} isOpen={showRecipeAssignModal} onClose={() => setShowRecipeAssignModal(false)} onSuccess={handleRecipeAssignSuccess} assignedRecipes={assignedRecipes} />
 
       {/* Consumption Modal */}
       {selectedInventoryItem && (
