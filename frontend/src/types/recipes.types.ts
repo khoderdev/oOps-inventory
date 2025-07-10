@@ -139,6 +139,13 @@ export interface CreateRecipeRequest {
   ingredients: CreateRecipeIngredient[];
 }
 
+export interface UpdateRecipeRequest {
+  name?: string;
+  category?: string;
+  instructions?: string;
+  ingredients?: CreateRecipeIngredient[];
+}
+
 export interface CreateRecipeIngredient {
   raw_material_id: number;
   quantity: number;

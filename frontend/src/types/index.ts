@@ -23,7 +23,7 @@ export type { CreateSupplierRequest, PaginatedSuppliers, SupplierAnalytics, Supp
 
 export { getSupplierGrade, SupplierGrades } from "./suppliers.types";
 
-export type { CreateMenuItemRequest, CreateRecipeRequest, MenuEngineering, MenuItem, PaginatedRecipes, Recipe, RecipeCostAnalysis, RecipeFilters, RecipeIngredient } from "./recipes.types";
+export type { CreateMenuItemRequest, CreateRecipeRequest, MenuEngineering, MenuItem, PaginatedRecipes, Recipe, RecipeCostAnalysis, RecipeFilters, RecipeIngredient, UpdateRecipeRequest } from "./recipes.types";
 
 export { MenuCategory, MenuCategoryLabels } from "./recipes.types";
 

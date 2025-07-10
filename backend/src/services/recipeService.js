@@ -116,13 +116,85 @@ export const calculateRecipeCost = async recipeId => {
 /**
  * Get all recipes with cost analysis
  */
+// export const getRecipes = async (filters = {}) => {
+//   try {
+//     const { category, is_active, page = 1, limit = 20 } = filters;
+
+//     const where = {};
+//     if (category) where.category = category;
+//     if (typeof is_active !== "undefined") {
+//       where.is_active = is_active === "true" || is_active === true;
+//     }
+
+//     const [recipes, total] = await Promise.all([
+//       prisma().recipe.findMany({
+//         where,
+//         include: {
+//           ingredients: { include: { raw_material: true } },
+//           menu_items: { select: { id: true, name: true, selling_price: true } },
+//           creator: { select: { id: true, username: true, first_name: true, last_name: true } }
+//         },
+//         orderBy: { created_at: "desc" },
+//         skip: (page - 1) * limit,
+//         take: limit
+//       }),
+//       prisma().recipe.count({ where })
+//     ]);
+
+//     // Add cost analysis to each recipe
+//     const recipesWithAnalysis = recipes.map(recipe => {
+//       let totalCost = 0;
+//       const costBreakdown = recipe.ingredients.map(ingredient => {
+//         const quantity = parseFloat(ingredient.quantity);
+//         const unitCost = getEffectiveUnitCost(ingredient);
+//         const ingredientCost = unitCost * quantity;
+
+//         totalCost += ingredientCost;
+
+//         return {
+//           materialName: ingredient.raw_material.name,
+//           quantity,
+//           unit: ingredient.unit,
+//           baseUnit: ingredient.baseUnit,
+//           unitCost,
+//           totalCost: ingredientCost
+//         };
+//       });
+
+//       return {
+//         ...recipe,
+//         costAnalysis: {
+//           totalCost,
+//           breakdown: costBreakdown
+//         }
+//       };
+//     });
+
+//     return {
+//       success: true,
+//       data: {
+//         recipes: recipesWithAnalysis,
+//         pagination: { total, page, limit, totalPages: Math.ceil(total / limit) }
+//       }
+//     };
+//   } catch (error) {
+//     logger.error("Error fetching recipes:", error);
+//     return {
+//       success: false,
+//       message: error.message
+//     };
+//   }
+// };
 export const getRecipes = async (filters = {}) => {
   try {
-    const { category, is_active, page = 1, limit = 20 } = filters;
+    const { category } = filters;
+    const is_active = filters.is_active === "true" || filters.is_active === true;
+    const page = parseInt(filters.page) || 1;
+    const limit = parseInt(filters.limit) || 20;
 
     const where = {};
     if (category) where.category = category;
-    if (typeof is_active !== "undefined") where.is_active = is_active;
+    if (typeof filters.is_active !== "undefined") where.is_active = is_active;
 
     const [recipes, total] = await Promise.all([
       prisma().recipe.findMany({
@@ -130,7 +202,9 @@ export const getRecipes = async (filters = {}) => {
         include: {
           ingredients: { include: { raw_material: true } },
           menu_items: { select: { id: true, name: true, selling_price: true } },
-          creator: { select: { id: true, username: true, first_name: true, last_name: true } }
+          creator: {
+            select: { id: true, username: true, first_name: true, last_name: true }
+          }
         },
         orderBy: { created_at: "desc" },
         skip: (page - 1) * limit,
@@ -139,7 +213,6 @@ export const getRecipes = async (filters = {}) => {
       prisma().recipe.count({ where })
     ]);
 
-    // Add cost analysis to each recipe
     const recipesWithAnalysis = recipes.map(recipe => {
       let totalCost = 0;
       const costBreakdown = recipe.ingredients.map(ingredient => {
@@ -172,7 +245,12 @@ export const getRecipes = async (filters = {}) => {
       success: true,
       data: {
         recipes: recipesWithAnalysis,
-        pagination: { total, page, limit, totalPages: Math.ceil(total / limit) }
+        pagination: {
+          total,
+          page,
+          limit,
+          totalPages: Math.ceil(total / limit)
+        }
       }
     };
   } catch (error) {

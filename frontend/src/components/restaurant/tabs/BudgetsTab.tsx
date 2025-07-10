@@ -262,7 +262,7 @@ export const BudgetsTab: React.FC = () => {
                 </div>
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Budgets</p>
-                  <p className="text-2xl font-semibold text-gray-900">{Number((analytics as unknown as Record<string, unknown>)?.summary?.totalBudgets) || 0}</p>
+                  <p className="text-2xl font-semibold text-gray-900">{Number((analytics as unknown as Record<string, unknown>)?.summary?.totalBudget) || 0}</p>
                 </div>
               </div>
             </div>
