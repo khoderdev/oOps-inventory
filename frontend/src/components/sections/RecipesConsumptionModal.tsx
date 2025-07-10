@@ -57,9 +57,9 @@ const RecipesConsumptionModal = ({ section, recipe, isOpen, onClose, onSuccess }
             <div className="space-y-3 max-h-96 overflow-y-auto pr-2">
               {recipe.ingredients.map((ingredient, index) => (
                 <div key={index} className="flex justify-between items-center py-3 px-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                  <span className="text-gray-800 dark:text-gray-200 font-medium">{ingredient.raw_material.name}</span>
+                  <span className="text-gray-800 dark:text-gray-200 font-medium">{ingredient.raw_material?.name}</span>
                   <span className="bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 px-3 py-1 rounded-full text-sm font-medium">
-                    {ingredient.quantity} {ingredient.raw_material.unit}
+                    {ingredient.quantity} {ingredient.raw_material?.unit}
                   </span>
                 </div>
               ))}
