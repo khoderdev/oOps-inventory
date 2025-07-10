@@ -44,7 +44,13 @@ export const calculateRecipeCost = async recipeId => {
   try {
     const recipe = await prisma().recipe.findUnique({
       where: { id: parseInt(recipeId) },
-      include: { ingredients: { include: { raw_material: true } } }
+      include: {
+        ingredients: {
+          include: {
+            raw_material: true
+          }
+        }
+      }
     });
 
     if (!recipe) {
@@ -87,10 +93,11 @@ export const calculateRecipeCost = async recipeId => {
       item.percentage = totalCost > 0 ? (item.totalCost / totalCost) * 100 : 0;
     });
 
-    // Update recipe with calculated cost
+    // Update recipe with calculated cost (rounded to 2 decimal places)
+    const roundedTotalCost = parseFloat(totalCost.toFixed(2));
     const updatedRecipe = await prisma().recipe.update({
       where: { id: parseInt(recipeId) },
-      data: { cost_per_serving: totalCost },
+      data: { serving_cost: roundedTotalCost },
       include: { ingredients: { include: { raw_material: true } } }
     });
 
@@ -98,8 +105,9 @@ export const calculateRecipeCost = async recipeId => {
       success: true,
       data: {
         ...updatedRecipe,
+        serving_cost: roundedTotalCost.toString(), // Ensure consistent string format
         costAnalysis: {
-          totalCost,
+          totalCost: roundedTotalCost,
           breakdown: costBreakdown
         }
       }
@@ -116,75 +124,6 @@ export const calculateRecipeCost = async recipeId => {
 /**
  * Get all recipes with cost analysis
  */
-// export const getRecipes = async (filters = {}) => {
-//   try {
-//     const { category, is_active, page = 1, limit = 20 } = filters;
-
-//     const where = {};
-//     if (category) where.category = category;
-//     if (typeof is_active !== "undefined") {
-//       where.is_active = is_active === "true" || is_active === true;
-//     }
-
-//     const [recipes, total] = await Promise.all([
-//       prisma().recipe.findMany({
-//         where,
-//         include: {
-//           ingredients: { include: { raw_material: true } },
-//           menu_items: { select: { id: true, name: true, selling_price: true } },
-//           creator: { select: { id: true, username: true, first_name: true, last_name: true } }
-//         },
-//         orderBy: { created_at: "desc" },
-//         skip: (page - 1) * limit,
-//         take: limit
-//       }),
-//       prisma().recipe.count({ where })
-//     ]);
-
-//     // Add cost analysis to each recipe
-//     const recipesWithAnalysis = recipes.map(recipe => {
-//       let totalCost = 0;
-//       const costBreakdown = recipe.ingredients.map(ingredient => {
-//         const quantity = parseFloat(ingredient.quantity);
-//         const unitCost = getEffectiveUnitCost(ingredient);
-//         const ingredientCost = unitCost * quantity;
-
-//         totalCost += ingredientCost;
-
-//         return {
-//           materialName: ingredient.raw_material.name,
-//           quantity,
-//           unit: ingredient.unit,
-//           baseUnit: ingredient.baseUnit,
-//           unitCost,
-//           totalCost: ingredientCost
-//         };
-//       });
-
-//       return {
-//         ...recipe,
-//         costAnalysis: {
-//           totalCost,
-//           breakdown: costBreakdown
-//         }
-//       };
-//     });
-
-//     return {
-//       success: true,
-//       data: {
-//         recipes: recipesWithAnalysis,
-//         pagination: { total, page, limit, totalPages: Math.ceil(total / limit) }
-//       }
-//     };
-//   } catch (error) {
-//     logger.error("Error fetching recipes:", error);
-//     return {
-//       success: false,
-//       message: error.message
-//     };
-//   }
-// };
 export const getRecipes = async (filters = {}) => {
   try {
     const { category } = filters;
@@ -213,33 +152,45 @@ export const getRecipes = async (filters = {}) => {
       prisma().recipe.count({ where })
     ]);
 
-    const recipesWithAnalysis = recipes.map(recipe => {
-      let totalCost = 0;
-      const costBreakdown = recipe.ingredients.map(ingredient => {
-        const quantity = parseFloat(ingredient.quantity);
-        const unitCost = getEffectiveUnitCost(ingredient);
-        const ingredientCost = unitCost * quantity;
+    const recipesWithAnalysis = await Promise.all(
+      recipes.map(async recipe => {
+        let totalCost = 0;
+        const costBreakdown = recipe.ingredients.map(ingredient => {
+          const quantity = parseFloat(ingredient.quantity);
+          const unitCost = getEffectiveUnitCost(ingredient);
+          const ingredientCost = unitCost * quantity;
 
-        totalCost += ingredientCost;
+          totalCost += ingredientCost;
+
+          return {
+            materialName: ingredient.raw_material.name,
+            quantity,
+            unit: ingredient.unit,
+            baseUnit: ingredient.baseUnit,
+            unitCost,
+            totalCost: ingredientCost
+          };
+        });
+
+        // If recipe doesn't have serving_cost calculated yet, calculate and update it
+        if (!recipe.serving_cost) {
+          const roundedTotalCost = parseFloat(totalCost.toFixed(2));
+          await prisma().recipe.update({
+            where: { id: recipe.id },
+            data: { serving_cost: roundedTotalCost }
+          });
+          recipe.serving_cost = roundedTotalCost.toString();
+        }
 
         return {
-          materialName: ingredient.raw_material.name,
-          quantity,
-          unit: ingredient.unit,
-          baseUnit: ingredient.baseUnit,
-          unitCost,
-          totalCost: ingredientCost
+          ...recipe,
+          costAnalysis: {
+            totalCost,
+            breakdown: costBreakdown
+          }
         };
-      });
-
-      return {
-        ...recipe,
-        costAnalysis: {
-          totalCost,
-          breakdown: costBreakdown
-        }
-      };
-    });
+      })
+    );
 
     return {
       success: true,

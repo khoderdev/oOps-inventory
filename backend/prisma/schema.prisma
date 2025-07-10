@@ -122,7 +122,7 @@ model SectionRecipe {
   section           Section   @relation(fields: [section_id], references: [id])
   recipe            Recipe    @relation(fields: [recipe_id], references: [id])
   assigned_by_user  User      @relation("UserAssignedSectionRecipes", fields: [assigned_by], references: [id])
-
+  @@map("section_recipes")
   @@unique([section_id, recipe_id])
 }
 
@@ -402,7 +402,7 @@ model Recipe {
   description     String?
   category        String?
   instructions    String?
-  cost_per_serving Decimal?       @map("cost_per_serving") @db.Decimal(10, 5)
+  serving_cost Decimal?       @map("serving_cost") @db.Decimal(10, 5)
   section_assignments SectionRecipe[]
   is_active       Boolean         @default(true) @map("is_active")
   created_by      Int             @map("created_by")

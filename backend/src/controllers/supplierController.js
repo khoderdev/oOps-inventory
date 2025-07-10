@@ -1,5 +1,5 @@
 import { asyncHandler } from "../middleware/errorHandler.js";
-import * as supplierService from "../services/supplierService.js";
+import * as supplierService from "../services/index.js";
 
 /**
  * Create a new supplier

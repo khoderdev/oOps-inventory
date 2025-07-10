@@ -1,5 +1,6 @@
 import type { BaseEntity, User } from "./common.types";
 import type { RawMaterial } from "./rawMaterials.types";
+import type { Recipe } from "./recipes.types";
 
 export interface Section extends BaseEntity {
   name: string;
@@ -29,6 +30,14 @@ export interface SectionInventory extends BaseEntity {
   minLevel?: number | null;
   maxLevel?: number | null;
   lastUpdated: Date;
+}
+
+export interface SectionRecipe extends BaseEntity {
+  sectionId: number;
+  section?: Section;
+  recipeId: number;
+  recipe?: Recipe;
+  serving_cost: number;
 }
 
 export interface SectionConsumption extends BaseEntity {
@@ -78,7 +87,6 @@ export interface CreateSectionAssignmentInput {
 export interface CreateSectionRecipeAssignmentInput {
   sectionId: number;
   recipeId: number;
-  quantity: number;
   assignedBy: number;
   notes?: string | null;
 }

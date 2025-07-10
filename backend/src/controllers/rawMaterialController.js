@@ -1,5 +1,5 @@
 import { asyncHandler } from "../middleware/errorHandler.js";
-import * as rawMaterialService from "../services/rawMaterialService.js";
+import * as rawMaterialService from "../services/index.js";
 
 /**
  * Get all raw materials with optional filtering

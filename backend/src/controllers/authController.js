@@ -1,5 +1,5 @@
 import { asyncHandler } from "../middleware/errorHandler.js";
-import { loginUser, logoutUser, refreshToken, registerUser } from "../services/authService.js";
+import { loginUser, logoutUser, refreshToken, registerUser } from "../services/index.js";
 import { loginSchema, registerSchema, validateData } from "../utils/validation.js";
 
 export const register = asyncHandler(async (req, res) => {

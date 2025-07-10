@@ -2,6 +2,7 @@ export interface Recipe {
   id: number;
   name: string;
   category?: string;
+  servingCost: number;
   instructions?: string;
   is_active: boolean;
   created_by: number;

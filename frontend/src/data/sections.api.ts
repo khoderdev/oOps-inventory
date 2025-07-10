@@ -1,5 +1,5 @@
 import { apiClient } from "../lib/api";
-import { type ApiResponse, type ConsumptionRequest, type CreateSectionAssignmentInput, type CreateSectionInput, type CreateSectionRecipeAssignmentInput, type InventoryUpdateRequest, type RawMaterial, type Section, type SectionConsumption, type SectionConsumptionFilters, type SectionFilters, type SectionInventory, type UpdateSectionInput } from "../types";
+import { type ApiResponse, type ConsumptionRequest, type CreateSectionAssignmentInput, type CreateSectionInput, type CreateSectionRecipeAssignmentInput, type InventoryUpdateRequest, type RawMaterial, type Section, type SectionConsumption, type SectionConsumptionFilters, type SectionFilters, type SectionInventory, type SectionRecipe, type UpdateSectionInput } from "../types";
 
 export class SectionsAPI {
   static async create(data: CreateSectionInput): Promise<ApiResponse<Section>> {
@@ -151,6 +151,18 @@ export class SectionsAPI {
         data: [],
         success: false,
         message: error instanceof Error ? error.message : "Failed to fetch section inventory"
+      };
+    }
+  }
+
+  static async getSectionRecipes(sectionId: string): Promise<ApiResponse<SectionRecipe[]>> {
+    try {
+      return await apiClient.get<SectionRecipe[]>(`/sections/${sectionId}/recipes`);
+    } catch (error) {
+      return {
+        data: [],
+        success: false,
+        message: error instanceof Error ? error.message : "Failed to fetch section recipes"
       };
     }
   }

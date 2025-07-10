@@ -1,5 +1,5 @@
 import { asyncHandler } from "../middleware/errorHandler.js";
-import * as budgetService from "../services/budgetService.js";
+import * as budgetService from "../services/index.js";
 
 /**
  * Create a new budget

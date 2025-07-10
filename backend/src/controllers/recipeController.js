@@ -1,5 +1,5 @@
 import { asyncHandler } from "../middleware/errorHandler.js";
-import * as recipeService from "../services/recipeService.js";
+import * as recipeService from "../services/index.js";
 
 export const createRecipe = asyncHandler(async (req, res) => {
   const result = await recipeService.createRecipe({

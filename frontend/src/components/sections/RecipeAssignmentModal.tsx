@@ -3,7 +3,6 @@ import { useApp } from "../../hooks/useApp";
 import { useAssignRecipeToSection } from "../../hooks/useSections";
 import type { Recipe, Section } from "../../types";
 import Button from "../ui/Button";
-import Input from "../ui/Input";
 import Modal from "../ui/Modal";
 import Select from "../ui/Select";
 
@@ -17,7 +16,6 @@ interface RecipeAssignmentModalProps {
 
 const RecipeAssignmentModal = ({ section, recipes, isOpen, onClose, onSuccess }: RecipeAssignmentModalProps) => {
   const [selectedRecipeId, setSelectedRecipeId] = useState("");
-  const [quantity, setQuantity] = useState(1);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const { state } = useApp();
   const assignMutation = useAssignRecipeToSection();
@@ -26,7 +24,6 @@ const RecipeAssignmentModal = ({ section, recipes, isOpen, onClose, onSuccess }:
   useEffect(() => {
     if (isOpen) {
       setSelectedRecipeId("");
-      setQuantity(1);
       setErrors({});
     }
   }, [isOpen]);
@@ -44,10 +41,6 @@ const RecipeAssignmentModal = ({ section, recipes, isOpen, onClose, onSuccess }:
       newErrors.selectedRecipeId = "Please select a recipe";
     }
 
-    if (quantity <= 0) {
-      newErrors.quantity = "Quantity must be greater than 0";
-    }
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -63,8 +56,7 @@ const RecipeAssignmentModal = ({ section, recipes, isOpen, onClose, onSuccess }:
       const assignmentData = {
         sectionId: section.id,
         recipeId: Number(selectedRecipeId),
-        quantity: quantity,
-        assignedBy: Number(state.user?.id || "1"),
+        assignedBy: Number(state.user?.id || ""),
         notes: `Recipe assigned to ${section.name}`
       };
 
@@ -80,9 +72,6 @@ const RecipeAssignmentModal = ({ section, recipes, isOpen, onClose, onSuccess }:
   const handleInputChange = (field: string, value: string | number) => {
     if (field === "selectedRecipeId") {
       setSelectedRecipeId(value as string);
-    } else if (field === "quantity") {
-      const numValue = typeof value === "string" ? parseFloat(value) : value;
-      setQuantity(numValue || 0);
     }
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: "" }));
@@ -132,19 +121,12 @@ const RecipeAssignmentModal = ({ section, recipes, isOpen, onClose, onSuccess }:
             </div>
           )}
 
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Quantity to Assign</label>
-            </div>
-            <Input type="number" min="1" step="1" value={quantity} onChange={e => handleInputChange("quantity", parseFloat(e.target.value) || 0)} error={errors.quantity} required helperText="Enter the number of servings/portions" disabled={!selectedRecipeId} />
-          </div>
-
-          {quantity > 0 && selectedRecipe && selectedRecipe.costAnalysis && (
+          {selectedRecipe && selectedRecipe.costAnalysis && (
             <div className="bg-gray-50 p-4 rounded-lg dark:bg-gray-900/10">
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
                   <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Total Cost:</span>
-                  <span className="text-lg font-bold text-gray-900 dark:text-gray-300">${(quantity * selectedRecipe.costAnalysis.totalCost).toFixed(2)}</span>
+                  <span className="text-lg font-bold text-gray-900 dark:text-gray-300">${selectedRecipe.costAnalysis.totalCost.toFixed(2)}</span>
                 </div>
               </div>
             </div>
@@ -155,7 +137,7 @@ const RecipeAssignmentModal = ({ section, recipes, isOpen, onClose, onSuccess }:
           <Button type="button" variant="outline" onClick={onClose} disabled={isLoading}>
             Cancel
           </Button>
-          <Button type="submit" loading={isLoading} disabled={!selectedRecipeId || quantity <= 0}>
+          <Button type="submit" loading={isLoading} disabled={!selectedRecipeId}>
             Assign Recipe
           </Button>
         </div>

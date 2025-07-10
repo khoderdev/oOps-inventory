@@ -1,5 +1,5 @@
 import { asyncHandler } from "../middleware/errorHandler.js";
-import { changePassword, deleteUser, getAllUsers, getUserById, updateUser, updateUserRole, updateUserStatus } from "../services/userService.js";
+import * as userService from "../services/index.js";
 import { changePasswordSchema, updateProfileSchema, updateRoleSchema, validateData } from "../utils/validation.js";
 
 export const getUsers = asyncHandler(async (req, res) => {
@@ -11,7 +11,7 @@ export const getUsers = asyncHandler(async (req, res) => {
     search,
     isActive: isActive !== undefined ? isActive === "true" : undefined
   };
-  const result = await getAllUsers(options);
+  const result = await userService.getAllUsers(options);
   res.json({
     success: true,
     data: result
@@ -29,7 +29,7 @@ export const getUser = asyncHandler(async (req, res) => {
     });
   }
 
-  const user = await getUserById(userId);
+  const user = await userService.getUserById(userId);
 
   if (!user) {
     return res.status(404).json({
@@ -74,7 +74,7 @@ export const updateProfile = asyncHandler(async (req, res) => {
     });
   }
 
-  const updatedUser = await updateUser(userId, validation.data);
+  const updatedUser = await userService.updateUser(userId, validation.data);
 
   if (!updatedUser) {
     return res.status(404).json({
@@ -129,7 +129,7 @@ export const updateRole = asyncHandler(async (req, res) => {
   }
 
   const { role } = validation.data;
-  const updatedUser = await updateUserRole(userId, role);
+  const updatedUser = await userService.updateUserRole(userId, role);
 
   if (!updatedUser) {
     return res.status(404).json({
@@ -173,7 +173,7 @@ export const deleteUserById = asyncHandler(async (req, res) => {
     });
   }
 
-  const deleted = await deleteUser(userId);
+  const deleted = await userService.deleteUser(userId);
 
   if (!deleted) {
     return res.status(404).json({
@@ -221,7 +221,7 @@ export const changeUserPassword = asyncHandler(async (req, res) => {
   const { currentPassword, newPassword } = validation.data;
 
   try {
-    const success = await changePassword(userId, currentPassword, newPassword);
+    const success = await userService.changePassword(userId, currentPassword, newPassword);
 
     if (!success) {
       return res.status(500).json({
@@ -406,7 +406,7 @@ export const updateCurrentUserProfile = asyncHandler(async (req, res) => {
   }
 
   try {
-    const updatedUser = await updateUser(userId, validation.data);
+    const updatedUser = await userService.updateUser(userId, validation.data);
 
     if (!updatedUser) {
       return res.status(404).json({

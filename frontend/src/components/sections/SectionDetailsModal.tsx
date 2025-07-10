@@ -1,7 +1,7 @@
-import { Minus, Package, Plus } from "lucide-react";
+import { Minus, Package, Plus, Utensils } from "lucide-react";
 import { useState } from "react";
 import { useRecipes } from "../../hooks/useRecipes";
-import { useSectionConsumption, useSectionInventory } from "../../hooks/useSections";
+import { useSectionConsumption, useSectionInventory, useSectionRecipes } from "../../hooks/useSections";
 import type { RawMaterial, Section, SectionDetailsModalProps, SectionInventory } from "../../types";
 import { MeasurementUnit } from "../../types";
 import { splitQuantityAndUnit } from "../../utils/units";
@@ -13,33 +13,33 @@ import SectionInventoryEditModal from "./SectionInventoryEditModal";
 import StockAssignmentModal from "./StockAssignmentModal";
 
 const SectionDetailsModal = ({ section, isOpen, onClose }: SectionDetailsModalProps) => {
-  const [activeTab, setActiveTab] = useState<"inventory" | "consumption">("inventory");
+  const [activeTab, setActiveTab] = useState<"inventory" | "consumption" | "recipes">("inventory");
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [showConsumptionModal, setShowConsumptionModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedInventoryItem, setSelectedInventoryItem] = useState<SectionInventory | null>(null);
   const { data: inventory = [], refetch } = useSectionInventory(section?.id.toString() || "");
   const { data: consumption = [], refetch: refetchConsumption } = useSectionConsumption(section?.id.toString() || "");
+  const { data: assignedRecipes = [], refetch: refetchAssignedRecipes } = useSectionRecipes(section?.id.toString() || "");
   const [showRecipeAssignModal, setShowRecipeAssignModal] = useState(false);
 
   // Add recipes data hook
-  const { data: recipesData } = useRecipes({});
+  const { data: recipesData } = useRecipes({ search: "" });
   const recipes = recipesData?.recipes || [];
 
   const handleRecipeAssignSuccess = () => {
-    refetch();
+    refetchAssignedRecipes();
     setShowRecipeAssignModal(false);
   };
-
   if (!section) return null;
-
   const getManagerName = (section: Section) => {
     return section.manager?.username;
   };
 
   const tabs = [
     { id: "inventory" as const, label: "Current Inventory" },
-    { id: "consumption" as const, label: "Consumption History" }
+    { id: "consumption" as const, label: "Consumption History" },
+    { id: "recipes" as const, label: "Assigned Recipes" }
   ];
 
   const handleAssignSuccess = () => {
@@ -71,14 +71,11 @@ const SectionDetailsModal = ({ section, isOpen, onClose }: SectionDetailsModalPr
     setSelectedInventoryItem(null);
   };
 
-  // Helper function to format quantity display for pack/box materials
-  // Updated formatQuantityDisplay function
   const formatQuantityDisplay = (quantity: number, material: RawMaterial | undefined) => {
     if (!material) return `${quantity}`;
 
     const isPackOrBox = material.unit === MeasurementUnit.PACKS || material.unit === MeasurementUnit.BOXES;
     if (isPackOrBox) {
-      // Always show in base units (bottles)
       const packInfo = material as unknown as { unitsPerPack?: number; baseUnit?: string };
       const baseUnit = packInfo.baseUnit || "pieces";
       return `${quantity} ${baseUnit}`;
@@ -130,9 +127,6 @@ const SectionDetailsModal = ({ section, isOpen, onClose }: SectionDetailsModalPr
                 <div className="flex space-x-2">
                   <Button size="sm" leftIcon={<Plus className="w-4 h-4" />} onClick={() => setShowAssignModal(true)}>
                     Assign Stock
-                  </Button>
-                  <Button size="sm" leftIcon={<Plus className="w-4 h-4" />} onClick={() => setShowRecipeAssignModal(true)}>
-                    Assign Recipe
                   </Button>
                 </div>
               </div>
@@ -217,6 +211,39 @@ const SectionDetailsModal = ({ section, isOpen, onClose }: SectionDetailsModalPr
                           );
                         })()}
                         {item.orderId && <p className="text-xs text-blue-600 dark:text-blue-400">Order #: {item.orderId}</p>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === "recipes" && (
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-300">Assigned Recipes</h3>
+                <Button size="sm" leftIcon={<Plus className="w-4 h-4" />} onClick={() => setShowRecipeAssignModal(true)}>
+                  Assign Recipe
+                </Button>
+              </div>
+
+              {assignedRecipes.length === 0 ? (
+                <div className="text-center py-8">
+                  <Utensils className="w-12 h-12 text-gray-400 mx-auto mb-4 dark:text-gray-400" />
+                  <p className="text-gray-600 dark:text-gray-400">No recipes assigned to this section</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">Click "Assign Recipe" to add recipes to this section</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {assignedRecipes.map(assignment => (
+                    <div key={assignment.id} className="p-4 border rounded-lg dark:bg-gray-900/10 dark:border-gray-800">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h4 className="font-medium text-gray-900 dark:text-gray-300">{assignment.recipe?.name}</h4>
+                          <p className="text-sm text-gray-500 dark:text-gray-400 capitalize">{assignment.recipe?.category}</p>
+                        </div>
+                        {assignment.recipe?.servingCost && <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">{assignment.recipe.servingCost} serving cost</span>}
                       </div>
                     </div>
                   ))}

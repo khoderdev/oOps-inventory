@@ -1,5 +1,5 @@
 import { asyncHandler } from "../middleware/errorHandler.js";
-import * as purchaseOrderService from "../services/purchaseOrderService.js";
+import * as purchaseOrderService from "../services/index.js";
 
 /**
  * Create a new purchase order

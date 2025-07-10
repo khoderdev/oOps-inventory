@@ -1,5 +1,5 @@
 import { asyncHandler } from "../middleware/errorHandler.js";
-import * as sectionsService from "../services/sectionsService.js";
+import * as sectionsService from "../services/index.js";
 
 /**
  * Create a new section
@@ -175,9 +175,7 @@ export const assignRecipeToSection = asyncHandler(async (req, res) => {
  */
 export const getSectionRecipes = asyncHandler(async (req, res) => {
   const { id: sectionId } = req.params;
-
   const result = await sectionsService.getSectionRecipeAssignments(parseInt(sectionId, 10));
-
   res.json({
     success: true,
     data: result.data
@@ -214,9 +212,7 @@ export const removeSectionRecipe = asyncHandler(async (req, res) => {
  */
 export const getSectionInventory = asyncHandler(async (req, res) => {
   const { id: sectionId } = req.params;
-
   const result = await sectionsService.getSectionInventory(parseInt(sectionId, 10));
-
   res.json({
     success: true,
     data: result.data

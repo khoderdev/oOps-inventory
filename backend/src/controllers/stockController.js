@@ -1,5 +1,5 @@
 import { asyncHandler } from "../middleware/errorHandler.js";
-import * as stockService from "../services/stockService.js";
+import * as stockService from "../services/index.js";
 
 /**
  * Create a new stock entry
