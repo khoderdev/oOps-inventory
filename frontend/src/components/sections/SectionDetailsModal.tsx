@@ -1,13 +1,14 @@
 import { Minus, Package, Plus, Trash2, Utensils } from "lucide-react";
 import { useState } from "react";
 import { useApp } from "../../hooks/useApp";
-import { useRemoveRecipeFromSection, useSectionConsumption, useSectionInventory, useSectionRecipes } from "../../hooks/useSections";
+import { useRemoveRecipeFromSection, useSectionInventory, useSectionRecipes, useSectionRecipesConsumption } from "../../hooks/useSections";
 import type { RawMaterial, Recipe, Section, SectionDetailsModalProps, SectionInventory } from "../../types";
 import { MeasurementUnit } from "../../types";
 import Button from "../ui/Button";
 import Modal from "../ui/Modal";
 import ConsumptionModal from "./ConsumptionModal";
 import RecipeAssignmentModal from "./RecipeAssignmentModal";
+import { SectionRecipesConsumptionHistory } from "./RecipeConsumptions";
 import RecipesConsumptionModal from "./RecipesConsumptionModal";
 import SectionInventoryEditModal from "./SectionInventoryEditModal";
 import StockAssignmentModal from "./StockAssignmentModal";
@@ -20,8 +21,7 @@ const SectionDetailsModal = ({ section, isOpen, onClose }: SectionDetailsModalPr
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedInventoryItem, setSelectedInventoryItem] = useState<SectionInventory | null>(null);
   const { data: inventory = [], refetch } = useSectionInventory(section?.id.toString() || "");
-  // const { data: consumption = [], refetch: refetchConsumption } = useSectionConsumption(section?.id.toString() || "");
-  const { data: consumption = [], refetch: refetchConsumption } = useSectionConsumption(section?.id.toString() || "", {
+  const { data: consumption = [], refetch: refetchConsumption } = useSectionRecipesConsumption(section?.id.toString() || "", {
     select: data =>
       data.map(item => ({
         ...item,
@@ -46,16 +46,11 @@ const SectionDetailsModal = ({ section, isOpen, onClose }: SectionDetailsModalPr
     try {
       const removedBy = state?.user?.id;
       if (!removedBy) throw new Error("Missing removedBy user ID");
-
-      console.log("Removing recipe assignment with ID:", assignmentId);
-      console.log("Removing recipe assignment with removedBy:", removedBy);
-
       await removeRecipeMutation.mutateAsync({
         assignmentId,
         removedBy,
         notes: "Optional reason here"
       });
-
       refetchAssignedRecipes();
     } catch (error) {
       console.error("Error removing recipe:", error);
@@ -73,7 +68,6 @@ const SectionDetailsModal = ({ section, isOpen, onClose }: SectionDetailsModalPr
 
   const tabs = [
     { id: "inventory" as const, label: "Current Inventory" },
-    { id: "consumption" as const, label: "Consumption History" },
     { id: "recipes" as const, label: "Assigned Recipes" }
   ];
 
@@ -106,39 +100,6 @@ const SectionDetailsModal = ({ section, isOpen, onClose }: SectionDetailsModalPr
     setSelectedInventoryItem(null);
   };
 
-  // const formatQuantityDisplay = (quantity: number, material: RawMaterial | undefined) => {
-  //   if (!material) return `${quantity}`;
-
-  //   const isPackOrBox = material.unit === MeasurementUnit.PACKS || material.unit === MeasurementUnit.BOXES;
-  //   if (isPackOrBox) {
-  //     const packInfo = material as unknown as { unitsPerPack?: number; baseUnit?: string };
-  //     const baseUnit = packInfo.baseUnit || "pieces";
-  //     return `${quantity} ${baseUnit}`;
-  //   }
-
-  //   return `${quantity} ${material.unit}`;
-  // };
-
-  const formatQuantityDisplay = (qty: number, material?: RawMaterial | null): string => {
-    if (!material) {
-      return `${qty}`; // Just show the quantity if no material data
-    }
-
-    // Handle cases where unit might be missing
-    const unit = material.unit?.toLowerCase?.() || "";
-    const baseUnit = material.baseUnit?.toLowerCase?.() || "units";
-    const unitsPerPack = material.unitsPerPack || 1;
-
-    // Handle pack/box cases
-    if ((material.unit === "PACKS" || material.unit === "BOXES") && unitsPerPack) {
-      return `${qty} ${baseUnit}`;
-    }
-
-    return unit ? `${qty} ${unit}` : `${qty}`;
-  };
-
-  console.log("Consumption data:", consumption);
-
   return (
     <>
       <Modal isOpen={isOpen} onClose={onClose} title={`${section.name} - Details`} size="xl">
@@ -167,7 +128,7 @@ const SectionDetailsModal = ({ section, isOpen, onClose }: SectionDetailsModalPr
           <div className="border-b border-gray-200 dark:border-gray-800">
             <nav className="flex space-x-8">
               {tabs.map(tab => (
-                <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === tab.id ? "border-blue-500 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"}`}>
+                <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === tab.id ? "border-blue-500 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-200 dark:hover:text-gray-400"}`}>
                   {tab.label}
                 </button>
               ))}
@@ -234,56 +195,17 @@ const SectionDetailsModal = ({ section, isOpen, onClose }: SectionDetailsModalPr
             </div>
           )}
 
-          {activeTab === "consumption" && (
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-300">Consumption History</h3>
-              {consumption.length === 0 ? (
-                <div className="text-center py-8">
-                  <Package className="w-12 h-12 text-gray-400 mx-auto mb-4 dark:text-gray-400" />
-                  <p className="text-gray-600 dark:text-gray-400">No consumption data available</p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Usage will appear here as items are consumed</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {consumption.map(item => {
-                    // Use the first ingredient for display
-                    const mainIngredient = item.ingredients?.[0];
-                    const materialName = mainIngredient?.rawMaterial?.name || item.recipe?.name || "Item";
-                    const quantity = mainIngredient?.quantity || 0;
-                    const unit = mainIngredient?.unit || "";
-
-                    return (
-                      <div key={item.id} className="flex items-center justify-between p-4 border rounded-lg dark:bg-gray-900/10 dark:border-gray-800">
-                        <div>
-                          <p className="font-medium text-gray-900 dark:text-gray-300">
-                            {materialName}
-                            {item.recipe && ` (${item.recipe.name})`}
-                          </p>
-                          <p className="text-sm text-gray-500 dark:text-gray-400">
-                            {new Date(item.consumedDate).toLocaleDateString()} at {new Date(item.consumedDate).toLocaleTimeString()}
-                          </p>
-                          <p className="text-xs text-gray-400">{item.reason}</p>
-                        </div>
-                        <div className="text-right">
-                          <span className="text-2xl font-bold text-gray-900 dark:text-gray-300">{quantity}</span>
-                          {unit && <span className="text-sm text-gray-500 dark:text-red-400"> {unit.toLowerCase()}</span>}
-                          {item.orderId && <p className="text-xs text-blue-600 dark:text-blue-400">{item.orderId}</p>}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          )}
-
           {activeTab === "recipes" && (
             <div className="space-y-4">
               <div className="flex justify-between items-center">
                 <h3 className="text-lg font-medium text-gray-900 dark:text-gray-300">Assigned Recipes</h3>
-                <Button size="sm" leftIcon={<Plus className="w-4 h-4" />} onClick={() => setShowRecipeAssignModal(true)}>
-                  Assign Recipe
-                </Button>
+                <div className="flex space-x-2">
+                  <Button size="sm" leftIcon={<Plus className="w-4 h-4" />} onClick={() => setShowRecipeAssignModal(true)}>
+                    Assign Recipe
+                  </Button>
+                  {/* {assignedRecipes.length > 0 && <SectionRecipesConsumptionHistory sectionId={section.id.toString()} sectionName={section.name} />} */}
+                  {section?.id && <SectionRecipesConsumptionHistory sectionId={String(section.id)} sectionName={section.name} />}
+                </div>
               </div>
 
               {isAssignedRecipesError ? (

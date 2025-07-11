@@ -144,9 +144,7 @@ export interface SectionConsumptionFilters {
   toDate?: Date;
 }
 
-// Add these new types
-export interface RecipeConsumption {
-  id: number;
+export interface RecipeConsumption extends BaseEntity {
   recipeId: number;
   recipe?: Recipe;
   sectionId: number;
@@ -165,8 +163,6 @@ export interface RecipeConsumption {
     baseUnit: MeasurementUnit;
     costPerUnit?: number;
   }[];
-  createdAt: Date;
-  updatedAt: Date;
 }
 
 export interface RecipeConsumptionIngredient {
@@ -192,4 +188,8 @@ export interface RecipeConsumptionFilters {
   sectionId?: string;
   fromDate?: Date;
   toDate?: Date;
+}
+
+export interface RecipeConsumptionApiResponse {
+  data: RecipeConsumption[];
 }

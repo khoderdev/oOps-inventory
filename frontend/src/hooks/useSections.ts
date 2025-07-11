@@ -8,7 +8,8 @@ const QUERY_KEYS = {
   sectionInventory: (sectionId: string) => ["sectionInventory", sectionId],
   sectionConsumption: (sectionId: string) => ["sectionConsumption", sectionId],
   sectionRecipes: (sectionId: string) => ["sectionRecipes", sectionId],
-  recipeConsumption: (recipeId: string) => ["recipeConsumption", recipeId]
+  recipeConsumption: (recipeId: string) => ["recipeConsumption", recipeId],
+  sectionRecipesConsumption: (sectionId: string) => ["sectionRecipesConsumption", sectionId]
 } as const;
 
 // Get all sections
@@ -110,17 +111,59 @@ export const useRecordRecipeConsumption = () => {
 export const useRecipeConsumption = (recipeId: string, filters?: RecipeConsumptionFilters) => {
   return useQuery({
     queryKey: [QUERY_KEYS.recipeConsumption(recipeId), filters],
-    queryFn: () =>
-      SectionsAPI.getRecipeConsumption(recipeId, {
+    queryFn: async () => {
+      const response = await SectionsAPI.getRecipeConsumption(recipeId, {
         ...filters,
         fromDate: filters?.fromDate?.toISOString(),
         toDate: filters?.toDate?.toISOString()
-      }),
-    select: response => response.data,
+      });
+      if (!response.success) {
+        throw new Error(response.message);
+      }
+      return response.data.map(item => ({ ...item, date: new Date(item.date) }));
+    },
     enabled: !!recipeId,
-    staleTime: 2 * 60 * 1000
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: true,
+    retry: 1
   });
 };
+
+export const useSectionRecipesConsumption = (sectionId: string, filters?: RecipeConsumptionFilters) => {
+  return useQuery({
+    queryKey: [QUERY_KEYS.sectionRecipesConsumption(sectionId), filters],
+    queryFn: async () => {
+      try {
+        const data = await SectionsAPI.getSectionRecipesConsumption(sectionId);
+        return data.map(item => ({
+          ...item,
+          consumedDate: new Date(item.consumedDate),
+          recipeName: item.recipe?.name || "Unknown Recipe"
+        }));
+      } catch (error) {
+        console.error("Error in queryFn:", error);
+        throw error;
+      }
+    },
+    enabled: !!sectionId,
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: true,
+    retry: 1
+  });
+};
+
+// export function useSectionRecipesConsumption(sectionId?: string) {
+//   return useQuery({
+//     queryKey: ["sectionRecipesConsumption", sectionId],
+//     queryFn: async () => {
+//       if (!sectionId) return []; // fallback for undefined section
+//       const response = await SectionsAPI.getSectionRecipesConsumption(sectionId);
+//       return response.data || []; // default to array if API returns undefined
+//     },
+//     refetchOnWindowFocus: true,
+//     enabled: !!sectionId // don't run query if sectionId is falsy
+//   });
+// }
 
 // Create section mutation
 export const useCreateSection = () => {

@@ -1,5 +1,24 @@
 import { apiClient } from "../lib/api";
-import { type ApiResponse, type ConsumptionRequest, type CreateSectionAssignmentInput, type CreateSectionInput, type CreateSectionRecipeAssignmentInput, type InventoryUpdateRequest, type RawMaterial, type RecipeConsumptionFilters, type RecordRecipeConsumptionInput, type RemoveSectionRecipeAssignmentInput, type Section, type SectionConsumption, type SectionConsumptionFilters, type SectionFilters, type SectionInventory, type SectionRecipe, type UpdateSectionInput } from "../types";
+import {
+  type ApiResponse,
+  type ConsumptionRequest,
+  type CreateSectionAssignmentInput,
+  type CreateSectionInput,
+  type CreateSectionRecipeAssignmentInput,
+  type InventoryUpdateRequest,
+  type RawMaterial,
+  type RecipeConsumption,
+  type RecipeConsumptionFilters,
+  type RecordRecipeConsumptionInput,
+  type RemoveSectionRecipeAssignmentInput,
+  type Section,
+  type SectionConsumption,
+  type SectionConsumptionFilters,
+  type SectionFilters,
+  type SectionInventory,
+  type SectionRecipe,
+  type UpdateSectionInput
+} from "../types";
 
 export class SectionsAPI {
   static async create(data: CreateSectionInput): Promise<ApiResponse<Section>> {
@@ -15,6 +34,19 @@ export class SectionsAPI {
         data: {} as Section,
         success: false,
         message: error instanceof Error ? error.message : "Failed to create section"
+      };
+    }
+  }
+  static async getSectionRecipesConsumption(sectionId: string): Promise<ApiResponse<RecipeConsumption[]>> {
+    try {
+      const response = await apiClient.get<ApiResponse<RecipeConsumption[]>>(`/sections/${sectionId}/recipes-consumption`);
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching section recipes consumption:", error);
+      return {
+        data: [] as RecipeConsumption[],
+        success: false,
+        message: error instanceof Error ? error.message : "Failed to fetch section recipes consumption"
       };
     }
   }

@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { assignRecipeToSection, assignStockToSection, createSection, deleteSection, getRecipeConsumption, getSection, getSectionConsumption, getSectionInventory, getSectionRecipes, getSections, recordConsumption, recordRecipeConsumption, removeSectionInventory, removeSectionRecipe, updateSection, updateSectionInventory } from "../controllers/sectionsController.js";
+import { assignRecipeToSection, assignStockToSection, createSection, deleteSection, getSection, getSectionConsumption, getSectionInventory, getSectionRecipes, getSectionRecipesConsumption, getSections, recordConsumption, recordRecipeConsumption, removeSectionInventory, removeSectionRecipe, updateSection, updateSectionInventory } from "../controllers/sectionsController.js";
 import { authenticate } from "../middleware/auth.js";
 import { requireManager } from "../middleware/rbac.js";
 
@@ -43,7 +43,8 @@ router.get("/:id/recipes", getSectionRecipes);
 router.post("/:assignmentId/remove-recipe", removeSectionRecipe);
 
 router.post("/:id/consume-recipe", recordRecipeConsumption);
-router.get("/:id/consumption", getRecipeConsumption);
+
+router.get("/:id/recipes-consumption", getSectionRecipesConsumption);
 
 // PUT /api/sections/inventory/:inventoryId - Update section inventory assignment (Manager only)
 router.put("/inventory/:inventoryId", requireManager, updateSectionInventory);

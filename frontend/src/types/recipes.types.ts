@@ -216,3 +216,20 @@ export const MenuCategoryLabels: Record<MenuCategory, string> = {
   [MenuCategory.LUNCH]: "Lunch",
   [MenuCategory.DINNER]: "Dinner"
 };
+
+export interface RecipeConsumption {
+  id: string;
+  recipeId: string;
+  sectionId: string;
+  sectionName: string;
+  date: Date;
+  quantity: number;
+  unit: string;
+  cost: number;
+}
+
+export interface RecipeConsumptionFilters {
+  sectionId?: string;
+  fromDate?: Date;
+  toDate?: Date;
+}

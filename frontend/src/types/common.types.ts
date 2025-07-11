@@ -1,5 +1,6 @@
 export interface BaseEntity {
   id: number;
+  data?: any;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -24,6 +25,7 @@ export interface User {
 }
 
 export interface ApiResponse<T> {
+  map(arg0: (item: any) => any): any;
   data: T;
   success: boolean;
   message?: string;

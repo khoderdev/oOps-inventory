@@ -316,13 +316,10 @@ export const recordRecipeConsumption = async consumptionData => {
 };
 
 // Get recipe consumption history
-export const getRecipeConsumption = async (recipeId, filters = {}) => {
+// In your service file (e.g., sections.service.js)
+export const getSectionRecipesConsumption = async (sectionId, filters = {}) => {
   try {
-    const where = { recipe_id: parseInt(recipeId, 10) };
-
-    if (filters.sectionId) {
-      where.section_id = parseInt(filters.sectionId, 10);
-    }
+    const where = { section_id: parseInt(sectionId, 10) };
 
     if (filters.fromDate || filters.toDate) {
       where.consumed_date = {};
@@ -334,8 +331,8 @@ export const getRecipeConsumption = async (recipeId, filters = {}) => {
       }
     }
 
-    logger.info("🔍 Fetching recipe consumption history", {
-      recipeId,
+    logger.info("🔍 Fetching section recipes consumption history", {
+      sectionId,
       filters
     });
 
@@ -345,25 +342,82 @@ export const getRecipeConsumption = async (recipeId, filters = {}) => {
         recipe: true,
         section: true,
         user: true,
-        ingredients: { include: { raw_material: true } }
+        ingredients: {
+          include: {
+            raw_material: true
+          }
+        }
       },
       orderBy: { consumed_date: "desc" }
     });
 
-    logger.info("✅ Recipe consumption history retrieved", { count: consumptions.length });
+    logger.info("✅ Section recipes consumption history retrieved", {
+      count: consumptions.length
+    });
 
     return {
       data: consumptions.map(formatRecipeConsumptionForFrontend),
       success: true,
-      message: "Recipe consumption history retrieved successfully"
+      message: "Section recipes consumption history retrieved successfully"
     };
   } catch (error) {
-    logger.error("❌ Error in getRecipeConsumption", {
+    logger.error("❌ Error in getSectionRecipesConsumption", {
       error: error.message,
       stack: error.stack,
-      recipeId,
+      sectionId,
       filters
     });
-    throw new Error("Failed to retrieve recipe consumption history");
+    throw new Error("Failed to retrieve section recipes consumption history");
   }
 };
+// export const getRecipeConsumption = async (recipeId, filters = {}) => {
+//   try {
+//     const where = { recipe_id: parseInt(recipeId, 10) };
+
+//     if (filters.sectionId) {
+//       where.section_id = parseInt(filters.sectionId, 10);
+//     }
+
+//     if (filters.fromDate || filters.toDate) {
+//       where.consumed_date = {};
+//       if (filters.fromDate) {
+//         where.consumed_date.gte = new Date(filters.fromDate);
+//       }
+//       if (filters.toDate) {
+//         where.consumed_date.lte = new Date(filters.toDate);
+//       }
+//     }
+
+//     logger.info("🔍 Fetching recipe consumption history", {
+//       recipeId,
+//       filters
+//     });
+
+//     const consumptions = await prisma().recipeConsumption.findMany({
+//       where,
+//       include: {
+//         recipe: true,
+//         section: true,
+//         user: true,
+//         ingredients: { include: { raw_material: true } }
+//       },
+//       orderBy: { consumed_date: "desc" }
+//     });
+
+//     logger.info("✅ Recipe consumption history retrieved", { count: consumptions.length });
+
+//     return {
+//       data: consumptions.map(formatRecipeConsumptionForFrontend),
+//       success: true,
+//       message: "Recipe consumption history retrieved successfully"
+//     };
+//   } catch (error) {
+//     logger.error("❌ Error in getRecipeConsumption", {
+//       error: error.message,
+//       stack: error.stack,
+//       recipeId,
+//       filters
+//     });
+//     throw new Error("Failed to retrieve recipe consumption history");
+//   }
+// };

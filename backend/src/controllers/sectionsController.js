@@ -368,17 +368,33 @@ export const recordRecipeConsumption = asyncHandler(async (req, res) => {
  * Get recipe consumption history
  * GET /api/sections/:id/consumption
  */
-export const getRecipeConsumption = asyncHandler(async (req, res) => {
-  const { id: recipeId } = req.params;
-  const { sectionId, fromDate, toDate } = req.query;
+// In your controller file (e.g., sections.controller.js)
+export const getSectionRecipesConsumption = asyncHandler(async (req, res) => {
+  const { id: sectionId } = req.params;
+  const { fromDate, toDate } = req.query;
+
   const filters = {};
-  if (sectionId) filters.sectionId = sectionId;
   if (fromDate) filters.fromDate = fromDate;
   if (toDate) filters.toDate = toDate;
-  const result = await sectionsService.getRecipeConsumption(parseInt(recipeId, 10), filters);
+
+  const result = await sectionsService.getSectionRecipesConsumption(parseInt(sectionId, 10), filters);
 
   res.json({
     success: true,
     data: result.data
   });
 });
+// export const getRecipeConsumption = asyncHandler(async (req, res) => {
+//   const { id: recipeId } = req.params;
+//   const { sectionId, fromDate, toDate } = req.query;
+//   const filters = {};
+//   if (sectionId) filters.sectionId = sectionId;
+//   if (fromDate) filters.fromDate = fromDate;
+//   if (toDate) filters.toDate = toDate;
+//   const result = await sectionsService.getRecipeConsumption(parseInt(recipeId, 10), filters);
+
+//   res.json({
+//     success: true,
+//     data: result.data
+//   });
+// });

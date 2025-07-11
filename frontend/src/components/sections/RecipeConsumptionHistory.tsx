@@ -1,4 +1,4 @@
-import { useRecipeConsumption } from "../../hooks/useSections";
+import { useSectionRecipesConsumption } from "../../hooks/useSections";
 
 interface RecipeConsumptionHistoryProps {
   recipeId: string;
@@ -6,8 +6,8 @@ interface RecipeConsumptionHistoryProps {
 }
 
 export const RecipeConsumptionHistory = ({ recipeId, sectionId }: RecipeConsumptionHistoryProps) => {
-  const { data: consumptions = [], isLoading } = useRecipeConsumption(recipeId, {
-    sectionId
+  const { data: consumptions = [], isLoading } = useSectionRecipesConsumption(sectionId || "", {
+    recipeId
   });
 
   return (
