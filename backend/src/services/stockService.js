@@ -9,6 +9,7 @@ import { generateNextOrderId } from "../utils/orderId.js";
  */
 const formatUserForFrontend = user => ({
   id: user.id,
+  username: user.username,
   firstName: user.first_name,
   lastName: user.last_name,
   email: user.email,
@@ -336,7 +337,6 @@ export const getAllStockEntries = async (filters = {}) => {
         where.received_date.lte = new Date(filters.toDate);
       }
     }
-
     const entries = await prisma().stockEntry.findMany({
       where,
       include: {
@@ -364,21 +364,16 @@ export const getAllStockEntries = async (filters = {}) => {
 export const getStockMovements = async (filters = {}) => {
   try {
     logger.info("Fetching stock movements with filters:", filters);
-
     const where = {};
-
     if (filters.stockEntryId) {
       where.stock_entry_id = filters.stockEntryId;
     }
-
     if (filters.type) {
       where.type = filters.type;
     }
-
     if (filters.sectionId) {
       where.OR = [{ from_section_id: filters.sectionId }, { to_section_id: filters.sectionId }];
     }
-
     if (filters.fromDate || filters.toDate) {
       where.created_at = {};
       if (filters.fromDate) {
@@ -388,7 +383,6 @@ export const getStockMovements = async (filters = {}) => {
         where.created_at.lte = new Date(filters.toDate);
       }
     }
-
     const movements = await prisma().stockMovement.findMany({
       where,
       include: {

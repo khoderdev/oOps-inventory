@@ -1,12 +1,13 @@
 import type { ColumnDef } from "@tanstack/react-table";
 import { format } from "date-fns";
 import { Activity, AlertTriangle, Package, TrendingDown } from "lucide-react";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { MeasurementUnit, MovementType, type MaterialConsumption } from "../../types";
 import type { ConsumptionReportProps } from "../../types/reports.types";
 import type { ReasonData, StockMovement } from "../../types/stock.types";
 import { formatPacksBoxQuantityDisplay } from "../../utils/quantity";
 import { Table } from "../ui";
+import { MovementDetails } from "./MovementDetails";
 
 const ConsumptionReport = ({ movements, stockEntries, rawMaterials, selectedSection, consumptionByCategory }: ConsumptionReportProps) => {
   const consumptionData = useMemo(() => {
@@ -114,6 +115,7 @@ const ConsumptionReport = ({ movements, stockEntries, rawMaterials, selectedSect
       totalMovements: filteredMovements.length
     };
   }, [movements, stockEntries, rawMaterials, selectedSection]);
+  const [selectedMovement, setSelectedMovement] = useState<StockMovement | null>(null);
 
   const topConsumedMaterials = Object.values(consumptionData.byMaterial)
     .sort((a: MaterialConsumption, b: MaterialConsumption) => b.totalValue - a.totalValue)
@@ -133,6 +135,14 @@ const ConsumptionReport = ({ movements, stockEntries, rawMaterials, selectedSect
     );
     return data;
   }, [consumptionData.byMaterial]);
+
+  const handleRowClick = (movement: StockMovement) => {
+    setSelectedMovement(movement);
+  };
+
+  const handleCloseModal = () => {
+    setSelectedMovement(null);
+  };
 
   const columns: ColumnDef<StockMovement>[] = [
     {
@@ -285,8 +295,11 @@ const ConsumptionReport = ({ movements, stockEntries, rawMaterials, selectedSect
 
       {/* Recent Consumption Activity */}
       <div className="bg-white p-6 rounded-lg border dark:bg-gray-800 dark:border-gray-700">
-        <Table columns={columns} data={tableData} />
+        <Table columns={columns} data={tableData} onRowClick={handleRowClick} />
       </div>
+
+      {/* Movement Details Modal */}
+      <MovementDetails movement={selectedMovement} onClose={handleCloseModal} />
     </div>
   );
 };

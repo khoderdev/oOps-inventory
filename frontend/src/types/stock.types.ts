@@ -32,6 +32,7 @@ export interface StockEntry extends BaseEntity {
 }
 
 export interface StockMovement extends BaseEntity {
+  material: RawMaterial;
   stockEntryId: number;
   stockEntry?: StockEntry;
   type: MovementType;
@@ -41,7 +42,7 @@ export interface StockMovement extends BaseEntity {
   fromSection?: Section | null;
   toSection?: Section | null;
   reason: string;
-  performedBy: number;
+  // performedBy: User;
   user?: User;
   referenceId?: string | null;
 }

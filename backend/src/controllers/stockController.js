@@ -214,7 +214,6 @@ export const createStockMovement = asyncHandler(async (req, res) => {
  */
 export const getStockMovements = asyncHandler(async (req, res) => {
   const { stockEntryId, type, fromDate, toDate, sectionId } = req.query;
-
   const filters = {};
   if (stockEntryId) filters.stockEntryId = stockEntryId;
   if (type) filters.type = type;
