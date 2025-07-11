@@ -60,3 +60,10 @@ export interface UpdateRawMaterialInput extends Partial<CreateRawMaterialInput> 
   id: number;
   isActive?: boolean;
 }
+
+export interface MaterialConsumption {
+  material: unknown;
+  totalQuantity: number;
+  totalValue: number;
+  movements: unknown[];
+}

@@ -1,75 +1,36 @@
+import type { ColumnDef } from "@tanstack/react-table";
+import { format } from "date-fns";
 import { Activity, AlertTriangle, Package, TrendingDown } from "lucide-react";
 import { useMemo } from "react";
-import { MovementType, MeasurementUnit } from "../../types";
+import { MeasurementUnit, MovementType, type MaterialConsumption } from "../../types";
 import type { ConsumptionReportProps } from "../../types/reports.types";
-
-interface MovementWithDetails {
-  material: unknown;
-  entry: unknown;
-  value: number;
-}
-
-interface ReasonData {
-  count: number;
-  totalValue: number;
-  movements: MovementWithDetails[];
-}
-
-interface MaterialConsumption {
-  material: unknown;
-  totalQuantity: number;
-  totalValue: number;
-  movements: unknown[];
-}
-
-// Helper function to format quantity display for pack/box materials
-const formatQuantityDisplay = (quantity: number, material: { unit: string; unitsPerPack?: number; baseUnit?: string } | undefined) => {
-  if (!material) return `${quantity}`;
-
-  const isPackOrBox = material.unit === MeasurementUnit.PACKS || material.unit === MeasurementUnit.BOXES;
-  if (isPackOrBox) {
-    const unitsPerPack = material.unitsPerPack || 1;
-    const baseUnit = material.baseUnit || "pieces";
-    const packQuantity = quantity / unitsPerPack;
-    return `${packQuantity.toFixed(1)} ${material.unit} (${quantity} ${baseUnit})`;
-  }
-
-  return `${quantity} ${material.unit}`;
-};
+import type { ReasonData, StockMovement } from "../../types/stock.types";
+import { formatPacksBoxQuantityDisplay } from "../../utils/quantity";
+import { Table } from "../ui";
 
 const ConsumptionReport = ({ movements, stockEntries, rawMaterials, selectedSection, consumptionByCategory }: ConsumptionReportProps) => {
   const consumptionData = useMemo(() => {
-    // Filter consumption movements - these are stock movements with OUT type
     const consumptionMovements = movements.filter(movement => movement.type === MovementType.OUT || movement.type === MovementType.EXPIRED || movement.type === MovementType.DAMAGED);
-
-    // Filter by section if selected
     const filteredMovements = selectedSection ? consumptionMovements.filter(m => m.fromSectionId === selectedSection) : consumptionMovements;
-
-    // Calculate totals
     const totalQuantityConsumed = filteredMovements.reduce((sum, movement) => sum + movement.quantity, 0);
 
     const totalValueConsumed = filteredMovements.reduce((sum, movement) => {
       const entry = stockEntries.find(e => e.id === movement.stockEntryId);
       const material = rawMaterials.find(m => m.id === entry?.rawMaterialId);
-      
+
       if (!material) return sum;
-      
-      // Calculate value based on material type
+
       const isPackOrBox = material.unit === MeasurementUnit.PACKS || material.unit === MeasurementUnit.BOXES;
       if (isPackOrBox) {
-        // For pack/box materials, movement.quantity is in base units (individual items)
-        // material.unitCost is cost per pack/box
         const packInfo = material as unknown as { unitsPerPack?: number; baseUnit?: string };
         const unitsPerPack = packInfo.unitsPerPack || 1;
         const individualCost = material.unitCost / unitsPerPack;
-        return sum + (movement.quantity * individualCost);
+        return sum + movement.quantity * individualCost;
       } else {
-        // For regular materials, movement.quantity and unitCost are in the same units
-        return sum + (movement.quantity * material.unitCost);
+        return sum + movement.quantity * material.unitCost;
       }
     }, 0);
 
-    // Group by reason
     const byReason = filteredMovements.reduce(
       (acc, movement) => {
         const reason = movement.reason || "Unknown";
@@ -79,7 +40,7 @@ const ConsumptionReport = ({ movements, stockEntries, rawMaterials, selectedSect
 
         const entry = stockEntries.find(e => e.id === movement.stockEntryId);
         const material = rawMaterials.find(m => m.id === entry?.rawMaterialId);
-        
+
         let value = 0;
         if (material) {
           const isPackOrBox = material.unit === MeasurementUnit.PACKS || material.unit === MeasurementUnit.BOXES;
@@ -92,18 +53,14 @@ const ConsumptionReport = ({ movements, stockEntries, rawMaterials, selectedSect
             value = movement.quantity * material.unitCost;
           }
         }
-        const materialData = acc[material.id] as unknown as MaterialConsumption;
-        if (materialData) {
-          materialData.totalQuantity += movement.quantity;
-          materialData.totalValue += value;
-          materialData.movements.push({ ...movement, material, value });
-        }
+        acc[reason].count += 1;
+        acc[reason].totalValue += value;
+        acc[reason].movements.push({ ...movement, material, value });
         return acc;
       },
       {} as Record<string, ReasonData>
     );
 
-    // Group by material
     const byMaterial = filteredMovements.reduce(
       (acc, movement) => {
         const entry = stockEntries.find(e => e.id === movement.stockEntryId);
@@ -129,19 +86,16 @@ const ConsumptionReport = ({ movements, stockEntries, rawMaterials, selectedSect
           } else {
             value = movement.quantity * material.unitCost;
           }
-          const materialData = acc[material.id] as unknown as MaterialConsumption;
-          if (materialData) {
-            materialData.totalQuantity += movement.quantity;
-            materialData.totalValue += value;
-            materialData.movements.push({ ...movement, material, value });
-          }
+          const materialData = acc[material.id] as MaterialConsumption;
+          materialData.totalQuantity += movement.quantity;
+          materialData.totalValue += value;
+          materialData.movements.push({ ...movement, material, value });
         }
         return acc;
       },
       {} as Record<string, MaterialConsumption>
     );
 
-    // Waste analysis
     const wasteMovements = filteredMovements.filter(m => m.type === MovementType.EXPIRED || m.type === MovementType.DAMAGED);
 
     const wasteValue = wasteMovements.reduce((sum, movement) => {
@@ -168,6 +122,63 @@ const ConsumptionReport = ({ movements, stockEntries, rawMaterials, selectedSect
   const categoryData = Object.entries(consumptionByCategory)
     .map(([category, value]) => ({ category, value }))
     .sort((a, b) => b.value - a.value);
+
+  // Prepare table data by flattening movements from byMaterial
+  const tableData = useMemo(() => {
+    const data = Object.values(consumptionData.byMaterial).flatMap((materialConsumption: MaterialConsumption) =>
+      materialConsumption.movements.map(movement => ({
+        ...movement,
+        material: materialConsumption.material
+      }))
+    );
+    return data;
+  }, [consumptionData.byMaterial]);
+
+  const columns: ColumnDef<StockMovement>[] = [
+    {
+      accessorKey: "date",
+      header: "Date",
+      cell: ({ row }) => {
+        const date = row.original.createdAt;
+        return date ? format(date, "dd-MM-yyyy") : "-";
+      },
+      enableSorting: true,
+      meta: { align: "left" },
+      size: 120,
+      minSize: 100,
+      maxSize: 140
+    },
+    {
+      accessorKey: "stockEntry.rawMaterial.name",
+      header: "Material",
+      cell: ({ row }) => row.original.stockEntry?.rawMaterial?.name || "Unknown",
+      enableSorting: true,
+      meta: { align: "left" },
+      size: 120,
+      minSize: 100,
+      maxSize: 140
+    },
+    {
+      accessorKey: "quantity",
+      header: "Quantity",
+      cell: ({ row }) => (row.original.quantity != null ? row.original.quantity : "-"),
+      enableSorting: true,
+      meta: { align: "left" },
+      size: 120,
+      minSize: 100,
+      maxSize: 140
+    },
+    {
+      accessorKey: "reason",
+      header: "Reason",
+      cell: ({ row }) => row.original.reason || "Unknown",
+      enableSorting: true,
+      meta: { align: "left" },
+      size: 120,
+      minSize: 100,
+      maxSize: 140
+    }
+  ];
 
   return (
     <div className="space-y-6">
@@ -243,7 +254,7 @@ const ConsumptionReport = ({ movements, stockEntries, rawMaterials, selectedSect
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-bold text-gray-900 dark:text-white">${item.totalValue.toFixed(2)}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">{formatQuantityDisplay(item.totalQuantity, material)}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{formatPacksBoxQuantityDisplay(item.totalQuantity, material)}</p>
                   </div>
                 </div>
               );
@@ -274,42 +285,7 @@ const ConsumptionReport = ({ movements, stockEntries, rawMaterials, selectedSect
 
       {/* Recent Consumption Activity */}
       <div className="bg-white p-6 rounded-lg border dark:bg-gray-800 dark:border-gray-700">
-        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Recent Consumption Activity</h3>
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50 dark:bg-gray-800">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Date</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Material</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Quantity</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Reason</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Value</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200 dark:bg-gray-800 dark:divide-gray-700">
-              {movements
-                .filter(m => m.type === MovementType.OUT || m.type === MovementType.EXPIRED || m.type === MovementType.DAMAGED)
-                .slice(0, 10)
-                .map((movement, index) => {
-                  const entry = stockEntries.find(e => e.id === movement.stockEntryId);
-                  const material = rawMaterials.find(m => m.id === entry?.rawMaterialId);
-                  const value = movement.quantity * (material?.unitCost || 0);
-
-                  return (
-                    <tr key={movement.id || `movement-${index}`}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300">{new Date(movement.createdAt).toLocaleDateString()}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300">{material?.name || "Unknown"}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300">{formatQuantityDisplay(movement.quantity, material)}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${movement.type === MovementType.EXPIRED || movement.type === MovementType.DAMAGED ? "bg-red-100 text-red-800" : "bg-blue-100 text-blue-800"}`}>{movement.reason}</span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300">${value.toFixed(2)}</td>
-                    </tr>
-                  );
-                })}
-            </tbody>
-          </table>
-        </div>
+        <Table columns={columns} data={tableData} />
       </div>
     </div>
   );

@@ -251,3 +251,15 @@ export interface LowStockReportData {
     }>;
   };
 }
+
+export interface MovementWithDetails {
+  material: unknown;
+  entry: unknown;
+  value: number;
+}
+
+export interface ReasonData {
+  count: number;
+  totalValue: number;
+  movements: MovementWithDetails[];
+}

@@ -1,4 +1,4 @@
-import { BarChart3, Calendar, DollarSign, Download, Filter, Package, TrendingUp } from "lucide-react";
+import { BarChart3, Calendar, DollarSign, Download, Package, TrendingUp } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useRawMaterials } from "../../hooks/useRawMaterials";
 import { useSections } from "../../hooks/useSections";
@@ -6,7 +6,6 @@ import { useStockEntries, useStockLevels, useStockMovements } from "../../hooks/
 import { MovementType } from "../../types";
 import { Tabs, type Tab } from "../ui";
 import Button from "../ui/Button";
-import Select from "../ui/Select";
 import CategoryBreakdown from "./CategoryBreakdown";
 import ConsumptionReport from "./ConsumptionReport";
 import ExpenseReport from "./ExpenseReport";
@@ -17,8 +16,8 @@ type ReportType = "overview" | "stock-levels" | "consumption" | "expenses";
 
 const ReportsPage = () => {
   const [activeReport, setActiveReport] = useState<ReportType>("overview");
-  const [dateRange, setDateRange] = useState("30");
-  const [selectedSection, setSelectedSection] = useState("");
+  const [dateRange] = useState("30");
+  const [selectedSection] = useState("");
   const { data: stockLevels = [] } = useStockLevels();
   const { data: rawMaterials = [] } = useRawMaterials({ isActive: true });
   const { data: sections = [] } = useSections({ isActive: true });
@@ -30,18 +29,6 @@ const ReportsPage = () => {
     { id: "stock-levels", label: "Stock Levels", icon: TrendingUp },
     { id: "consumption", label: "Consumption", icon: Calendar },
     { id: "expenses", label: "Expenses", icon: DollarSign }
-  ];
-
-  const sectionOptions = sections.map(section => ({
-    value: section.id,
-    label: section.name
-  }));
-
-  const dateRangeOptions = [
-    { value: "7", label: "Last 7 days" },
-    { value: "30", label: "Last 30 days" },
-    { value: "90", label: "Last 3 months" },
-    { value: "365", label: "Last year" }
   ];
 
   // Date filtering helper
@@ -254,30 +241,15 @@ const ReportsPage = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex justify-end items-center">
-        <Button leftIcon={<Download className="w-4 h-4" />} variant="outline">
-          Export Reports
-        </Button>
-      </div>
-
       {/* Tabs */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm">
         <Tabs tabs={reports} activeTab={activeReport} onTabChange={setActiveReport} variant="default" size="md" className="px-6" />
 
         {/* Filters */}
         <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <Select placeholder="Date range" options={dateRangeOptions} value={dateRange} onChange={e => setDateRange(e.target.value)} />
-
-            <Select placeholder="All sections" options={[{ value: "", label: "All Sections" }, ...sectionOptions]} value={selectedSection} onChange={e => setSelectedSection(e.target.value)} />
-
-            <div></div>
-
-            <Button variant="outline" leftIcon={<Filter className="w-4 h-4" />}>
-              Advanced Filters
-            </Button>
-          </div>
+          <Button leftIcon={<Download className="w-4 h-4" />} variant="outline">
+            Export Reports
+          </Button>
         </div>
 
         {/* Report Content */}
