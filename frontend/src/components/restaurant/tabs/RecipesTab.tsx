@@ -10,14 +10,14 @@ import { RecipeDetailsModal } from "../components/RecipeDetailsModal";
 import { RecipesView } from "../components/RecipesView";
 
 export const RecipesTab: React.FC = () => {
-  const [filters, setFilters] = useState<RecipeFilters>({
+  const [filters] = useState<RecipeFilters>({
     search: "",
     category: "",
     is_active: true,
     page: 1,
     limit: 10
   });
-  const [viewMode, setViewMode] = useState<"recipes" | "menu-engineering" | "costing">("recipes");
+  const [viewMode, setViewMode] = useState<"recipes" | "costing">("recipes");
 
   const [modalState, setModalState] = useState<{
     create: boolean;
@@ -68,8 +68,7 @@ export const RecipesTab: React.FC = () => {
       case "costing":
         return <CostingView recipes={recipes} onBack={() => setViewMode("recipes")} onViewCostBreakdown={openCostAnalysisModal} />;
       default:
-        // your existing RecipesView component call, with handlers to open modals (not shown here)
-        return <RecipesView onOpenCreate={() => setModalState({ ...modalState, create: true })} onOpenEdit={openEditModal} onOpenView={openViewModal} onSwitchView={() => setViewMode("recipes")} />;
+        return <RecipesView onOpenCreate={() => setModalState({ ...modalState, create: true })} onOpenEdit={openEditModal} onOpenView={openViewModal} onSwitchView={view => setViewMode(view)} />;
     }
   };
 

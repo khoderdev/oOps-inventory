@@ -85,6 +85,13 @@ export const SectionRecipesConsumptionContent: React.FC<Props> = ({ sectionId })
 
   const totalConsumption = React.useMemo(() => tableData.reduce((sum, item) => sum + item.cost, 0), [tableData]);
 
+  const Detail = ({ label, value, isMono = false }: { label: string; value: React.ReactNode; isMono?: boolean }) => (
+    <div className="space-y-1">
+      <div className="text-xs text-muted-foreground">{label}</div>
+      <div className={isMono ? "font-mono" : ""}>{value}</div>
+    </div>
+  );
+
   if (isLoading) {
     return (
       <div className="flex justify-center py-8" aria-live="polite" aria-busy="true">
@@ -111,62 +118,53 @@ export const SectionRecipesConsumptionContent: React.FC<Props> = ({ sectionId })
 
   return (
     <div className="space-y-4">
-      <Accordion.Root type="multiple" className="w-full border rounded-lg divide-y dark:divide-gray-700 dark:border-gray-400" aria-label="Recipe consumption records">
+      <Accordion.Root type="multiple" className="w-full divide-y rounded-lg border border-gray-200 dark:border-gray-600 dark:divide-gray-700" aria-label="Recipe consumption records">
         {tableData.map(item => (
-          <Accordion.Item key={item.id} value={item.id} className="group px-4 py-3 focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-2 transition-colors dark:focus-within:ring-gray-400">
+          <Accordion.Item key={item.id} value={item.id} className="group px-4 py-3 focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-2 dark:focus-within:ring-gray-500">
             <Accordion.Header>
-              <Accordion.Trigger className="flex justify-between items-center w-full text-left font-medium hover:bg-gray-100 dark:hover:bg-gray-800 py-2 transition rounded-md focus:outline-none">
-                <div className="flex-1 min-w-0">
-                  <div className="font-semibold truncate">{item.recipeName}</div>
-                  <div className="text-xs text-muted-foreground capitalize truncate">{item.recipeCategory}</div>
+              <Accordion.Trigger className="flex justify-between items-center w-full text-left gap-4 font-medium hover:bg-gray-50 dark:hover:bg-gray-800 px-3 py-2 rounded-md transition">
+                <div className="flex flex-col flex-1 truncate">
+                  <span className="text-base font-semibold truncate">{item.recipeName}</span>
+                  <span className="text-sm text-muted-foreground capitalize truncate">{item.recipeCategory}</span>
                 </div>
-                <div className="flex items-center gap-4 pl-4">
-                  <span className="text-sm tabular-nums">{formatCurrency(item.cost)}</span>
-                  <ChevronDown className="w-4 h-4 transition-transform duration-200 group-data-[state=open]:rotate-180 shrink-0 dark:text-gray-400" aria-hidden />
+                <div className="flex items-center gap-4 text-sm text-right">
+                  <span className="font-mono tabular-nums text-gray-700 dark:text-gray-200">{formatCurrency(item.cost)}</span>
+                  <ChevronDown className="w-4 h-4 transition-transform duration-200 group-data-[state=open]:rotate-180 dark:text-gray-400" />
                 </div>
               </Accordion.Trigger>
             </Accordion.Header>
 
-            <Accordion.Content className="overflow-hidden data-[state=open]:animate-slideDown data-[state=closed]:animate-slideUp dark:bg-gray-800">
-              <div className="pt-3 pb-2 text-sm text-gray-700 dark:text-gray-300 space-y-3">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <div className="text-xs text-muted-foreground">Date</div>
-                    <div>{formatDate(item.date)}</div>
-                  </div>
-                  <div className="space-y-1">
-                    <div className="text-xs text-muted-foreground">Order</div>
-                    <div className="font-mono">{item.orderId || "N/A"}</div>
-                  </div>
-                  <div className="space-y-1">
-                    <div className="text-xs text-muted-foreground">Prepared By</div>
-                    <div>{item.consumedBy}</div>
-                  </div>
-                  <div className="space-y-1">
-                    <div className="text-xs text-muted-foreground">Cost</div>
-                    <div>{formatCurrency(item.cost)}</div>
-                  </div>
+            <Accordion.Content className="overflow-hidden data-[state=open]:animate-slideDown data-[state=closed]:animate-slideUp dark:bg-gray-900 bg-gray-50 rounded-b-lg">
+              <div className="p-4 text-sm text-gray-800 dark:text-gray-300 space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Detail label="Date" value={formatDate(item.date)} />
+                  <Detail label="Order" value={item.orderId || "N/A"} isMono />
+                  <Detail label="Prepared By" value={item.consumedBy} />
+                  <Detail label="Cost" value={formatCurrency(item.cost)} isMono />
                   {item.reason && (
-                    <div className="md:col-span-2 space-y-1">
-                      <div className="text-xs text-muted-foreground">Reason</div>
-                      <div className="capitalize">{item.reason.replace(/_/g, " ")}</div>
+                    <div className="md:col-span-2">
+                      <Detail label="Reason" value={item.reason.replace(/_/g, " ").toLowerCase()} />
                     </div>
                   )}
                 </div>
 
                 {item.ingredients.length > 0 && (
-                  <div className="space-y-1">
-                    <div className="text-xs text-muted-foreground">Ingredients</div>
-                    <ul className="space-y-2">
+                  <div className="pt-2">
+                    <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Ingredients</h4>
+                    <ul className="divide-y divide-gray-200 dark:divide-gray-700">
                       {item.ingredients.map(ing => (
-                        <li key={ing.id} className="flex justify-between">
-                          <span>
-                            {ing.name} — {ing.quantity} {ing.unit}
-                            {ing.baseUnit && ing.baseUnit !== ing.unit && <span className="text-xs text-muted-foreground ml-1">({ing.baseUnit})</span>}
-                          </span>
-                          <span className="tabular-nums">
-                            @ {formatCurrency(parseFloat(ing.cost_per_unit))} = <strong>{formatCurrency(parseFloat(ing.quantity) * parseFloat(ing.cost_per_unit))}</strong>
-                          </span>
+                        <li key={ing.id} className="flex justify-between py-1">
+                          <div className="flex flex-col">
+                            <span className="font-medium text-gray-900 dark:text-white">{ing.name}</span>
+                            <span className="text-sm text-gray-600 dark:text-gray-400">
+                              {ing.quantity} {ing.unit}
+                              {ing.baseUnit && ing.baseUnit !== ing.unit && <span className="ml-1 text-xs text-muted-foreground">({ing.baseUnit})</span>}
+                            </span>
+                          </div>
+                          <div className="text-right text-sm font-mono text-gray-700 dark:text-gray-200 tabular-nums">
+                            <div>@ {formatCurrency(parseFloat(ing.cost_per_unit))}</div>
+                            <div className="font-bold">= {formatCurrency(parseFloat(ing.quantity) * parseFloat(ing.cost_per_unit))}</div>
+                          </div>
                         </li>
                       ))}
                     </ul>
@@ -178,8 +176,8 @@ export const SectionRecipesConsumptionContent: React.FC<Props> = ({ sectionId })
         ))}
       </Accordion.Root>
 
-      <div className="flex justify-end pt-4 border-t dark:border-gray-400">
-        <div className="text-lg font-medium tabular-nums">Total: {formatCurrency(totalConsumption)}</div>
+      <div className="flex justify-end pt-6 border-t mt-4 dark:border-gray-600">
+        <div className="text-lg font-semibold text-gray-900 dark:text-gray-100 tabular-nums">Total: {formatCurrency(totalConsumption)}</div>
       </div>
     </div>
   );

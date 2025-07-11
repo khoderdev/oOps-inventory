@@ -187,10 +187,10 @@ export interface PaginatedSuppliers {
 }
 
 export const SupplierGrades = {
-  A: { label: "Excellent", color: "bg-green-100 text-green-800", range: "9-10" },
-  B: { label: "Good", color: "bg-blue-100 text-blue-800", range: "7-8" },
-  C: { label: "Average", color: "bg-yellow-100 text-yellow-800", range: "5-6" },
-  D: { label: "Poor", color: "bg-red-100 text-red-800", range: "1-4" }
+  A: { label: "Excellent", color: "bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-200", range: "9-10" },
+  B: { label: "Good", color: "bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-200", range: "7-8" },
+  C: { label: "Average", color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-200", range: "5-6" },
+  D: { label: "Poor", color: "bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-200", range: "1-4" }
 };
 
 export const getSupplierGrade = (rating: number): keyof typeof SupplierGrades => {

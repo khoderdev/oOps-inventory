@@ -6,7 +6,7 @@ import { Button, Table } from "../../ui";
 import { CategoryBadge } from "./CategoryBadge";
 import { RecipeCostCell } from "./RecipeCostCell";
 
-export const RecipesView: React.FC<{ onOpenCreate: () => void; onOpenEdit: (recipe: Recipe) => void; onOpenView: (recipe: Recipe) => void; onSwitchView: (view: "menu-engineering" | "costing") => void }> = ({ onOpenCreate, onOpenEdit, onOpenView, onSwitchView }) => {
+export const RecipesView: React.FC<{ onOpenCreate: () => void; onOpenEdit: (recipe: Recipe) => void; onOpenView: (recipe: Recipe) => void; onSwitchView: (view: "recipes" | "costing") => void }> = ({ onOpenCreate, onOpenEdit, onOpenView, onSwitchView }) => {
   const [filters, setFilters] = useState<RecipeFilters>({
     search: "",
     category: undefined,
@@ -126,7 +126,14 @@ export const RecipesView: React.FC<{ onOpenCreate: () => void; onOpenEdit: (reci
           <p className="text-sm text-gray-500 dark:text-gray-400">Manage recipes and calculate ingredient costs</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" onClick={() => onSwitchView("costing")}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              console.log("Switching to costing");
+              onSwitchView("costing");
+            }}
+          >
             💰 Recipe Costing
           </Button>
           <Button onClick={onOpenCreate} size="sm">
