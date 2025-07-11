@@ -84,7 +84,7 @@ export const useSectionConsumption = (
   });
 };
 
-// Add these new hooks to your existing hooks
+// Add these new hooks
 export const useRecordRecipeConsumption = () => {
   const queryClient = useQueryClient();
   return useMutation({

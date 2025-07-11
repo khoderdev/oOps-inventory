@@ -1,10 +1,7 @@
 import prisma from "../config/prisma.js";
 import logger from "./logger.js";
 
-/**
- * Generates the next sequential order ID in the format ORDER-001, ORDER-002, etc.
- * @returns Promise<string> - The next order ID
- */
+// Generates the next sequential order ID in the format ORDER-001, ORDER-002, etc.
 export async function generateNextOrderId() {
   try {
     // Use a transaction to ensure atomicity
@@ -46,10 +43,7 @@ export async function generateNextOrderId() {
   }
 }
 
-/**
- * Gets the current order number without incrementing
- * @returns Promise<number> - The current order number
- */
+// Gets the current order number without incrementing
 export async function getCurrentOrderNumber() {
   try {
     const counter = await prisma().orderCounter.findFirst();
@@ -60,11 +54,7 @@ export async function getCurrentOrderNumber() {
   }
 }
 
-/**
- * Resets the order counter to a specific number
- * @param number - The number to reset to
- * @returns Promise<void>
- */
+// Resets the order counter to a specific number
 export async function resetOrderCounter(number = 0) {
   try {
     // Get existing counter

@@ -333,3 +333,52 @@ export const removeSectionInventory = asyncHandler(async (req, res) => {
     message: result.message
   });
 });
+
+/**
+ * Record recipe consumption
+ * POST /api/sections/:id/consume-recipe
+ */
+export const recordRecipeConsumption = asyncHandler(async (req, res) => {
+  const { id: sectionId } = req.params;
+  const { recipeId, consumedBy, notes, reason } = req.body;
+
+  const result = await sectionsService.recordRecipeConsumption({
+    sectionId: parseInt(sectionId, 10),
+    recipeId,
+    consumedBy,
+    notes,
+    reason
+  });
+
+  if (!result.success) {
+    return res.status(400).json({
+      success: false,
+      error: result.message
+    });
+  }
+
+  res.status(201).json({
+    success: true,
+    data: result.data,
+    message: result.message
+  });
+});
+
+/**
+ * Get recipe consumption history
+ * GET /api/sections/:id/consumption
+ */
+export const getRecipeConsumption = asyncHandler(async (req, res) => {
+  const { id: recipeId } = req.params;
+  const { sectionId, fromDate, toDate } = req.query;
+  const filters = {};
+  if (sectionId) filters.sectionId = sectionId;
+  if (fromDate) filters.fromDate = fromDate;
+  if (toDate) filters.toDate = toDate;
+  const result = await sectionsService.getRecipeConsumption(parseInt(recipeId, 10), filters);
+
+  res.json({
+    success: true,
+    data: result.data
+  });
+});

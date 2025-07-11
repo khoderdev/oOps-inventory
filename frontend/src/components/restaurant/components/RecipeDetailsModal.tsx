@@ -81,15 +81,15 @@ export const RecipeDetailsModal: React.FC<RecipeDetailsModalProps> = ({ recipe, 
               </thead>
               <tbody className="bg-white divide-y divide-gray-200 dark:bg-gray-800 dark:divide-gray-700">
                 {recipe.ingredients.map((ingredient, i) => {
-                  const unitCost = getEffectiveUnitCost(ingredient);
-                  const totalCost = ingredient.quantity * unitCost;
+                  const costPerBaseUnit = getEffectiveUnitCost(ingredient);
+                  const totalCost = ingredient.quantity * costPerBaseUnit;
                   return (
                     <tr key={i} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                       <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{ingredient.raw_material?.name || "Unknown"}</td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                         {ingredient.quantity} {ingredient.baseUnit}
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">${unitCost.toFixed(4)}</td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">${costPerBaseUnit.toFixed(4)}</td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">${totalCost.toFixed(2)}</td>
                     </tr>
                   );

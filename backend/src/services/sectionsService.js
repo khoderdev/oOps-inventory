@@ -1,7 +1,8 @@
 import { Decimal } from "@prisma/client/runtime/library";
 import prisma from "../config/prisma.js";
-import { convertBaseToPack, formatSectionConsumptionForFrontend, formatSectionForFrontend, formatUserForFrontend, getPackInfo } from "../utils/helpers.js";
+import { convertBaseToPack, formatRecipeConsumptionForFrontend, formatSectionConsumptionForFrontend, formatSectionForFrontend, formatUserForFrontend, getPackInfo } from "../utils/helpers.js";
 import logger from "../utils/logger.js";
+import { generateNextOrderId } from "../utils/orderId.js";
 import * as stockService from "./stockService.js";
 
 // Create a new section
@@ -105,9 +106,11 @@ export const deleteSection = async id => {
 // Record consumption in section with pack/box handling
 export const recordSectionConsumption = async consumptionData => {
   try {
-    const { sectionId, rawMaterialId, quantity, consumedBy, reason, orderId, notes } = consumptionData;
+    const { sectionId, rawMaterialId, quantity, consumedBy, reason, notes } = consumptionData;
     logger.info("Recording consumption:", { sectionId, rawMaterialId, quantity });
     // Get section and raw material
+
+    const orderId = await generateNextOrderId();
     const section = await prisma().section.findUnique({ where: { id: parseInt(sectionId, 10) } });
     const rawMaterial = await prisma().rawMaterial.findUnique({ where: { id: parseInt(rawMaterialId, 10) } });
     if (!section) throw new Error("Section not found");
@@ -203,5 +206,164 @@ export const getSectionConsumption = async (sectionId, filters = {}) => {
   } catch (error) {
     logger.error("Error in getSectionConsumption service:", error);
     throw new Error("Failed to retrieve section consumption");
+  }
+};
+
+// Record recipe consumption
+export const recordRecipeConsumption = async consumptionData => {
+  try {
+    const { recipeId, sectionId, consumedBy, notes, reason } = consumptionData;
+
+    logger.info("📦 Starting recipe consumption process", { recipeId, sectionId, consumedBy });
+
+    const orderId = await generateNextOrderId();
+
+    const recipe = await prisma().recipe.findUnique({
+      where: { id: parseInt(recipeId, 10) },
+      include: { ingredients: { include: { raw_material: true } } }
+    });
+    if (!recipe) throw new Error("Recipe not found");
+
+    const section = await prisma().section.findUnique({
+      where: { id: parseInt(sectionId, 10) }
+    });
+    if (!section) throw new Error("Section not found");
+
+    for (const ingredient of recipe.ingredients) {
+      const assignedRecipe = await prisma().sectionRecipe.findFirst({
+        where: {
+          section_id: parseInt(sectionId, 10),
+          recipe_id: parseInt(recipeId, 10)
+        }
+      });
+
+      if (!assignedRecipe) {
+        throw new Error(`Recipe is not assigned to section ${sectionId}`);
+      }
+    }
+
+    const recipeConsumption = await prisma().recipeConsumption.create({
+      data: {
+        recipe_id: parseInt(recipeId, 10),
+        section_id: parseInt(sectionId, 10),
+        consumed_by: parseInt(consumedBy, 10),
+        order_id: orderId, // 👈 Use generated orderId
+        notes,
+        reason,
+        ingredients: {
+          create: recipe.ingredients.map(ingredient => ({
+            raw_material_id: ingredient.raw_material_id,
+            quantity: ingredient.quantity,
+            unit: ingredient.unit,
+            base_unit: ingredient.baseUnit || ingredient.unit,
+            cost_per_unit: ingredient.cost_per_unit
+          }))
+        }
+      },
+      include: {
+        recipe: true,
+        section: true,
+        user: true,
+        ingredients: { include: { raw_material: true } }
+      }
+    });
+
+    for (const ingredient of recipe.ingredients) {
+      await prisma().sectionInventory.updateMany({
+        where: {
+          section_id: parseInt(sectionId, 10),
+          raw_material_id: ingredient.raw_material_id
+        },
+        data: {
+          quantity: { decrement: ingredient.quantity },
+          last_updated: new Date()
+        }
+      });
+
+      await prisma().sectionConsumption.create({
+        data: {
+          section_id: parseInt(sectionId, 10),
+          raw_material_id: ingredient.raw_material_id,
+          quantity: ingredient.quantity,
+          consumed_by: parseInt(consumedBy, 10),
+          consumed_date: new Date(),
+          reason: reason || `Recipe preparation: ${recipe.name}`,
+          order_id: orderId,
+          notes: notes || `Part of recipe ${recipe.name} preparation`
+        }
+      });
+    }
+
+    logger.info("✅ Recipe consumption recorded successfully", { recipeConsumptionId: recipeConsumption.id });
+
+    return {
+      data: formatRecipeConsumptionForFrontend(recipeConsumption),
+      success: true,
+      message: "Recipe consumption recorded successfully"
+    };
+  } catch (error) {
+    logger.error("❌ Error in recordRecipeConsumption", {
+      error: error.message,
+      stack: error.stack,
+      consumptionData
+    });
+    return {
+      data: null,
+      success: false,
+      message: error.message || "Failed to record recipe consumption"
+    };
+  }
+};
+
+// Get recipe consumption history
+export const getRecipeConsumption = async (recipeId, filters = {}) => {
+  try {
+    const where = { recipe_id: parseInt(recipeId, 10) };
+
+    if (filters.sectionId) {
+      where.section_id = parseInt(filters.sectionId, 10);
+    }
+
+    if (filters.fromDate || filters.toDate) {
+      where.consumed_date = {};
+      if (filters.fromDate) {
+        where.consumed_date.gte = new Date(filters.fromDate);
+      }
+      if (filters.toDate) {
+        where.consumed_date.lte = new Date(filters.toDate);
+      }
+    }
+
+    logger.info("🔍 Fetching recipe consumption history", {
+      recipeId,
+      filters
+    });
+
+    const consumptions = await prisma().recipeConsumption.findMany({
+      where,
+      include: {
+        recipe: true,
+        section: true,
+        user: true,
+        ingredients: { include: { raw_material: true } }
+      },
+      orderBy: { consumed_date: "desc" }
+    });
+
+    logger.info("✅ Recipe consumption history retrieved", { count: consumptions.length });
+
+    return {
+      data: consumptions.map(formatRecipeConsumptionForFrontend),
+      success: true,
+      message: "Recipe consumption history retrieved successfully"
+    };
+  } catch (error) {
+    logger.error("❌ Error in getRecipeConsumption", {
+      error: error.message,
+      stack: error.stack,
+      recipeId,
+      filters
+    });
+    throw new Error("Failed to retrieve recipe consumption history");
   }
 };

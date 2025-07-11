@@ -142,3 +142,41 @@ export const convertBaseToPack = (baseQuantity, rawMaterial) => {
   if (!packInfo) return baseQuantity;
   return parseFloat((baseQuantity / packInfo.unitsPerPack).toFixed(1));
 };
+
+// Helper function to format recipe consumption for frontend
+export const formatRecipeConsumptionForFrontend = consumption => {
+  return {
+    id: consumption.id,
+    recipe: {
+      id: consumption.recipe.id,
+      name: consumption.recipe.name,
+      category: consumption.recipe.category
+    },
+    section: {
+      id: consumption.section.id,
+      name: consumption.section.name,
+      type: consumption.section.type
+    },
+    consumedBy: {
+      id: consumption.user.id,
+      username: consumption.user.username
+    },
+    consumedDate: consumption.consumed_date,
+    orderId: consumption.order_id,
+    notes: consumption.notes,
+    reason: consumption.reason,
+    ingredients: consumption.ingredients.map(ingredient => ({
+      rawMaterial: {
+        id: ingredient.raw_material.id,
+        name: ingredient.raw_material.name,
+        unit: ingredient.raw_material.unit
+      },
+      quantity: ingredient.quantity,
+      unit: ingredient.unit,
+      baseUnit: ingredient.base_unit,
+      costPerUnit: ingredient.cost_per_unit
+    })),
+    createdAt: consumption.created_at,
+    updatedAt: consumption.updated_at
+  };
+};

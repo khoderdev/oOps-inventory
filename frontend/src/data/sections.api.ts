@@ -1,24 +1,5 @@
 import { apiClient } from "../lib/api";
-import {
-  type ApiResponse,
-  type ConsumptionRequest,
-  type CreateSectionAssignmentInput,
-  type CreateSectionInput,
-  type CreateSectionRecipeAssignmentInput,
-  type InventoryUpdateRequest,
-  type RawMaterial,
-  type RecipeConsumption,
-  type RecipeConsumptionFilters,
-  type RecordRecipeConsumptionInput,
-  type RemoveSectionRecipeAssignmentInput,
-  type Section,
-  type SectionConsumption,
-  type SectionConsumptionFilters,
-  type SectionFilters,
-  type SectionInventory,
-  type SectionRecipe,
-  type UpdateSectionInput
-} from "../types";
+import { type ApiResponse, type ConsumptionRequest, type CreateSectionAssignmentInput, type CreateSectionInput, type CreateSectionRecipeAssignmentInput, type InventoryUpdateRequest, type RawMaterial, type RecipeConsumptionFilters, type RecordRecipeConsumptionInput, type RemoveSectionRecipeAssignmentInput, type Section, type SectionConsumption, type SectionConsumptionFilters, type SectionFilters, type SectionInventory, type SectionRecipe, type UpdateSectionInput } from "../types";
 
 export class SectionsAPI {
   static async create(data: CreateSectionInput): Promise<ApiResponse<Section>> {
@@ -239,8 +220,8 @@ export class SectionsAPI {
       let endpoint = `/sections/${sectionId}/consumption`;
       const params = new URLSearchParams();
 
-      if (filters?.rawMaterialId) {
-        params.append("rawMaterialId", filters.rawMaterialId.toString());
+      if (filters?.sectionId) {
+        params.append("sectionId", filters.sectionId.toString());
       }
 
       if (filters?.fromDate) {
@@ -283,18 +264,18 @@ export class SectionsAPI {
     }
   }
 
-  static async getRecipeConsumption(recipeId: string, filters?: RecipeConsumptionFilters): Promise<ApiResponse<RecipeConsumption[]>> {
+  static async getRecipeConsumption(recipeId: string, filters: RecipeConsumptionFilters = {}) {
     try {
       let endpoint = `/recipes/${recipeId}/consumption`;
       const params = new URLSearchParams();
 
-      if (filters?.sectionId) {
+      if (filters.sectionId) {
         params.append("sectionId", filters.sectionId);
       }
-      if (filters?.fromDate) {
+      if (filters.fromDate) {
         params.append("fromDate", filters.fromDate.toString());
       }
-      if (filters?.toDate) {
+      if (filters.toDate) {
         params.append("toDate", filters.toDate.toString());
       }
 
@@ -302,7 +283,12 @@ export class SectionsAPI {
         endpoint += `?${params.toString()}`;
       }
 
-      return await apiClient.get<RecipeConsumption[]>(endpoint);
+      const response = await apiClient.get(endpoint);
+      return {
+        data: response.data,
+        success: response.success,
+        message: response.message
+      };
     } catch (error) {
       return {
         data: [],

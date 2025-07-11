@@ -4,7 +4,6 @@ import { useApp } from "../../hooks/useApp";
 import { useRemoveRecipeFromSection, useSectionConsumption, useSectionInventory, useSectionRecipes } from "../../hooks/useSections";
 import type { RawMaterial, Recipe, Section, SectionDetailsModalProps, SectionInventory } from "../../types";
 import { MeasurementUnit } from "../../types";
-import { splitQuantityAndUnit } from "../../utils/units";
 import Button from "../ui/Button";
 import Modal from "../ui/Modal";
 import ConsumptionModal from "./ConsumptionModal";
@@ -21,7 +20,16 @@ const SectionDetailsModal = ({ section, isOpen, onClose }: SectionDetailsModalPr
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedInventoryItem, setSelectedInventoryItem] = useState<SectionInventory | null>(null);
   const { data: inventory = [], refetch } = useSectionInventory(section?.id.toString() || "");
-  const { data: consumption = [], refetch: refetchConsumption } = useSectionConsumption(section?.id.toString() || "");
+  // const { data: consumption = [], refetch: refetchConsumption } = useSectionConsumption(section?.id.toString() || "");
+  const { data: consumption = [], refetch: refetchConsumption } = useSectionConsumption(section?.id.toString() || "", {
+    select: data =>
+      data.map(item => ({
+        ...item,
+        // Flatten the first ingredient for display purposes
+        displayMaterial: item.ingredients?.[0]?.rawMaterial || null,
+        displayQuantity: item.ingredients?.[0]?.quantity || 0
+      }))
+  });
   const { data: assignedRecipes = [], refetch: refetchAssignedRecipes, isError: isAssignedRecipesError, error: assignedRecipesError } = useSectionRecipes(section?.id.toString() || "");
   const [showRecipeAssignModal, setShowRecipeAssignModal] = useState(false);
   const [showRecipeDetailsModal, setShowRecipeDetailsModal] = useState(false);
@@ -98,18 +106,38 @@ const SectionDetailsModal = ({ section, isOpen, onClose }: SectionDetailsModalPr
     setSelectedInventoryItem(null);
   };
 
-  const formatQuantityDisplay = (quantity: number, material: RawMaterial | undefined) => {
-    if (!material) return `${quantity}`;
+  // const formatQuantityDisplay = (quantity: number, material: RawMaterial | undefined) => {
+  //   if (!material) return `${quantity}`;
 
-    const isPackOrBox = material.unit === MeasurementUnit.PACKS || material.unit === MeasurementUnit.BOXES;
-    if (isPackOrBox) {
-      const packInfo = material as unknown as { unitsPerPack?: number; baseUnit?: string };
-      const baseUnit = packInfo.baseUnit || "pieces";
-      return `${quantity} ${baseUnit}`;
+  //   const isPackOrBox = material.unit === MeasurementUnit.PACKS || material.unit === MeasurementUnit.BOXES;
+  //   if (isPackOrBox) {
+  //     const packInfo = material as unknown as { unitsPerPack?: number; baseUnit?: string };
+  //     const baseUnit = packInfo.baseUnit || "pieces";
+  //     return `${quantity} ${baseUnit}`;
+  //   }
+
+  //   return `${quantity} ${material.unit}`;
+  // };
+
+  const formatQuantityDisplay = (qty: number, material?: RawMaterial | null): string => {
+    if (!material) {
+      return `${qty}`; // Just show the quantity if no material data
     }
 
-    return `${quantity} ${material.unit}`;
+    // Handle cases where unit might be missing
+    const unit = material.unit?.toLowerCase?.() || "";
+    const baseUnit = material.baseUnit?.toLowerCase?.() || "units";
+    const unitsPerPack = material.unitsPerPack || 1;
+
+    // Handle pack/box cases
+    if ((material.unit === "PACKS" || material.unit === "BOXES") && unitsPerPack) {
+      return `${qty} ${baseUnit}`;
+    }
+
+    return unit ? `${qty} ${unit}` : `${qty}`;
   };
+
+  console.log("Consumption data:", consumption);
 
   return (
     <>
@@ -217,30 +245,33 @@ const SectionDetailsModal = ({ section, isOpen, onClose }: SectionDetailsModalPr
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {consumption.map(item => (
-                    <div key={item.id} className="flex items-center justify-between p-4 border rounded-lg dark:bg-gray-900/10 dark:border-gray-800">
-                      <div>
-                        <p className="font-medium text-gray-900 dark:text-gray-300">{item.rawMaterial?.name}</p>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
-                          {new Date(item.consumedDate).toLocaleDateString()} at {new Date(item.consumedDate).toLocaleTimeString()}
-                        </p>
-                        <p className="text-xs text-gray-400">{item.reason}</p>
+                  {consumption.map(item => {
+                    // Use the first ingredient for display
+                    const mainIngredient = item.ingredients?.[0];
+                    const materialName = mainIngredient?.rawMaterial?.name || item.recipe?.name || "Item";
+                    const quantity = mainIngredient?.quantity || 0;
+                    const unit = mainIngredient?.unit || "";
+
+                    return (
+                      <div key={item.id} className="flex items-center justify-between p-4 border rounded-lg dark:bg-gray-900/10 dark:border-gray-800">
+                        <div>
+                          <p className="font-medium text-gray-900 dark:text-gray-300">
+                            {materialName}
+                            {item.recipe && ` (${item.recipe.name})`}
+                          </p>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">
+                            {new Date(item.consumedDate).toLocaleDateString()} at {new Date(item.consumedDate).toLocaleTimeString()}
+                          </p>
+                          <p className="text-xs text-gray-400">{item.reason}</p>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-2xl font-bold text-gray-900 dark:text-gray-300">{quantity}</span>
+                          {unit && <span className="text-sm text-gray-500 dark:text-red-400"> {unit.toLowerCase()}</span>}
+                          {item.orderId && <p className="text-xs text-blue-600 dark:text-blue-400">{item.orderId}</p>}
+                        </div>
                       </div>
-                      <div className="text-right">
-                        {(() => {
-                          const displayText = formatQuantityDisplay(item.quantity, item.rawMaterial as RawMaterial);
-                          const { quantity, unit } = splitQuantityAndUnit(displayText);
-                          return (
-                            <>
-                              <span className="text-2xl font-bold text-gray-900 dark:text-gray-300">{quantity}</span>
-                              {unit && <span className="text-sm text-gray-500 dark:text-red-400"> {unit}</span>}
-                            </>
-                          );
-                        })()}
-                        {item.orderId && <p className="text-xs text-blue-600 dark:text-blue-400">Order #: {item.orderId}</p>}
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>

@@ -1,6 +1,6 @@
 import type { BaseEntity, User } from "./common.types";
-import type { RawMaterial } from "./rawMaterials.types";
-import type { Recipe } from "./recipes.types";
+import type { MeasurementUnit, RawMaterial } from "./rawMaterials.types";
+import type { Recipe, RecipeIngredient } from "./recipes.types";
 
 export interface Section extends BaseEntity {
   name: string;
@@ -41,6 +41,8 @@ export interface SectionRecipe extends BaseEntity {
 }
 
 export interface SectionConsumption extends BaseEntity {
+  ingredients: RecipeIngredient[];
+  recipe: Recipe;
   sectionId: number;
   section?: Section;
   rawMaterialId: number;
@@ -136,8 +138,15 @@ export interface InventoryUpdateRequest {
   notes?: string | null;
 }
 
-// Add to your existing types
-export interface RecipeConsumption extends BaseEntity {
+export interface SectionConsumptionFilters {
+  sectionId?: string;
+  fromDate?: Date;
+  toDate?: Date;
+}
+
+// Add these new types
+export interface RecipeConsumption {
+  id: number;
   recipeId: number;
   recipe?: Recipe;
   sectionId: number;
@@ -147,23 +156,38 @@ export interface RecipeConsumption extends BaseEntity {
   consumedDate: Date;
   orderId?: string | null;
   notes?: string | null;
+  reason?: string;
   ingredients: {
     rawMaterialId: number;
     rawMaterial?: RawMaterial;
     quantity: number;
+    unit: MeasurementUnit;
+    baseUnit: MeasurementUnit;
+    costPerUnit?: number;
   }[];
+  createdAt: Date;
+  updatedAt: Date;
 }
 
-// Add to your input types
+export interface RecipeConsumptionIngredient {
+  id: number;
+  recipeConsumptionId: number;
+  rawMaterialId: number;
+  quantity: number;
+  unit: MeasurementUnit;
+  baseUnit: MeasurementUnit;
+  costPerUnit?: number;
+}
+
 export interface RecordRecipeConsumptionInput {
   recipeId: number;
   sectionId: number;
   consumedBy: number;
-  orderId?: string | null;
-  notes?: string | null;
+  orderId?: string;
+  notes?: string;
+  reason?: string;
 }
 
-// Add to your filter types
 export interface RecipeConsumptionFilters {
   sectionId?: string;
   fromDate?: Date;

@@ -23,6 +23,7 @@ model User {
   stock_movements      StockMovement[]     @relation("StockMovementPerformedBy")
   section_consumptions SectionConsumption[] @relation("ConsumptionPerformedBy")
   assigned_section_recipes SectionRecipe[] @relation("UserAssignedSectionRecipes")
+  recipe_consumptions RecipeConsumption[] @relation("RecipeConsumptionPerformedBy")
   created_purchase_orders  PurchaseOrder[] @relation("PurchaseOrderCreatedBy")
   approved_purchase_orders PurchaseOrder[] @relation("PurchaseOrderApprovedBy")
   received_receipts       PurchaseReceipt[] @relation("PurchaseReceiptReceivedBy")
@@ -55,6 +56,7 @@ model RawMaterial {
   updated_at           DateTime             @updatedAt @map("updated_at")
   id                   Int                  @id @default(autoincrement())
   section_consumptions SectionConsumption[]
+  recipe_consumption_ingredients RecipeConsumptionIngredient[]
   section_inventories  SectionInventory[]
   stock_entries        StockEntry[]
   supplier_materials   SupplierMaterial[]
@@ -81,8 +83,7 @@ model Section {
   manager              User                 @relation("SectionManager", fields: [manager_id], references: [id])
   movements_from       StockMovement[]      @relation("MovementFromSection")
   movements_to         StockMovement[]      @relation("MovementToSection")
-  
-  // New relationships for comprehensive restaurant management
+  recipe_consumptions RecipeConsumption[]
   sales                Sale[]
 
   @@index([manager_id])
@@ -150,6 +151,49 @@ model SectionConsumption {
   @@map("section_consumptions")
 }
 
+model RecipeConsumption {
+  id              Int       @id @default(autoincrement())
+  recipe_id       Int       @map("recipe_id")
+  section_id      Int       @map("section_id")
+  consumed_by     Int       @map("consumed_by")
+  consumed_date   DateTime  @default(now()) @map("consumed_date")
+  order_id        String?   @map("order_id")
+  notes           String?
+  reason          String?
+  created_at      DateTime  @default(now()) @map("created_at")
+  updated_at      DateTime  @updatedAt @map("updated_at")
+  
+  // Relationships
+  recipe          Recipe    @relation(fields: [recipe_id], references: [id])
+  section         Section   @relation(fields: [section_id], references: [id])
+  user            User      @relation("RecipeConsumptionPerformedBy", fields: [consumed_by], references: [id])
+  ingredients     RecipeConsumptionIngredient[]
+
+  @@map("recipe_consumptions")
+  @@index([recipe_id])
+  @@index([section_id])
+  @@index([consumed_date])
+  @@index([consumed_by])
+}
+
+model RecipeConsumptionIngredient {
+  id                      Int             @id @default(autoincrement())
+  recipe_consumption_id   Int             @map("recipe_consumption_id")
+  raw_material_id         Int             @map("raw_material_id")
+  quantity                Decimal         @db.Decimal(10, 3)
+  unit                    MeasurementUnit
+  base_unit               MeasurementUnit @map("base_unit")
+  cost_per_unit           Decimal?        @map("cost_per_unit") @db.Decimal(10, 5)
+  
+  // Relationships
+  recipe_consumption      RecipeConsumption @relation(fields: [recipe_consumption_id], references: [id], onDelete: Cascade)
+  raw_material            RawMaterial       @relation(fields: [raw_material_id], references: [id])
+
+  @@map("recipe_consumption_ingredients")
+  @@index([recipe_consumption_id])
+  @@index([raw_material_id])
+}
+
 model StockEntry {
   quantity        Decimal         @db.Decimal(10, 2)
   unit_cost       Decimal         @map("unit_cost") @db.Decimal(10, 6)
@@ -203,13 +247,15 @@ model StockMovement {
 }
 
 model OrderCounter {
+  id                Int      @id @default(autoincrement())
   last_order_number Int      @default(0) @map("last_order_number")
   created_at        DateTime @default(now()) @map("created_at")
   updated_at        DateTime @updatedAt @map("updated_at")
-  id                Int      @id @default(autoincrement())
+  unique_key        String   @default("singleton") @unique
 
   @@map("order_counters")
 }
+
 
 enum Role {
   MANAGER
@@ -410,6 +456,7 @@ model Recipe {
   updated_at      DateTime        @updatedAt @map("updated_at")
   creator         User            @relation("RecipeCreatedBy", fields: [created_by], references: [id])
   ingredients     RecipeIngredient[]
+  consumptions    RecipeConsumption[]
   menu_items      MenuItem[]
 
   @@map("recipes")

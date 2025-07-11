@@ -8,40 +8,27 @@ import Button from "../ui/Button";
 import Input from "../ui/Input";
 import Modal from "../ui/Modal";
 import Select from "../ui/Select";
-import { useOrderIdCounter } from "../../utils/orderId";
 
-const ConsumptionModal = ({
-  section,
-  inventoryItem,
-  isOpen,
-  onClose,
-  onSuccess,
-}: ConsumptionModalProps) => {
+const ConsumptionModal = ({ section, inventoryItem, isOpen, onClose, onSuccess }: ConsumptionModalProps) => {
   const [quantity, setQuantity] = useState("");
   const [reason, setReason] = useState("");
   const [notes, setNotes] = useState("");
-  const [orderId, setOrderId] = useState("");
-  const [generatedOrderId, setGeneratedOrderId] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
-
-  const { generateNextOrderId } = useOrderIdCounter();
+  const [generatedOrderId, setGeneratedOrderId] = useState("");
 
   const { state } = useApp();
   const recordMutation = useRecordConsumption();
 
-  // Reset form and generate order ID when modal opens
+  // Reset form when modal opens
   useEffect(() => {
     if (isOpen && inventoryItem) {
       setQuantity("");
       setReason("selling");
       setNotes("");
       setErrors({});
-      
-      const id = generateNextOrderId();
-      setGeneratedOrderId(id);
-      setOrderId(id);
+      setGeneratedOrderId("");
     }
-  }, [isOpen, inventoryItem, generateNextOrderId]);
+  }, [isOpen, inventoryItem]);
 
   const reasonOptions = [
     { value: "selling", label: "Selling" },
@@ -50,65 +37,36 @@ const ConsumptionModal = ({
     { value: "sampling", label: "Sampling/Testing" },
     { value: "transfer", label: "Transfer to Another Section" },
     { value: "adjustment", label: "Inventory Adjustment" },
-    { value: "other", label: "Other" },
+    { value: "other", label: "Other" }
   ];
 
-  const isPackOrBox = () =>
-    inventoryItem?.rawMaterial?.unit === MeasurementUnit.PACKS ||
-    inventoryItem?.rawMaterial?.unit === MeasurementUnit.BOXES;
+  const isPackOrBox = () => inventoryItem?.rawMaterial?.unit === MeasurementUnit.PACKS || inventoryItem?.rawMaterial?.unit === MeasurementUnit.BOXES;
 
   const getPackInfo = () => {
     if (!inventoryItem?.rawMaterial || !isPackOrBox()) return null;
-
-    const material = inventoryItem.rawMaterial as unknown as {
+    const material = inventoryItem.rawMaterial as {
       unitsPerPack?: number;
       baseUnit?: MeasurementUnit;
     };
-
     return {
       unitsPerPack: material.unitsPerPack || 1,
       baseUnit: material.baseUnit || MeasurementUnit.PIECES,
-      packUnit: inventoryItem.rawMaterial.unit,
+      packUnit: inventoryItem.rawMaterial.unit
     };
   };
 
   const convertToBaseQuantity = (inputQuantity: number) => inputQuantity;
-
   const getMaxQuantity = () => (inventoryItem ? inventoryItem.quantity : 0);
-
-  const getDisplayUnit = () => {
-    if (!inventoryItem?.rawMaterial) return "";
-    if (isPackOrBox()) {
-      const packInfo = getPackInfo();
-      return packInfo?.baseUnit?.toLowerCase() || "pieces";
-    }
-    return inventoryItem.rawMaterial.unit.toLowerCase();
-  };
-
-  const getStepValueForDisplay = () => {
-    if (!inventoryItem?.rawMaterial) return "1";
-
-    if (isPackOrBox()) {
-      const packInfo = getPackInfo();
-      return getStepValue(packInfo?.baseUnit as MeasurementUnit);
-    }
-
-    return getStepValue(inventoryItem.rawMaterial.unit as MeasurementUnit);
-  };
-
+  const getDisplayUnit = () => (isPackOrBox() ? getPackInfo()?.baseUnit?.toLowerCase() || "pieces" : inventoryItem.rawMaterial.unit.toLowerCase());
+  const getStepValueForDisplay = () => getStepValue(isPackOrBox() ? (getPackInfo()?.baseUnit as MeasurementUnit) : (inventoryItem.rawMaterial.unit as MeasurementUnit));
   const getNumericQuantity = () => parseFloat(quantity) || 0;
-
-  const getFormattedQuantity = (qty: number, unit: string) => `${qty} ${unit}`;
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
     const numericQuantity = getNumericQuantity();
 
     if (numericQuantity <= 0) newErrors.quantity = "Quantity must be greater than 0";
-
-    if (numericQuantity > getMaxQuantity())
-      newErrors.quantity = `Quantity cannot exceed available stock (${getMaxQuantity()} ${getDisplayUnit()})`;
-
+    if (numericQuantity > getMaxQuantity()) newErrors.quantity = `Quantity cannot exceed available stock (${getMaxQuantity()} ${getDisplayUnit()})`;
     if (!reason) newErrors.reason = "Please select a reason";
 
     setErrors(newErrors);
@@ -117,26 +75,22 @@ const ConsumptionModal = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!inventoryItem || !validateForm()) return;
-
-    if (!orderId) {
-      console.error("No order ID available");
-      return;
-    }
 
     try {
       const baseQuantity = convertToBaseQuantity(getNumericQuantity());
-
-      await recordMutation.mutateAsync({
+      const result = await recordMutation.mutateAsync({
         sectionId: section.id,
         rawMaterialId: inventoryItem.rawMaterialId,
         quantity: baseQuantity,
         consumedBy: state.user?.id || "1",
         reason,
-        orderId,
-        notes: notes || undefined,
+        notes: notes || undefined
       });
+
+      if (result?.data?.order_id) {
+        setGeneratedOrderId(result.data.order_id);
+      }
 
       onSuccess();
       onClose();
@@ -146,24 +100,19 @@ const ConsumptionModal = ({
   };
 
   const handleInputChange = (field: string, value: string | number) => {
-      console.log(`Field: ${field}, Value:`, value); 
     switch (field) {
       case "quantity":
-        setQuantity(String(value)); 
+        setQuantity(String(value));
         break;
       case "reason":
         setReason(value as string);
-        break;
-      case "orderId":
-        setOrderId(value as string);
         break;
       case "notes":
         setNotes(value as string);
         break;
     }
-
     if (errors[field]) {
-      setErrors((prev) => ({ ...prev, [field]: "" }));
+      setErrors(prev => ({ ...prev, [field]: "" }));
     }
   };
 
@@ -179,7 +128,6 @@ const ConsumptionModal = ({
     <Modal isOpen={isOpen} onClose={onClose} title={`Record Usage - ${inventoryItem.rawMaterial?.name}`} size="md">
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="space-y-4">
-          {/* Order ID Display */}
           {generatedOrderId && (
             <div className="bg-blue-50 p-4 rounded-lg dark:bg-blue-900/10">
               <div className="flex items-center justify-between">
@@ -189,7 +137,6 @@ const ConsumptionModal = ({
             </div>
           )}
 
-          {/* Item Info */}
           <div className="bg-gray-50 p-4 rounded-lg dark:bg-gray-900/10">
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
@@ -215,7 +162,6 @@ const ConsumptionModal = ({
               </div>
             </div>
 
-            {/* Pack/Box Info */}
             {isPackOrBox() && packInfo && (
               <div className="mt-3 pt-3 border-t border-gray-200">
                 <p className="text-xs text-gray-600 dark:text-gray-400">
@@ -225,37 +171,12 @@ const ConsumptionModal = ({
             )}
           </div>
 
-          <Input
-            autoFocus
-            label={`Quantity Used (${getDisplayUnit()})`}
-            type="number"
-            min="0"
-            max={maxQuantity}
-            step={getStepValueForDisplay()}
-            value={quantity}
-           onValueChange={(value) => handleInputChange("quantity", value)}
-            error={errors.quantity}
-            required
-            helperText={`Max: ${getFormattedQuantity(maxQuantity, getDisplayUnit())}`}
-          />
+          <Input autoFocus label={`Quantity Used (${getDisplayUnit()})`} type="number" min="0" max={maxQuantity} step={getStepValueForDisplay()} value={quantity} onValueChange={value => handleInputChange("quantity", value)} error={errors.quantity} required helperText={`Max: ${maxQuantity} ${getDisplayUnit()}`} />
 
-          <Select
-            label="Reason for Usage"
-            options={[{ value: "", label: "Select a reason..." }, ...reasonOptions]}
-            value={reason}
-            onChange={(value) => handleInputChange("reason", value ?? "")}
-            error={errors.reason}
-            required
-          />
+          <Select label="Reason for Usage" options={[{ value: "", label: "Select a reason..." }, ...reasonOptions]} value={reason} onChange={value => handleInputChange("reason", value ?? "")} error={errors.reason} required />
 
-          <Input
-            label="Notes (Optional)"
-            value={notes}
-            onChange={(value) => handleInputChange("notes", value)}
-            placeholder="Additional notes about this usage"
-          />
+          <Input label="Notes (Optional)" value={notes} onChange={value => handleInputChange("notes", value)} placeholder="Additional notes about this usage" />
 
-          {/* Usage Summary */}
           {getNumericQuantity() > 0 && inventoryItem.rawMaterial && (
             <div className="bg-blue-50 p-4 rounded-lg space-y-2 dark:bg-blue-900/10">
               <div className="flex justify-between items-center">
@@ -263,30 +184,28 @@ const ConsumptionModal = ({
                 <span className="text-lg font-bold text-blue-900 dark:text-blue-300">
                   $
                   {(() => {
-                    const numericQuantity = getNumericQuantity();
-                    const packInfo = getPackInfo();
+                    const qty = getNumericQuantity();
                     if (packInfo && isPackOrBox()) {
-                      const individualCost = inventoryItem.rawMaterial.unitCost / packInfo.unitsPerPack;
-                      return (numericQuantity * individualCost).toFixed(2);
+                      const unitCost = inventoryItem.rawMaterial.unitCost / packInfo.unitsPerPack;
+                      return (qty * unitCost).toFixed(2);
                     } else {
-                      return (numericQuantity * inventoryItem.rawMaterial.unitCost).toFixed(2);
+                      return (qty * inventoryItem.rawMaterial.unitCost).toFixed(2);
                     }
                   })()}
                 </span>
               </div>
-
               <div className="flex justify-between items-center">
                 <span className="text-xs text-blue-600 dark:text-blue-400">Remaining after usage:</span>
                 <div className="text-right">
                   {isPackOrBox() && packInfo ? (
-                    <div>
+                    <>
                       <span className="text-sm font-medium text-blue-800 dark:text-blue-300">
                         {remainingAfterUsage} {packInfo.baseUnit}
                       </span>
                       <div className="text-xs text-blue-600 dark:text-blue-400">
                         ({(remainingAfterUsage / packInfo.unitsPerPack).toFixed(2)} {inventoryItem.rawMaterial.unit} total)
                       </div>
-                    </div>
+                    </>
                   ) : (
                     <span className="text-sm font-medium text-blue-800 dark:text-blue-300">
                       {remainingAfterUsage.toFixed(2)} {inventoryItem.rawMaterial.unit}
