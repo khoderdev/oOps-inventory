@@ -42,7 +42,6 @@ export interface StockMovement extends BaseEntity {
   fromSection?: Section | null;
   toSection?: Section | null;
   reason: string;
-  // performedBy: User;
   user?: User;
   referenceId?: string | null;
 }

@@ -115,6 +115,7 @@ const ConsumptionReport = ({ movements, stockEntries, rawMaterials, selectedSect
       totalMovements: filteredMovements.length
     };
   }, [movements, stockEntries, rawMaterials, selectedSection]);
+
   const [selectedMovement, setSelectedMovement] = useState<StockMovement | null>(null);
 
   const topConsumedMaterials = Object.values(consumptionData.byMaterial)
@@ -125,12 +126,12 @@ const ConsumptionReport = ({ movements, stockEntries, rawMaterials, selectedSect
     .map(([category, value]) => ({ category, value }))
     .sort((a, b) => b.value - a.value);
 
-  // Prepare table data by flattening movements from byMaterial
   const tableData = useMemo(() => {
     const data = Object.values(consumptionData.byMaterial).flatMap((materialConsumption: MaterialConsumption) =>
       materialConsumption.movements.map(movement => ({
         ...movement,
-        material: materialConsumption.material
+        material: materialConsumption.material,
+        username: movement.user?.username || "Unknown" // Include username
       }))
     );
     return data;
@@ -144,7 +145,7 @@ const ConsumptionReport = ({ movements, stockEntries, rawMaterials, selectedSect
     setSelectedMovement(null);
   };
 
-  const columns: ColumnDef<StockMovement>[] = [
+  const columns: ColumnDef<StockMovement & { username?: string }>[] = [
     {
       accessorKey: "date",
       header: "Date",
@@ -182,6 +183,16 @@ const ConsumptionReport = ({ movements, stockEntries, rawMaterials, selectedSect
       accessorKey: "reason",
       header: "Reason",
       cell: ({ row }) => row.original.reason || "Unknown",
+      enableSorting: true,
+      meta: { align: "left" },
+      size: 120,
+      minSize: 100,
+      maxSize: 140
+    },
+    {
+      accessorKey: "username",
+      header: "Performed By",
+      cell: ({ row }) => row.original.username || "Unknown",
       enableSorting: true,
       meta: { align: "left" },
       size: 120,
@@ -295,7 +306,7 @@ const ConsumptionReport = ({ movements, stockEntries, rawMaterials, selectedSect
 
       {/* Recent Consumption Activity */}
       <div className="bg-white p-6 rounded-lg border dark:bg-gray-800 dark:border-gray-700">
-        <Table columns={columns} data={tableData} onRowClick={handleRowClick} />
+        <Table columns={columns} data={tableData} onRowClick={handleRowClick} showExport={true} />
       </div>
 
       {/* Movement Details Modal */}
