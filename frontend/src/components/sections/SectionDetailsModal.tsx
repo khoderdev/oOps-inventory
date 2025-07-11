@@ -1,14 +1,14 @@
-import { Minus, Package, Plus, Trash2, Utensils } from "lucide-react";
+import { List, Minus, Package, Plus, Trash2, Utensils } from "lucide-react";
 import { useState } from "react";
 import { useApp } from "../../hooks/useApp";
-import { useRemoveRecipeFromSection, useSectionInventory, useSectionRecipes, useSectionRecipesConsumption } from "../../hooks/useSections";
+import { useRemoveRecipeFromSection, useSectionInventory, useSectionRecipes } from "../../hooks/useSections";
 import type { RawMaterial, Recipe, Section, SectionDetailsModalProps, SectionInventory } from "../../types";
 import { MeasurementUnit } from "../../types";
 import Button from "../ui/Button";
 import Modal from "../ui/Modal";
 import ConsumptionModal from "./ConsumptionModal";
 import RecipeAssignmentModal from "./RecipeAssignmentModal";
-import { SectionRecipesConsumptionHistory } from "./RecipeConsumptions";
+import { SectionRecipesConsumptionContent } from "./RecipeConsumptions";
 import RecipesConsumptionModal from "./RecipesConsumptionModal";
 import SectionInventoryEditModal from "./SectionInventoryEditModal";
 import StockAssignmentModal from "./StockAssignmentModal";
@@ -21,22 +21,13 @@ const SectionDetailsModal = ({ section, isOpen, onClose }: SectionDetailsModalPr
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedInventoryItem, setSelectedInventoryItem] = useState<SectionInventory | null>(null);
   const { data: inventory = [], refetch } = useSectionInventory(section?.id.toString() || "");
-  const { data: consumption = [], refetch: refetchConsumption } = useSectionRecipesConsumption(section?.id.toString() || "", {
-    select: data =>
-      data.map(item => ({
-        ...item,
-        // Flatten the first ingredient for display purposes
-        displayMaterial: item.ingredients?.[0]?.rawMaterial || null,
-        displayQuantity: item.ingredients?.[0]?.quantity || 0
-      }))
-  });
   const { data: assignedRecipes = [], refetch: refetchAssignedRecipes, isError: isAssignedRecipesError, error: assignedRecipesError } = useSectionRecipes(section?.id.toString() || "");
   const [showRecipeAssignModal, setShowRecipeAssignModal] = useState(false);
   const [showRecipeDetailsModal, setShowRecipeDetailsModal] = useState(false);
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
   const removeRecipeMutation = useRemoveRecipeFromSection();
   const [showRecipeConsumptionModal, setShowRecipeConsumptionModal] = useState(false);
-
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
   const handleRecipeClick = (recipe: Recipe) => {
     setSelectedRecipe(recipe);
     setShowRecipeDetailsModal(true);
@@ -84,7 +75,6 @@ const SectionDetailsModal = ({ section, isOpen, onClose }: SectionDetailsModalPr
 
   const handleConsumptionSuccess = () => {
     refetch();
-    refetchConsumption();
     setShowConsumptionModal(false);
     setSelectedInventoryItem(null);
   };
@@ -204,7 +194,9 @@ const SectionDetailsModal = ({ section, isOpen, onClose }: SectionDetailsModalPr
                     Assign Recipe
                   </Button>
                   {/* {assignedRecipes.length > 0 && <SectionRecipesConsumptionHistory sectionId={section.id.toString()} sectionName={section.name} />} */}
-                  {section?.id && <SectionRecipesConsumptionHistory sectionId={String(section.id)} sectionName={section.name} />}
+                  <Button size="sm" leftIcon={<List className="w-4 h-4" />} variant="outline" onClick={() => setShowHistoryModal(true)}>
+                    View History
+                  </Button>
                 </div>
               </div>
 
@@ -236,7 +228,7 @@ const SectionDetailsModal = ({ section, isOpen, onClose }: SectionDetailsModalPr
                           <Button
                             onClick={e => {
                               e.stopPropagation();
-                              setSelectedRecipe(assignment.recipe);
+                              setSelectedRecipe(assignment.recipe || null);
                               setShowRecipeConsumptionModal(true);
                             }}
                             leftIcon={<Plus className="w-4 h-4" />}
@@ -375,10 +367,14 @@ const SectionDetailsModal = ({ section, isOpen, onClose }: SectionDetailsModalPr
           }}
           onSuccess={() => {
             refetch();
-            refetchConsumption();
+            refetchAssignedRecipes();
           }}
         />
       )}
+
+      <Modal isOpen={showHistoryModal} onClose={() => setShowHistoryModal(false)} title={`Recipes Consumption History - ${section.name}`} size="xl">
+        <SectionRecipesConsumptionContent sectionId={String(section.id)} />
+      </Modal>
     </>
   );
 };
