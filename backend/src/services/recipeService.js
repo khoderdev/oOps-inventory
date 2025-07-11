@@ -5,69 +5,83 @@ import logger from "../utils/logger.js";
 export const createRecipe = async recipeData => {
   try {
     const { ingredients, ...recipe } = recipeData;
-
-    const newRecipe = await prisma().recipe.create({
-      data: {
-        ...recipe,
-        ingredients: {
-          create: ingredients.map(ingredient => ({
-            raw_material_id: ingredient.raw_material_id,
-            quantity: parseFloat(ingredient.quantity),
-            unit: ingredient.baseUnit,
-            baseUnit: ingredient.baseUnit
-          }))
-        }
-      },
-      include: { ingredients: { include: { raw_material: true } } }
-    });
-
-    // Calculate recipe cost
+    const newRecipe = await prisma().recipe.create({ data: { ...recipe, ingredients: { create: ingredients.map(ingredient => ({ raw_material_id: ingredient.raw_material_id, quantity: parseFloat(ingredient.quantity), unit: ingredient.baseUnit, baseUnit: ingredient.baseUnit })) } }, include: { ingredients: { include: { raw_material: true } } } });
     const updatedRecipe = await calculateRecipeCost(newRecipe.id);
-
     logger.info(`Recipe created: ${newRecipe.name}`);
-
-    return {
-      success: true,
-      data: updatedRecipe.data,
-      message: "Recipe created successfully"
-    };
+    return { success: true, data: updatedRecipe.data, message: "Recipe created successfully" };
   } catch (error) {
     logger.error("Error creating recipe:", error);
-    return {
-      success: false,
-      message: error.message
-    };
+    return { success: false, message: error.message };
   }
 };
+
+// export const calculateRecipeCost = async recipeId => {
+//   try {
+//     const recipe = await prisma().recipe.findUnique({
+//       where: { id: Number(recipeId) },
+//       include: { ingredients: { include: { raw_material: true } } }
+//     });
+//     if (!recipe) {
+//       return { success: false, message: "Recipe not found" };
+//     }
+//     let totalCost = 0;
+//     const costBreakdown = [];
+//     for (const ingredient of recipe.ingredients) {
+//       const quantity = parseFloat(ingredient.quantity || "0");
+//       const unitCost = getEffectiveUnitCost(ingredient);
+//       const ingredientCost = unitCost * quantity;
+//       totalCost += ingredientCost;
+//       costBreakdown.push({
+//         materialId: ingredient.raw_material.id,
+//         materialName: ingredient.raw_material.name,
+//         quantity,
+//         unit: ingredient.unit,
+//         baseUnit: ingredient.baseUnit,
+//         unitCost,
+//         totalCost: ingredientCost,
+//         percentage: 0
+//       });
+//     }
+//     costBreakdown.forEach(item => {
+//       item.percentage = totalCost > 0 ? parseFloat(((item.totalCost / totalCost) * 100).toFixed(2)) : 0;
+//     });
+//     const [updatedRecipe] = await prisma().$transaction([
+//       prisma().recipe.update({
+//         where: { id: Number(recipeId) },
+//         data: {
+//           serving_cost: parseFloat(totalCost.toFixed(2)),
+//           updated_at: new Date()
+//         },
+//         include: { ingredients: { include: { raw_material: true } } }
+//       }),
+//       ...recipe.ingredients.map(ingredient => prisma().recipeIngredient.update({ where: { id: ingredient.id }, data: { cost_per_unit: getEffectiveUnitCost(ingredient), updated_at: new Date() } }))
+//     ]);
+//     return { success: true, data: { ...updatedRecipe, costAnalysis: { totalCost: parseFloat(totalCost.toFixed(2)), perServingCost: parseFloat((totalCost / (recipe.servings || 1)).toFixed(2)), breakdown: costBreakdown } } };
+//   } catch (error) {
+//     logger.error("Error calculating recipe cost:", error);
+//     return { success: false, message: error.message || "Failed to calculate recipe cost" };
+//   }
+// };
 
 export const calculateRecipeCost = async recipeId => {
   try {
     const recipe = await prisma().recipe.findUnique({
-      where: { id: parseInt(recipeId) },
-      include: {
-        ingredients: {
-          include: {
-            raw_material: true
-          }
-        }
-      }
+      where: { id: Number(recipeId) },
+      include: { ingredients: { include: { raw_material: true } } }
     });
 
     if (!recipe) {
-      return {
-        success: false,
-        message: "Recipe not found"
-      };
+      return { success: false, message: "Recipe not found" };
     }
 
+    // 1. Calculate Total Recipe Cost
     let totalCost = 0;
     const costBreakdown = [];
 
     for (const ingredient of recipe.ingredients) {
-      const quantity = parseFloat(ingredient.quantity);
+      const quantity = parseFloat(ingredient.quantity || "0");
       const unitCost = getEffectiveUnitCost(ingredient);
       const ingredientCost = unitCost * quantity;
-
       totalCost += ingredientCost;
 
       costBreakdown.push({
@@ -80,44 +94,49 @@ export const calculateRecipeCost = async recipeId => {
         totalCost: ingredientCost,
         percentage: 0
       });
-
-      // Update ingredient cost
-      await prisma().recipeIngredient.update({
-        where: { id: ingredient.id },
-        data: { cost_per_unit: unitCost }
-      });
     }
 
     // Calculate percentages
     costBreakdown.forEach(item => {
-      item.percentage = totalCost > 0 ? (item.totalCost / totalCost) * 100 : 0;
+      item.percentage = totalCost > 0 ? parseFloat(((item.totalCost / totalCost) * 100).toFixed(2)) : 0;
     });
 
-    // Update recipe with calculated cost (rounded to 2 decimal places)
-    const roundedTotalCost = parseFloat(totalCost.toFixed(2));
-    const updatedRecipe = await prisma().recipe.update({
-      where: { id: parseInt(recipeId) },
-      data: { serving_cost: roundedTotalCost },
-      include: { ingredients: { include: { raw_material: true } } }
-    });
+    // 2. Serving Cost = Total Cost (no division)
+    const servingCost = totalCost;
+
+    const [updatedRecipe] = await prisma().$transaction([
+      prisma().recipe.update({
+        where: { id: Number(recipeId) },
+        data: {
+          serving_cost: parseFloat(servingCost.toFixed(2)), // Stores total cost as serving cost
+          updated_at: new Date()
+        }
+      }),
+      ...recipe.ingredients.map(ingredient =>
+        prisma().recipeIngredient.update({
+          where: { id: ingredient.id },
+          data: {
+            cost_per_unit: getEffectiveUnitCost(ingredient),
+            updated_at: new Date()
+          }
+        })
+      )
+    ]);
 
     return {
       success: true,
       data: {
         ...updatedRecipe,
-        serving_cost: roundedTotalCost.toString(), // Ensure consistent string format
         costAnalysis: {
-          totalCost: roundedTotalCost,
+          totalCost: parseFloat(totalCost.toFixed(2)),
+          perServingCost: parseFloat(servingCost.toFixed(2)), // Same as totalCost
           breakdown: costBreakdown
         }
       }
     };
   } catch (error) {
     logger.error("Error calculating recipe cost:", error);
-    return {
-      success: false,
-      message: error.message
-    };
+    return { success: false, message: error.message || "Failed to calculate recipe cost" };
   }
 };
 
@@ -259,33 +278,25 @@ export const createMenuItem = async menuData => {
   }
 };
 
-/**
- * Hard delete a recipe and its related ingredients
- */
 export const deleteRecipe = async id => {
   try {
     const recipeId = parseInt(id);
 
-    // Ensure the recipe exists
-    const existing = await prisma().recipe.findUnique({ where: { id: recipeId } });
-    if (!existing) {
-      return { success: false, message: "Recipe not found" };
-    }
+    return await prisma().$transaction(async prisma => {
+      const existing = await prisma.recipe.findUnique({ where: { id: recipeId } });
+      if (!existing) {
+        return { success: false, message: "Recipe not found" };
+      }
 
-    // Delete ingredients first (if cascade is not configured)
-    await prisma().recipeIngredient.deleteMany({
-      where: { recipe_id: recipeId }
+      await prisma.sectionRecipe.deleteMany({ where: { recipe_id: recipeId } });
+      await prisma.recipeIngredient.deleteMany({ where: { recipe_id: recipeId } });
+      await prisma.recipe.delete({ where: { id: recipeId } });
+
+      return {
+        success: true,
+        message: "Recipe deleted successfully"
+      };
     });
-
-    // Delete the recipe
-    await prisma().recipe.delete({
-      where: { id: recipeId }
-    });
-
-    return {
-      success: true,
-      message: "Recipe deleted successfully"
-    };
   } catch (error) {
     logger.error("Error deleting recipe:", error);
     return {

@@ -26,7 +26,10 @@ export const RecipeDetailsModal: React.FC<RecipeDetailsModalProps> = ({ recipe, 
       </Modal>
     );
 
-  const calculateTotalCost = () => recipe.ingredients.reduce((total, ing) => total + ing.quantity * getEffectiveUnitCost(ing), 0);
+  const calculateTotalCost = () => {
+    if (!recipe.ingredients) return 0;
+    return recipe.ingredients.reduce((total, ing) => total + (ing.quantity || 0) * (getEffectiveUnitCost(ing) || 0), 0);
+  };
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={`Recipe Details: ${recipe.name}`} size="xl">

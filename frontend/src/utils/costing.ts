@@ -47,38 +47,82 @@ import type { RecipeIngredient } from "../types/recipes.types";
 
 ////////////////////////////////////////////////////////
 
+// export const getEffectiveUnitCost = (ingredient: RecipeIngredient) => {
+//   const rawMaterial = ingredient.raw_material;
+//   if (!rawMaterial) return 0;
+
+//   // For PIECES and BOTTLES (individual units)
+//   if (ingredient.baseUnit === "PIECES" || ingredient.baseUnit === "BOTTLES") {
+//     // First try cost_per_individual_unit if available
+//     if (rawMaterial.cost_per_individual_unit) {
+//       return parseFloat(rawMaterial.cost_per_individual_unit.toString());
+//     }
+//     // Then fall back to unit_cost
+//     return parseFloat(rawMaterial.cost_per_base_unit.toString() || "0");
+//   }
+
+//   // For other units (GRAMS, KG, etc.)
+//   // If the ingredient is already in the purchase unit, use unit_cost
+//   if (ingredient.baseUnit === rawMaterial.unit) {
+//     return parseFloat(rawMaterial.unit_cost?.toString() || "0");
+//   }
+
+//   // If there's a direct cost_per_base_unit, use that
+//   if (rawMaterial.cost_per_base_unit) {
+//     return parseFloat(rawMaterial.cost_per_base_unit.toString());
+//   }
+
+//   // Calculate based on units_per_pack if available
+//   if (rawMaterial.units_per_pack) {
+//     const packCost = parseFloat(rawMaterial.unit_cost?.toString() || "0");
+//     const unitsPerPack = parseFloat(rawMaterial.units_per_pack.toString());
+//     return packCost / unitsPerPack;
+//   }
+
+//   // Final fallback to unit_cost
+//   return parseFloat(rawMaterial.unit_cost?.toString() || "0");
+// };
+
+/////////////////////////////////////////////////////////////////
+
 export const getEffectiveUnitCost = (ingredient: RecipeIngredient) => {
   const rawMaterial = ingredient.raw_material;
   if (!rawMaterial) return 0;
 
+  // Safely handle null/undefined values
+  const safeToString = (value: string | number | null | undefined) => {
+    if (value === null || value === undefined) return "0";
+    return value.toString();
+  };
+
   // For PIECES and BOTTLES (individual units)
   if (ingredient.baseUnit === "PIECES" || ingredient.baseUnit === "BOTTLES") {
     // First try cost_per_individual_unit if available
-    if (rawMaterial.cost_per_individual_unit) {
-      return parseFloat(rawMaterial.cost_per_individual_unit.toString());
+    if (rawMaterial.cost_per_individual_unit !== null && rawMaterial.cost_per_individual_unit !== undefined) {
+      return parseFloat(safeToString(rawMaterial.cost_per_individual_unit));
     }
     // Then fall back to unit_cost
-    return parseFloat(rawMaterial.cost_per_base_unit.toString() || "0");
+    return parseFloat(safeToString(rawMaterial.cost_per_base_unit));
   }
 
   // For other units (GRAMS, KG, etc.)
   // If the ingredient is already in the purchase unit, use unit_cost
   if (ingredient.baseUnit === rawMaterial.unit) {
-    return parseFloat(rawMaterial.unit_cost?.toString() || "0");
+    return parseFloat(safeToString(rawMaterial.unit_cost));
   }
 
   // If there's a direct cost_per_base_unit, use that
-  if (rawMaterial.cost_per_base_unit) {
-    return parseFloat(rawMaterial.cost_per_base_unit.toString());
+  if (rawMaterial.cost_per_base_unit !== null && rawMaterial.cost_per_base_unit !== undefined) {
+    return parseFloat(safeToString(rawMaterial.cost_per_base_unit));
   }
 
   // Calculate based on units_per_pack if available
-  if (rawMaterial.units_per_pack) {
-    const packCost = parseFloat(rawMaterial.unit_cost?.toString() || "0");
-    const unitsPerPack = parseFloat(rawMaterial.units_per_pack.toString());
-    return packCost / unitsPerPack;
+  if (rawMaterial.units_per_pack !== null && rawMaterial.units_per_pack !== undefined) {
+    const packCost = parseFloat(safeToString(rawMaterial.unit_cost));
+    const unitsPerPack = parseFloat(safeToString(rawMaterial.units_per_pack));
+    return unitsPerPack > 0 ? packCost / unitsPerPack : 0;
   }
 
   // Final fallback to unit_cost
-  return parseFloat(rawMaterial.unit_cost?.toString() || "0");
+  return parseFloat(safeToString(rawMaterial.unit_cost));
 };

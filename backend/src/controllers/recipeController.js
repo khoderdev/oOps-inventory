@@ -63,22 +63,48 @@ export const getRecipeById = asyncHandler(async (req, res) => {
   });
 });
 
+// export const calculateRecipeCost = asyncHandler(async (req, res) => {
+//   const { id } = req.params;
+
+//   const result = await recipeService.calculateRecipeCost(id);
+
+//   if (!result.success) {
+//     return res.status(404).json({
+//       success: false,
+//       error: result.message
+//     });
+//   }
+
+//   res.json({
+//     success: true,
+//     data: result.data
+//   });
+// });
+
 export const calculateRecipeCost = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
-  const result = await recipeService.calculateRecipeCost(id);
+  try {
+    const result = await recipeService.calculateRecipeCost(id);
 
-  if (!result.success) {
-    return res.status(404).json({
+    if (!result.success) {
+      return res.status(404).json({
+        success: false,
+        error: result.message
+      });
+    }
+
+    res.json({
+      success: true,
+      data: result.data
+    });
+  } catch (error) {
+    logger.error("Error in calculateRecipeCost controller:", error);
+    res.status(500).json({
       success: false,
-      error: result.message
+      error: "Internal server error"
     });
   }
-
-  res.json({
-    success: true,
-    data: result.data
-  });
 });
 
 export const createMenuItem = asyncHandler(async (req, res) => {

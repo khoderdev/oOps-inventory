@@ -92,9 +92,8 @@ export const RecipesView: React.FC<{ onOpenCreate: () => void; onOpenEdit: (reci
         size: 140,
         enableSorting: false,
         meta: { align: "right" },
-        cell: ({ getValue }) => {
-          const id = getValue() as number;
-          return <RecipeCostCell recipeId={id} />;
+        cell: ({ row }) => {
+          return <RecipeCostCell recipe={row.original} />;
         }
       },
       {
