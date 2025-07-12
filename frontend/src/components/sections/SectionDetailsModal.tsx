@@ -1,7 +1,7 @@
 import { List, Minus, Package, Plus, Trash2, Utensils } from "lucide-react";
 import { useState } from "react";
 import { useApp } from "../../hooks/useApp";
-import { useRemoveRecipeFromSection, useSectionInventory, useSectionRecipes } from "../../hooks/useSections";
+import { useRemoveRecipeFromSection, useSectionInventory, useSectionRecipes, useSectionRecipesConsumption } from "../../hooks/useSections";
 import type { RawMaterial, Recipe, Section, SectionDetailsModalProps, SectionInventory } from "../../types";
 import { MeasurementUnit } from "../../types";
 import Button from "../ui/Button";
@@ -22,6 +22,7 @@ const SectionDetailsModal = ({ section, isOpen, onClose }: SectionDetailsModalPr
   const [selectedInventoryItem, setSelectedInventoryItem] = useState<SectionInventory | null>(null);
   const { data: inventory = [], refetch } = useSectionInventory(section?.id.toString() || "");
   const { data: assignedRecipes = [], refetch: refetchAssignedRecipes, isError: isAssignedRecipesError, error: assignedRecipesError } = useSectionRecipes(section?.id.toString() || "");
+  const { data: consumptions, refetch: refetchConsumptions } = useSectionRecipesConsumption(section?.id.toString() || "");
   const [showRecipeAssignModal, setShowRecipeAssignModal] = useState(false);
   const [showRecipeDetailsModal, setShowRecipeDetailsModal] = useState(false);
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
@@ -366,8 +367,9 @@ const SectionDetailsModal = ({ section, isOpen, onClose }: SectionDetailsModalPr
             setSelectedRecipe(null);
           }}
           onSuccess={() => {
-            refetch();
-            refetchAssignedRecipes();
+            refetch(); // Refetch inventory
+            refetchAssignedRecipes(); // Refetch assigned recipes
+            refetchConsumptions(); // Add this to refetch consumption data
           }}
         />
       )}
