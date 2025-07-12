@@ -124,8 +124,8 @@ export const SectionRecipesConsumptionContent: React.FC<Props> = ({ sectionId })
             <Accordion.Header>
               <Accordion.Trigger className="flex justify-between items-center w-full text-left gap-4 font-medium hover:bg-gray-50 dark:hover:bg-gray-800 px-3 py-2 rounded-md transition">
                 <div className="flex flex-col flex-1 truncate">
-                  <span className="text-base font-semibold truncate">{item.recipeName}</span>
-                  <span className="text-sm text-muted-foreground capitalize truncate">{item.recipeCategory}</span>
+                  <span className="text-base font-semibold truncate text-ellipsis dark:text-white">{item.recipeName}</span>
+                  <span className="text-xs text-muted-foreground capitalize truncate dark:text-gray-400">{item.recipeCategory}</span>
                 </div>
                 <div className="flex items-center gap-4 text-sm text-right">
                   <span className="font-mono tabular-nums text-gray-700 dark:text-gray-200">{formatCurrency(item.cost)}</span>
