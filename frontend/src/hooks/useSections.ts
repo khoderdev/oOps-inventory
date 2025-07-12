@@ -19,9 +19,9 @@ export const useSections = (filters?: { type?: SectionType; isActive?: boolean; 
     queryFn: () =>
       SectionsAPI.getAll({
         ...filters,
-        type: filters?.type || SectionType.KITCHEN,
-        isActive: filters?.isActive || false,
-        managerId: filters?.managerId || 0
+        type: filters?.type,
+        isActive: filters?.isActive,
+        managerId: filters?.managerId
       }),
     select: response => response.data,
     staleTime: 5 * 60 * 1000
@@ -152,19 +152,6 @@ export const useSectionRecipesConsumption = (sectionId: string, filters?: Recipe
   });
 };
 
-// export function useSectionRecipesConsumption(sectionId?: string) {
-//   return useQuery({
-//     queryKey: ["sectionRecipesConsumption", sectionId],
-//     queryFn: async () => {
-//       if (!sectionId) return []; // fallback for undefined section
-//       const response = await SectionsAPI.getSectionRecipesConsumption(sectionId);
-//       return response.data || []; // default to array if API returns undefined
-//     },
-//     refetchOnWindowFocus: true,
-//     enabled: !!sectionId // don't run query if sectionId is falsy
-//   });
-// }
-
 // Create section mutation
 export const useCreateSection = () => {
   const queryClient = useQueryClient();
@@ -173,7 +160,7 @@ export const useCreateSection = () => {
     onSuccess: response => {
       if (response.success) {
         // Invalidate sections list
-        queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.sections] });
+        queryClient.invalidateQueries({ predicate: query => query.queryKey[0] === QUERY_KEYS.sections });
       }
     }
   });
@@ -189,7 +176,7 @@ export const useUpdateSection = () => {
         // Update specific item in cache
         queryClient.setQueryData(QUERY_KEYS.section(variables.id.toString()), { data: response.data });
         // Invalidate lists
-        queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.sections] });
+        queryClient.invalidateQueries({ predicate: query => query.queryKey[0] === QUERY_KEYS.sections });
       }
     }
   });
@@ -203,7 +190,7 @@ export const useDeleteSection = () => {
     onSuccess: response => {
       if (response.success) {
         // Invalidate sections queries
-        queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.sections] });
+        queryClient.invalidateQueries({ predicate: query => query.queryKey[0] === QUERY_KEYS.sections });
       }
     }
   });
