@@ -28,14 +28,12 @@ export const createRecipe = asyncHandler(async (req, res) => {
 
 export const getRecipes = asyncHandler(async (req, res) => {
   const result = await recipeService.getRecipes(req.query);
-
   if (!result.success) {
     return res.status(500).json({
       success: false,
       error: result.message
     });
   }
-
   res.json({
     success: true,
     data: result.data
@@ -163,15 +161,15 @@ export const getRecipeCostVariance = asyncHandler(async (req, res) => {
 
 export const updateRecipe = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { ingredients, ...recipeData } = req.body;
+  const recipeData = req.body;
 
-  // For now, we'll implement a basic update
-  // In a full implementation, you'd want to handle ingredient updates properly
+  const result = await recipeService.updateRecipe(id, recipeData);
 
-  res.json({
-    success: true,
-    message: "Recipe update functionality to be implemented"
-  });
+  if (!result.success) {
+    return res.status(500).json({ success: false, error: result.message });
+  }
+
+  res.json({ success: true, data: result.data });
 });
 
 export const deleteRecipe = asyncHandler(async (req, res) => {

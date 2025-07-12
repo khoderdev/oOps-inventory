@@ -30,11 +30,14 @@ export const RecipeForm: React.FC<RecipeFormProps> = ({ recipe, onSubmit, onCanc
         name: recipe.name,
         category: recipe.category || "",
         instructions: recipe.instructions || "",
-        ingredients: recipe.ingredients.map(ing => ({
-          raw_material_id: ing.raw_material_id,
-          quantity: ing.quantity,
-          baseUnit: ing.baseUnit
-        }))
+        ingredients: recipe.ingredients.map(ing => {
+          const availableUnits = getAvailableUnits(ing.raw_material_id);
+          return {
+            raw_material_id: ing.raw_material_id,
+            quantity: ing.quantity,
+            baseUnit: availableUnits.includes(ing.baseUnit) ? ing.baseUnit : availableUnits[0] || ""
+          };
+        })
       });
 
       const initialIngredientErrors: Record<number, Record<string, string>> = {};
@@ -44,6 +47,12 @@ export const RecipeForm: React.FC<RecipeFormProps> = ({ recipe, onSubmit, onCanc
       setIngredientErrors(initialIngredientErrors);
     }
   }, [recipe]);
+
+  useEffect(() => {
+    formData.ingredients.forEach((ing, i) => {
+      console.log(`Ingredient[${i}]`, ing.raw_material_id, getAvailableUnits(ing.raw_material_id));
+    });
+  }, [formData.ingredients]);
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -140,14 +149,19 @@ export const RecipeForm: React.FC<RecipeFormProps> = ({ recipe, onSubmit, onCanc
   };
 
   const addIngredient = () => {
+    const firstMaterial = materials[0];
+    const defaultRawMaterialId = firstMaterial?.id ?? 0;
+    const defaultUnits = defaultRawMaterialId ? getAvailableUnits(defaultRawMaterialId) : [];
+    const defaultUnit = defaultUnits[0] ?? "";
+
     setFormData(prev => ({
       ...prev,
       ingredients: [
         ...prev.ingredients,
         {
-          raw_material_id: 0,
+          raw_material_id: defaultRawMaterialId,
           quantity: 0,
-          baseUnit: ""
+          baseUnit: defaultUnit
         }
       ]
     }));
@@ -246,7 +260,7 @@ export const RecipeForm: React.FC<RecipeFormProps> = ({ recipe, onSubmit, onCanc
                       className="w-full"
                       value={ingredient.raw_material_id?.toString() || ""}
                       onChange={value => {
-                        handleIngredientChange(index, "raw_material_id", value ? parseInt(value) : "0");
+                        handleIngredientChange(index, "raw_material_id", value ? parseInt(value) : 0);
                         handleIngredientChange(index, "baseUnit", "");
                       }}
                       placeholder="Select ingredient"

@@ -15,53 +15,69 @@ export const createRecipe = async recipeData => {
   }
 };
 
-// export const calculateRecipeCost = async recipeId => {
-//   try {
-//     const recipe = await prisma().recipe.findUnique({
-//       where: { id: Number(recipeId) },
-//       include: { ingredients: { include: { raw_material: true } } }
-//     });
-//     if (!recipe) {
-//       return { success: false, message: "Recipe not found" };
-//     }
-//     let totalCost = 0;
-//     const costBreakdown = [];
-//     for (const ingredient of recipe.ingredients) {
-//       const quantity = parseFloat(ingredient.quantity || "0");
-//       const unitCost = getEffectiveUnitCost(ingredient);
-//       const ingredientCost = unitCost * quantity;
-//       totalCost += ingredientCost;
-//       costBreakdown.push({
-//         materialId: ingredient.raw_material.id,
-//         materialName: ingredient.raw_material.name,
-//         quantity,
-//         unit: ingredient.unit,
-//         baseUnit: ingredient.baseUnit,
-//         unitCost,
-//         totalCost: ingredientCost,
-//         percentage: 0
-//       });
-//     }
-//     costBreakdown.forEach(item => {
-//       item.percentage = totalCost > 0 ? parseFloat(((item.totalCost / totalCost) * 100).toFixed(2)) : 0;
-//     });
-//     const [updatedRecipe] = await prisma().$transaction([
-//       prisma().recipe.update({
-//         where: { id: Number(recipeId) },
-//         data: {
-//           serving_cost: parseFloat(totalCost.toFixed(2)),
-//           updated_at: new Date()
-//         },
-//         include: { ingredients: { include: { raw_material: true } } }
-//       }),
-//       ...recipe.ingredients.map(ingredient => prisma().recipeIngredient.update({ where: { id: ingredient.id }, data: { cost_per_unit: getEffectiveUnitCost(ingredient), updated_at: new Date() } }))
-//     ]);
-//     return { success: true, data: { ...updatedRecipe, costAnalysis: { totalCost: parseFloat(totalCost.toFixed(2)), perServingCost: parseFloat((totalCost / (recipe.servings || 1)).toFixed(2)), breakdown: costBreakdown } } };
-//   } catch (error) {
-//     logger.error("Error calculating recipe cost:", error);
-//     return { success: false, message: error.message || "Failed to calculate recipe cost" };
-//   }
-// };
+export const updateRecipe = async (id, recipeData) => {
+  try {
+    const { ingredients, ...recipeFields } = recipeData;
+
+    // Update main recipe fields
+    await prisma().recipe.update({
+      where: { id: Number(id) },
+      data: recipeFields
+    });
+
+    // Delete existing ingredients linked to the recipe
+    await prisma().recipeIngredient.deleteMany({
+      where: { recipe_id: Number(id) }
+    });
+
+    // Create new ingredients
+    if (ingredients && ingredients.length > 0) {
+      await prisma().recipeIngredient.createMany({
+        data: ingredients.map(ingredient => ({
+          recipe_id: Number(id),
+          raw_material_id: ingredient.raw_material_id,
+          quantity: parseFloat(ingredient.quantity),
+          unit: ingredient.baseUnit,
+          baseUnit: ingredient.baseUnit
+        }))
+      });
+    }
+
+    // Recalculate and update recipe cost analysis
+    const updatedRecipeCost = await calculateRecipeCost(Number(id));
+
+    // Fetch the updated recipe with relations to return to frontend
+    const updatedRecipe = await prisma().recipe.findUnique({
+      where: { id: Number(id) },
+      include: {
+        ingredients: {
+          include: {
+            raw_material: true
+          }
+        },
+        creator: true
+        // Add other relations if needed
+      }
+    });
+
+    logger.info(`Recipe updated: id=${id}`);
+    return {
+      success: true,
+      data: {
+        ...updatedRecipe,
+        // optionally merge cost recalculation data if needed
+        costAnalysis: updatedRecipeCost.data
+      },
+      message: "Recipe updated successfully"
+    };
+  } catch (error) {
+    logger.error("Error updating recipe:", error);
+    return {
+      success: false,
+      message: error.message
+    };
+  }
+};
 
 export const calculateRecipeCost = async recipeId => {
   try {
