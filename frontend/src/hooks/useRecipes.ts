@@ -54,7 +54,6 @@ export const useCreateRecipe = () => {
     mutationFn: (data: CreateRecipeRequest) => recipesApi.createRecipe(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["recipes"] });
-      queryClient.invalidateQueries({ queryKey: ["menu-engineering"] });
     }
   });
 };
@@ -68,7 +67,6 @@ export const useUpdateRecipe = () => {
       queryClient.invalidateQueries({ queryKey: ["recipes"] });
       queryClient.invalidateQueries({ queryKey: ["recipe", variables.id] });
       queryClient.invalidateQueries({ queryKey: ["recipe-cost", variables.id] });
-      queryClient.invalidateQueries({ queryKey: ["menu-engineering"] });
     }
   });
 };
@@ -80,7 +78,6 @@ export const useDeleteRecipe = () => {
     mutationFn: (id: number) => recipesApi.deleteRecipe(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["recipes"] });
-      queryClient.invalidateQueries({ queryKey: ["menu-engineering"] });
     }
   });
 };

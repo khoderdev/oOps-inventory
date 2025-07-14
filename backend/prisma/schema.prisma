@@ -164,9 +164,9 @@ model RecipeConsumption {
   updated_at      DateTime  @updatedAt @map("updated_at")
   
   // Relationships
-  recipe          Recipe    @relation(fields: [recipe_id], references: [id])
-  section         Section   @relation(fields: [section_id], references: [id])
-  user            User      @relation("RecipeConsumptionPerformedBy", fields: [consumed_by], references: [id])
+  recipe          Recipe    @relation(fields: [recipe_id], references: [id], onDelete: Cascade)
+  section         Section   @relation(fields: [section_id], references: [id], onDelete: Cascade)
+  user            User      @relation("RecipeConsumptionPerformedBy", fields: [consumed_by], references: [id], onDelete: Cascade)
   ingredients     RecipeConsumptionIngredient[]
 
   @@map("recipe_consumptions")
@@ -186,7 +186,7 @@ model RecipeConsumptionIngredient {
   cost_per_unit           Decimal?        @map("cost_per_unit") @db.Decimal(10, 5)
   
   // Relationships
-  recipe_consumption      RecipeConsumption @relation(fields: [recipe_consumption_id], references: [id], onDelete: Cascade)
+  recipe_consumption    RecipeConsumption @relation(fields: [recipe_consumption_id], references: [id], onDelete: Cascade)
   raw_material            RawMaterial       @relation(fields: [raw_material_id], references: [id])
 
   @@map("recipe_consumption_ingredients")
