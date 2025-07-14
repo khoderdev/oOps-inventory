@@ -1,7 +1,9 @@
+import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
+import { categoriesApi } from "../../data/categories.api";
 import { useCreateRawMaterial, useUpdateRawMaterial } from "../../hooks/useRawMaterials";
 import { useSuppliers } from "../../hooks/useSuppliers";
-import { type Category, MeasurementUnit, type RawMaterial } from "../../types";
+import { MeasurementUnit, type CategoryResponse, type RawMaterial } from "../../types";
 import type { Supplier } from "../../types/suppliers.types";
 import Button from "../ui/Button";
 import Input from "../ui/Input";
@@ -27,10 +29,24 @@ const RawMaterialForm = ({ initialData, onSuccess, onCancel }: RawMaterialFormPr
     unitsPerPack: 1,
     baseUnit: MeasurementUnit.PIECES
   });
-  const [categoryOptions, setCategoryOptions] = useState<{ value: Category; label: string }[]>([]);
+
   const [errors, setErrors] = useState<Record<string, string>>({});
   const createMutation = useCreateRawMaterial();
   const updateMutation = useUpdateRawMaterial();
+
+  const useCategories = () => {
+    return useQuery({
+      queryKey: ["categories"],
+      queryFn: categoriesApi.getCategories
+    });
+  };
+  const { data: categoriesData } = useCategories();
+
+  const categoryOptions =
+    categoriesData?.map((cat: CategoryResponse) => ({
+      value: cat.id,
+      label: cat.name.charAt(0).toUpperCase() + cat.name.slice(1).replace("_", " ")
+    })) || [];
 
   useEffect(() => {
     if (initialData) {
@@ -62,25 +78,7 @@ const RawMaterialForm = ({ initialData, onSuccess, onCancel }: RawMaterialFormPr
         unitsPerPack: initialData.unitsPerPack || 1,
         baseUnit: initialData.baseUnit ? normalizeUnit(initialData.baseUnit as string) : MeasurementUnit.PIECES
       };
-
       setFormData(newFormData);
-
-      // If we have the category name in the response, add it to options immediately
-      if (initialData.category) {
-        setCategoryOptions(prev => {
-          const exists = prev.some(opt => opt.value === initialData.category.id.toString());
-          if (!exists) {
-            return [
-              ...prev,
-              {
-                value: initialData.category.id.toString(),
-                label: initialData.category.name.charAt(0).toUpperCase() + initialData.category.name.slice(1).replace("_", " ")
-              }
-            ];
-          }
-          return prev;
-        });
-      }
     } else {
       // Reset form for create mode
       setFormData({
@@ -269,8 +267,14 @@ const RawMaterialForm = ({ initialData, onSuccess, onCancel }: RawMaterialFormPr
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Input label="Name" value={formData.name} onChange={e => handleInputChange("name", e.target.value)} error={errors.name} required placeholder="e.g., Fresh Beef, Organic Tomatoes" />
-        <Select label="Category" options={categoryOptions} value={formData.categoryId} onChange={value => handleInputChange("categoryId", value)} required />
-        {/* <Select key={`category-${formData.categoryId}`} label="Category" options={categoryOptions} value={formData.categoryId} onChange={value => handleInputChange("categoryId", value)} required /> */}
+        {/* <Select label="Category" options={categoryOptions} value={formData.categoryId} onChange={value => handleInputChange("categoryId", value)} required /> */}
+        <Select
+          label="Category"
+          options={categoryOptions}
+          value={formData.categoryId} // number
+          onChange={value => handleInputChange("categoryId", value)}
+          required
+        />
 
         <Select key={`unit-${formData.unit}`} label="Unit of Measurement" options={unitOptions} value={formData.unit} onChange={value => handleInputChange("unit", value)} required />
 

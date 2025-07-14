@@ -94,7 +94,7 @@ export const RawMaterialsTable = ({ data, loading, userRole, onEdit, onDelete }:
         maxSize: 180,
         enableSorting: true,
         cell: ({ row }) => {
-          const categoryId = row.original.categoryId;
+          const categoryId = row.original.category.id;
           const category = categories.find(cat => cat.id === categoryId);
           const label = category?.name.replace("_", " ").toLowerCase() || "Uncategorized";
 
