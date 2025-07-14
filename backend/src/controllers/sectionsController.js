@@ -384,17 +384,3 @@ export const getSectionRecipesConsumption = asyncHandler(async (req, res) => {
     data: result.data
   });
 });
-// export const getRecipeConsumption = asyncHandler(async (req, res) => {
-//   const { id: recipeId } = req.params;
-//   const { sectionId, fromDate, toDate } = req.query;
-//   const filters = {};
-//   if (sectionId) filters.sectionId = sectionId;
-//   if (fromDate) filters.fromDate = fromDate;
-//   if (toDate) filters.toDate = toDate;
-//   const result = await sectionsService.getRecipeConsumption(parseInt(recipeId, 10), filters);
-
-//   res.json({
-//     success: true,
-//     data: result.data
-//   });
-// });

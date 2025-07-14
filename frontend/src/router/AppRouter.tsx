@@ -4,6 +4,7 @@ import ErrorPage from "../components/common/ErrorPage";
 import CostControlPage from "../components/costControl/CostControlPage";
 import DashboardPage from "../components/dashboard/DashboardPage";
 import Layout from "../components/layout/Layout";
+import POSScreen from "../components/pos/POSScreen";
 import { RawMaterialsPage } from "../components/rawMaterials/RawMaterialsPage";
 import ReportsPage from "../components/reports/ReportsPage";
 import { RestaurantManagementPage } from "../components/restaurant/RestaurantManagementPage";
@@ -30,6 +31,10 @@ const router = createBrowserRouter([
       {
         path: "dashboard",
         element: <DashboardPage />
+      },
+      {
+        path: "pos",
+        element: <POSScreen />
       },
       {
         path: "raw-materials",

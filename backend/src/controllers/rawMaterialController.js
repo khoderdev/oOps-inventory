@@ -58,16 +58,6 @@ export const getRawMaterial = asyncHandler(async (req, res) => {
  * POST /api/raw-materials
  */
 export const createRawMaterial = asyncHandler(async (req, res) => {
-  // TODO: Add validation schema
-  // const validation = validateData(createRawMaterialSchema, req.body);
-  // if (!validation.isValid) {
-  //   return res.status(400).json({
-  //     success: false,
-  //     error: "Validation failed",
-  //     details: validation.errors
-  //   });
-  // }
-
   const result = await rawMaterialService.createRawMaterial(req.body);
 
   if (!result.success) {

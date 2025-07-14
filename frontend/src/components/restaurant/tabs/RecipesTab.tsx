@@ -10,43 +10,17 @@ import { RecipeDetailsModal } from "../components/RecipeDetailsModal";
 import { RecipesView } from "../components/RecipesView";
 
 export const RecipesTab: React.FC = () => {
-  const [filters] = useState<RecipeFilters>({
-    search: "",
-    category: "",
-    is_active: true,
-    page: 1,
-    limit: 10
-  });
+  const [filters] = useState<RecipeFilters>({ search: "", category: "", is_active: true, page: 1, limit: 10 });
   const [viewMode, setViewMode] = useState<"recipes" | "costing">("recipes");
 
-  const [modalState, setModalState] = useState<{
-    create: boolean;
-    edit: boolean;
-    view: boolean;
-    selectedRecipe: Recipe | null;
-    costAnalysis: boolean;
-  }>({
-    create: false,
-    edit: false,
-    view: false,
-    costAnalysis: false,
-    selectedRecipe: null
-  });
+  const [modalState, setModalState] = useState<{ create: boolean; edit: boolean; view: boolean; selectedRecipe: Recipe | null; costAnalysis: boolean }>({ create: false, edit: false, view: false, costAnalysis: false, selectedRecipe: null });
 
   const { data: recipesData } = useRecipes(filters);
   const recipes = recipesData?.recipes || [];
   const rawMaterials = useRawMaterials({}).data || [];
   const createRecipe = useCreateRecipe();
   const updateRecipe = useUpdateRecipe();
-
-  const closeAllModals = () =>
-    setModalState({
-      create: false,
-      edit: false,
-      view: false,
-      costAnalysis: false,
-      selectedRecipe: null
-    });
+  const closeAllModals = () => setModalState({ create: false, edit: false, view: false, costAnalysis: false, selectedRecipe: null });
 
   const handleCreateRecipe = async (data: CreateRecipeRequest) => {
     await createRecipe.mutateAsync(data);

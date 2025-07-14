@@ -30,4 +30,4 @@ export { MenuCategory, MenuCategoryLabels } from "./recipes.types";
 export type { Budget, BudgetAllocation, BudgetAnalytics, BudgetFilters, BudgetRecommendations, BudgetSpendingAnalysis, BudgetVarianceAnalysis, CreateBudgetRequest, PaginatedBudgets } from "./budgets.types";
 
 export { BudgetPeriod, BudgetPeriodLabels, MaterialCategories } from "./budgets.types";
-export type { MaterialCategory as BudgetMaterialCategory } from "./budgets.types";
+export type { Category as BudgetMaterialCategory } from "./budgets.types";

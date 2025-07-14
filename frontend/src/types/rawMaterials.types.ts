@@ -5,7 +5,7 @@ export interface RawMaterial extends BaseEntity {
   costPerIndividualUnit: number;
   name: string;
   description?: string | null;
-  category: MaterialCategory;
+  category: CategoryResponse;
   unit: MeasurementUnit;
   displayUnit?: string | null;
   baseUnit?: MeasurementUnit | null;
@@ -20,17 +20,17 @@ export interface RawMaterial extends BaseEntity {
   isActive: boolean;
 }
 
-export enum MaterialCategory {
-  MEAT = "MEAT",
-  VEGETABLES = "VEGETABLES",
-  DAIRY = "DAIRY",
-  BEVERAGES = "BEVERAGES",
-  BREAD = "BREAD",
-  GRAINS = "GRAINS",
-  SPICES = "SPICES",
-  PACKAGING = "PACKAGING",
-  OTHER = "OTHER"
-}
+export type CategoryResponse = {
+  id: number;
+  name: string;
+  description: string;
+  type: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type Category = CategoryResponse["name"];
 
 export enum MeasurementUnit {
   KG = "KG",
@@ -46,7 +46,7 @@ export enum MeasurementUnit {
 export interface CreateRawMaterialInput {
   name: string;
   description?: string | null;
-  category: MaterialCategory;
+  category: Category;
   unit: MeasurementUnit;
   baseUnit?: MeasurementUnit | null;
   unitsPerPack?: number | null;

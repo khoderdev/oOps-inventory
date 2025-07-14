@@ -1,11 +1,11 @@
 import { Filter, Search } from "lucide-react";
-import type { MaterialCategory } from "../../types";
+import type { Category } from "../../types";
 import Button from "../ui/Button";
 import Input from "../ui/Input";
 import Select from "../ui/Select";
 
 type StatusFilterValue = "all" | "active" | "inactive";
-type CategoryFilterValue = MaterialCategory | "";
+type CategoryFilterValue = Category | "";
 
 type Option<T = string> = {
   value: T;

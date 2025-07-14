@@ -1,3 +1,375 @@
+// import { Decimal } from "@prisma/client/runtime/library";
+// import prisma from "../config/prisma.js";
+// import logger from "../utils/logger.js";
+
+// /**
+//  * Helper function to convert enum values to uppercase
+//  */
+// const convertEnumsToUppercase = data => {
+//   const result = { ...data };
+
+//   // Convert Category to uppercase
+//   if (result.category) {
+//     result.category = result.category.toString().toUpperCase();
+//   }
+
+//   // Convert MeasurementUnit to uppercase
+//   if (result.unit) {
+//     result.unit = result.unit.toString().toUpperCase();
+//   }
+
+//   // Convert base unit to uppercase
+//   if (result.baseUnit) {
+//     result.baseUnit = result.baseUnit.toString().toUpperCase();
+//   }
+
+//   return result;
+// };
+
+// /**
+//  * Helper function to format material data for frontend
+//  */
+// const formatMaterialForFrontend = material => ({
+//   id: material.id,
+//   name: material.name,
+//   description: material.description,
+//   category: material.category,
+//   unit: material.unit,
+//   unitCost: parseFloat(material.unit_cost.toString()),
+//   supplier: material.supplier,
+//   minStockLevel: parseFloat(material.min_stock_level.toString()),
+//   maxStockLevel: parseFloat(material.max_stock_level.toString()),
+//   isActive: material.is_active,
+//   unitsPerPack: material.units_per_pack,
+//   baseUnit: material.base_unit,
+//   costPerBaseUnit: material.cost_per_base_unit ? parseFloat(material.cost_per_base_unit.toString()) : null,
+//   costPerIndividualUnit: material.cost_per_individual_unit ? parseFloat(material.cost_per_individual_unit.toString()) : null,
+//   createdAt: material.created_at,
+//   updatedAt: material.updated_at
+// });
+
+// /**
+//  * Get all raw materials with filtering
+//  */
+// export const getAllRawMaterials = async (filters = {}) => {
+//   try {
+//     logger.info("Fetching raw materials with filters:", filters);
+
+//     const where = {};
+
+//     if (filters.isActive !== undefined) {
+//       where.is_active = filters.isActive;
+//     }
+
+//     if (filters.category) {
+//       where.category = filters.category;
+//     }
+
+//     if (filters.search) {
+//       where.OR = [{ name: { contains: filters.search, mode: "insensitive" } }, { description: { contains: filters.search, mode: "insensitive" } }, { supplier: { contains: filters.search, mode: "insensitive" } }];
+//     }
+
+//     const materials = await prisma().rawMaterial.findMany({
+//       where,
+//       orderBy: { name: "asc" }
+//     });
+
+//     return {
+//       data: materials.map(formatMaterialForFrontend),
+//       success: true
+//     };
+//   } catch (error) {
+//     logger.error("Error in getAllRawMaterials service:", error);
+//     throw new Error("Failed to retrieve raw materials");
+//   }
+// };
+
+// /**
+//  * Get raw material by ID
+//  */
+// export const getRawMaterialById = async id => {
+//   try {
+//     if (!id) {
+//       throw new Error("Raw material ID is required");
+//     }
+
+//     logger.info("Fetching raw material by ID:", id);
+
+//     const material = await prisma().rawMaterial.findUnique({
+//       where: { id }
+//     });
+
+//     if (!material) {
+//       return {
+//         data: null,
+//         success: true
+//       };
+//     }
+
+//     return {
+//       data: formatMaterialForFrontend(material),
+//       success: true
+//     };
+//   } catch (error) {
+//     logger.error("Error in getRawMaterialById service:", error);
+//     throw new Error("Failed to retrieve raw material");
+//   }
+// };
+
+// /**
+//  * Create new raw material
+//  */
+// export const createRawMaterial = async materialData => {
+//   try {
+//     if (!materialData.name || !materialData.category || !materialData.unit) {
+//       throw new Error("Name, category, and unit are required fields");
+//     }
+
+//     if (materialData.unitCost !== undefined && materialData.unitCost < 0) {
+//       throw new Error("Unit cost cannot be negative");
+//     }
+
+//     if (materialData.minStockLevel !== undefined && materialData.maxStockLevel !== undefined) {
+//       if (materialData.minStockLevel > materialData.maxStockLevel) {
+//         throw new Error("Minimum stock level cannot be greater than maximum stock level");
+//       }
+//     }
+
+//     logger.info("Creating new raw material:", materialData.name);
+
+//     const convertedData = convertEnumsToUppercase(materialData);
+
+//     const dbData = {
+//       name: convertedData.name,
+//       description: convertedData.description,
+//       category: convertedData.category,
+//       unit: convertedData.unit,
+//       unit_cost: new Decimal(convertedData.unitCost || 0),
+//       supplier: convertedData.supplier,
+//       min_stock_level: new Decimal(convertedData.minStockLevel || 0),
+//       max_stock_level: new Decimal(convertedData.maxStockLevel || 0),
+//       is_active: true,
+//       units_per_pack: convertedData.unitsPerPack,
+//       base_unit: convertedData.baseUnit,
+//       cost_per_base_unit: convertedData.costPerBaseUnit ? new Decimal(convertedData.costPerBaseUnit) : undefined,
+//       cost_per_individual_unit: convertedData.costPerIndividualUnit ? new Decimal(convertedData.costPerIndividualUnit) : undefined
+//     };
+
+//     const material = await prisma().rawMaterial.create({ data: dbData });
+
+//     logger.info("Raw material created successfully:", material.id);
+
+//     return {
+//       data: formatMaterialForFrontend(material),
+//       success: true,
+//       message: "Raw material created successfully"
+//     };
+//   } catch (error) {
+//     logger.error("Error in createRawMaterial service:", error);
+//     return {
+//       data: null,
+//       success: false,
+//       message: error.message || "Failed to create raw material"
+//     };
+//   }
+// };
+
+// /**
+//  * Update raw material
+//  */
+// export const updateRawMaterial = async updateData => {
+//   try {
+//     const { id, ...data } = updateData;
+
+//     if (!id) throw new Error("Raw material ID is required");
+
+//     const existingMaterial = await prisma().rawMaterial.findUnique({ where: { id } });
+
+//     if (!existingMaterial) {
+//       throw new Error(`Raw material with ID ${id} not found`);
+//     }
+
+//     if (data.unitCost !== undefined && data.unitCost < 0) {
+//       throw new Error("Unit cost cannot be negative");
+//     }
+
+//     if (data.minStockLevel !== undefined && data.maxStockLevel !== undefined) {
+//       if (data.minStockLevel > data.maxStockLevel) {
+//         throw new Error("Minimum stock level cannot be greater than maximum stock level");
+//       }
+//     }
+
+//     logger.info("Updating raw material:", id);
+
+//     const convertedData = convertEnumsToUppercase(data);
+
+//     const dbData = {};
+//     if (convertedData.name !== undefined) dbData.name = convertedData.name;
+//     if (convertedData.description !== undefined) dbData.description = convertedData.description;
+//     if (convertedData.category !== undefined) dbData.category = convertedData.category;
+//     if (convertedData.unit !== undefined) dbData.unit = convertedData.unit;
+//     if (convertedData.unitCost !== undefined) dbData.unit_cost = new Decimal(convertedData.unitCost);
+//     if (convertedData.supplier !== undefined) dbData.supplier = convertedData.supplier;
+//     if (convertedData.minStockLevel !== undefined) dbData.min_stock_level = new Decimal(convertedData.minStockLevel);
+//     if (convertedData.maxStockLevel !== undefined) dbData.max_stock_level = new Decimal(convertedData.maxStockLevel);
+//     if (convertedData.isActive !== undefined) dbData.is_active = convertedData.isActive;
+//     if (convertedData.unitsPerPack !== undefined) dbData.units_per_pack = convertedData.unitsPerPack;
+//     if (convertedData.baseUnit !== undefined) dbData.base_unit = convertedData.baseUnit;
+//     if (convertedData.costPerBaseUnit != null) dbData.cost_per_base_unit = new Decimal(convertedData.costPerBaseUnit);
+//     if (convertedData.costPerIndividualUnit != null) dbData.cost_per_individual_unit = new Decimal(convertedData.costPerIndividualUnit);
+
+//     const material = await prisma().rawMaterial.update({
+//       where: { id },
+//       data: dbData
+//     });
+
+//     logger.info("Raw material updated successfully:", id);
+
+//     return {
+//       data: formatMaterialForFrontend(material),
+//       success: true,
+//       message: "Raw material updated successfully"
+//     };
+//   } catch (error) {
+//     logger.error("Error in updateRawMaterial service:", error);
+//     return {
+//       data: null,
+//       success: false,
+//       message: error.message || "Failed to update raw material"
+//     };
+//   }
+// };
+
+// /**
+//  * Delete raw material (soft delete)
+//  */
+// export const deleteRawMaterial = async id => {
+//   try {
+//     if (!id) throw new Error("Raw material ID is required");
+//     logger.info("Deleting raw material:", id);
+//     await prisma().rawMaterial.update({ where: { id }, data: { is_active: false } });
+//     logger.info("Raw material deleted successfully:", id);
+
+//     return {
+//       data: true,
+//       success: true,
+//       message: "Raw material deleted successfully"
+//     };
+//   } catch (error) {
+//     logger.error("Error in deleteRawMaterial service:", error);
+//     return {
+//       data: false,
+//       success: false,
+//       message: error.message || "Failed to delete raw material"
+//     };
+//   }
+// };
+
+// /**
+//  * Get low stock materials
+//  */
+// export const getLowStockMaterials = async () => {
+//   try {
+//     logger.info("Fetching low stock materials");
+
+//     const materials = await prisma().rawMaterial.findMany({
+//       where: { is_active: true },
+//       include: {
+//         stock_entries: {
+//           include: {
+//             stock_movements: {
+//               where: { type: "OUT" }
+//             }
+//           }
+//         }
+//       }
+//     });
+
+//     const lowStockMaterials = materials.filter(material => {
+//       const totalReceived = material.stock_entries.reduce((sum, entry) => sum + parseFloat(entry.quantity.toString()), 0);
+
+//       const totalUsed = material.stock_entries.reduce((sum, entry) => sum + entry.stock_movements.reduce((movSum, movement) => movSum + parseFloat(movement.quantity.toString()), 0), 0);
+
+//       const currentStock = totalReceived - totalUsed;
+//       const minLevel = parseFloat(material.min_stock_level.toString());
+
+//       return currentStock <= minLevel;
+//     });
+
+//     lowStockMaterials.sort((a, b) => {
+//       const aTotal = a.stock_entries.reduce((sum, entry) => sum + parseFloat(entry.quantity.toString()), 0);
+//       const aUsed = a.stock_entries.reduce((sum, entry) => sum + entry.stock_movements.reduce((movSum, movement) => movSum + parseFloat(movement.quantity.toString()), 0), 0);
+//       const aPercentage = (aTotal - aUsed) / parseFloat(a.min_stock_level.toString());
+//       const bTotal = b.stock_entries.reduce((sum, entry) => sum + parseFloat(entry.quantity.toString()), 0);
+//       const bUsed = b.stock_entries.reduce((sum, entry) => sum + entry.stock_movements.reduce((movSum, movement) => movSum + parseFloat(movement.quantity.toString()), 0), 0);
+//       const bPercentage = (bTotal - bUsed) / parseFloat(b.min_stock_level.toString());
+
+//       return aPercentage - bPercentage;
+//     });
+
+//     return {
+//       data: lowStockMaterials.map(formatMaterialForFrontend),
+//       success: true
+//     };
+//   } catch (error) {
+//     logger.error("Error in getLowStockMaterials service:", error);
+//     throw new Error("Failed to retrieve low stock materials");
+//   }
+// };
+
+// /**
+//  * Get materials by category
+//  */
+// export const getMaterialsByCategory = async category => {
+//   try {
+//     if (!category) throw new Error("Category is required");
+//     logger.info("Fetching materials by category:", category);
+
+//     const materials = await prisma().rawMaterial.findMany({
+//       where: {
+//         category: category,
+//         is_active: true
+//       },
+//       orderBy: { name: "asc" }
+//     });
+
+//     return {
+//       data: materials.map(formatMaterialForFrontend),
+//       success: true
+//     };
+//   } catch (error) {
+//     logger.error("Error in getMaterialsByCategory service:", error);
+//     throw new Error("Failed to retrieve materials by category");
+//   }
+// };
+
+// /**
+//  * Validate material availability for operations
+//  */
+// export const validateMaterialAvailability = async (materialId, requiredQuantity) => {
+//   try {
+//     const material = await prisma().rawMaterial.findUnique({ where: { id: materialId } });
+//     if (!material) throw new Error("Material not found");
+
+//     if (!material.is_active) {
+//       throw new Error("Material is not active");
+//     }
+
+//     // Could add more business logic here, like checking stock levels
+//     return {
+//       success: true,
+//       data: formatMaterialForFrontend(material),
+//       available: true
+//     };
+//   } catch (error) {
+//     logger.error("Error in validateMaterialAvailability service:", error);
+//     return {
+//       success: false,
+//       available: false,
+//       message: error.message
+//     };
+//   }
+// };
 import { Decimal } from "@prisma/client/runtime/library";
 import prisma from "../config/prisma.js";
 import logger from "../utils/logger.js";
@@ -7,11 +379,6 @@ import logger from "../utils/logger.js";
  */
 const convertEnumsToUppercase = data => {
   const result = { ...data };
-
-  // Convert MaterialCategory to uppercase
-  if (result.category) {
-    result.category = result.category.toString().toUpperCase();
-  }
 
   // Convert MeasurementUnit to uppercase
   if (result.unit) {
@@ -33,7 +400,13 @@ const formatMaterialForFrontend = material => ({
   id: material.id,
   name: material.name,
   description: material.description,
-  category: material.category,
+  category: material.category
+    ? {
+        id: material.category.id,
+        name: material.category.name,
+        type: material.category.type
+      }
+    : null,
   unit: material.unit,
   unitCost: parseFloat(material.unit_cost.toString()),
   supplier: material.supplier,
@@ -61,8 +434,8 @@ export const getAllRawMaterials = async (filters = {}) => {
       where.is_active = filters.isActive;
     }
 
-    if (filters.category) {
-      where.category = filters.category;
+    if (filters.categoryId) {
+      where.category_id = filters.categoryId;
     }
 
     if (filters.search) {
@@ -71,6 +444,9 @@ export const getAllRawMaterials = async (filters = {}) => {
 
     const materials = await prisma().rawMaterial.findMany({
       where,
+      include: {
+        category: true
+      },
       orderBy: { name: "asc" }
     });
 
@@ -96,7 +472,10 @@ export const getRawMaterialById = async id => {
     logger.info("Fetching raw material by ID:", id);
 
     const material = await prisma().rawMaterial.findUnique({
-      where: { id }
+      where: { id },
+      include: {
+        category: true
+      }
     });
 
     if (!material) {
@@ -121,8 +500,8 @@ export const getRawMaterialById = async id => {
  */
 export const createRawMaterial = async materialData => {
   try {
-    if (!materialData.name || !materialData.category || !materialData.unit) {
-      throw new Error("Name, category, and unit are required fields");
+    if (!materialData.name || !materialData.categoryId || !materialData.unit) {
+      throw new Error("Name, category ID, and unit are required fields");
     }
 
     if (materialData.unitCost !== undefined && materialData.unitCost < 0) {
@@ -142,7 +521,7 @@ export const createRawMaterial = async materialData => {
     const dbData = {
       name: convertedData.name,
       description: convertedData.description,
-      category: convertedData.category,
+      category_id: convertedData.categoryId,
       unit: convertedData.unit,
       unit_cost: new Decimal(convertedData.unitCost || 0),
       supplier: convertedData.supplier,
@@ -155,7 +534,12 @@ export const createRawMaterial = async materialData => {
       cost_per_individual_unit: convertedData.costPerIndividualUnit ? new Decimal(convertedData.costPerIndividualUnit) : undefined
     };
 
-    const material = await prisma().rawMaterial.create({ data: dbData });
+    const material = await prisma().rawMaterial.create({
+      data: dbData,
+      include: {
+        category: true
+      }
+    });
 
     logger.info("Raw material created successfully:", material.id);
 
@@ -183,7 +567,12 @@ export const updateRawMaterial = async updateData => {
 
     if (!id) throw new Error("Raw material ID is required");
 
-    const existingMaterial = await prisma().rawMaterial.findUnique({ where: { id } });
+    const existingMaterial = await prisma().rawMaterial.findUnique({
+      where: { id },
+      include: {
+        category: true
+      }
+    });
 
     if (!existingMaterial) {
       throw new Error(`Raw material with ID ${id} not found`);
@@ -206,7 +595,7 @@ export const updateRawMaterial = async updateData => {
     const dbData = {};
     if (convertedData.name !== undefined) dbData.name = convertedData.name;
     if (convertedData.description !== undefined) dbData.description = convertedData.description;
-    if (convertedData.category !== undefined) dbData.category = convertedData.category;
+    if (convertedData.categoryId !== undefined) dbData.category_id = convertedData.categoryId;
     if (convertedData.unit !== undefined) dbData.unit = convertedData.unit;
     if (convertedData.unitCost !== undefined) dbData.unit_cost = new Decimal(convertedData.unitCost);
     if (convertedData.supplier !== undefined) dbData.supplier = convertedData.supplier;
@@ -220,7 +609,10 @@ export const updateRawMaterial = async updateData => {
 
     const material = await prisma().rawMaterial.update({
       where: { id },
-      data: dbData
+      data: dbData,
+      include: {
+        category: true
+      }
     });
 
     logger.info("Raw material updated successfully:", id);
@@ -247,7 +639,10 @@ export const deleteRawMaterial = async id => {
   try {
     if (!id) throw new Error("Raw material ID is required");
     logger.info("Deleting raw material:", id);
-    await prisma().rawMaterial.update({ where: { id }, data: { is_active: false } });
+    await prisma().rawMaterial.update({
+      where: { id },
+      data: { is_active: false }
+    });
     logger.info("Raw material deleted successfully:", id);
 
     return {
@@ -275,6 +670,7 @@ export const getLowStockMaterials = async () => {
     const materials = await prisma().rawMaterial.findMany({
       where: { is_active: true },
       include: {
+        category: true,
         stock_entries: {
           include: {
             stock_movements: {
@@ -320,15 +716,18 @@ export const getLowStockMaterials = async () => {
 /**
  * Get materials by category
  */
-export const getMaterialsByCategory = async category => {
+export const getMaterialsByCategory = async categoryId => {
   try {
-    if (!category) throw new Error("Category is required");
-    logger.info("Fetching materials by category:", category);
+    if (!categoryId) throw new Error("Category ID is required");
+    logger.info("Fetching materials by category ID:", categoryId);
 
     const materials = await prisma().rawMaterial.findMany({
       where: {
-        category: category,
+        category_id: categoryId,
         is_active: true
+      },
+      include: {
+        category: true
       },
       orderBy: { name: "asc" }
     });
@@ -348,7 +747,12 @@ export const getMaterialsByCategory = async category => {
  */
 export const validateMaterialAvailability = async (materialId, requiredQuantity) => {
   try {
-    const material = await prisma().rawMaterial.findUnique({ where: { id: materialId } });
+    const material = await prisma().rawMaterial.findUnique({
+      where: { id: materialId },
+      include: {
+        category: true
+      }
+    });
     if (!material) throw new Error("Material not found");
 
     if (!material.is_active) {

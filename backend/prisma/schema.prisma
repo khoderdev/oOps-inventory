@@ -8,88 +8,124 @@ datasource db {
 }
 
 model User {
-  id            Int      @id @default(autoincrement())
-  username      String   @unique
+  id            Int     @id @default(autoincrement())
+  username      String  @unique
   email         String?
-  password_hash String   @map("password_hash")
-  first_name    String?   @map("first_name")
-  last_name     String?   @map("last_name")
-  role          Role     @default(STAFF)
-  is_active     Boolean  @default(true) @map("is_active")
-  created_at    DateTime @default(now()) @map("created_at")
-  updated_at    DateTime @updatedAt @map("updated_at")
-  managed_sections     Section[]           @relation("SectionManager")
-  stock_entries        StockEntry[]        @relation("StockEntryCreatedBy")
-  stock_movements      StockMovement[]     @relation("StockMovementPerformedBy")
-  section_consumptions SectionConsumption[] @relation("ConsumptionPerformedBy")
-  assigned_section_recipes SectionRecipe[] @relation("UserAssignedSectionRecipes")
-  recipe_consumptions RecipeConsumption[] @relation("RecipeConsumptionPerformedBy")
-  created_purchase_orders  PurchaseOrder[] @relation("PurchaseOrderCreatedBy")
-  approved_purchase_orders PurchaseOrder[] @relation("PurchaseOrderApprovedBy")
-  received_receipts       PurchaseReceipt[] @relation("PurchaseReceiptReceivedBy")
-  created_recipes         Recipe[]        @relation("RecipeCreatedBy")
-  sales_served           Sale[]          @relation("SaleServedBy")
-  created_budgets        Budget[]        @relation("BudgetCreatedBy")
-  created_contracts      VendorContract[] @relation("VendorContractCreatedBy")
+  password_hash String  @map("password_hash")
+  first_name    String? @map("first_name")
+  last_name     String? @map("last_name")
+  role          Role    @default(STAFF)
 
-  @@map("users")
+  is_active                Boolean              @default(true) @map("is_active")
+  created_at               DateTime             @default(now()) @map("created_at")
+  updated_at               DateTime             @updatedAt @map("updated_at")
+  managed_sections         Section[]            @relation("SectionManager")
+  stock_entries            StockEntry[]         @relation("StockEntryCreatedBy")
+  stock_movements          StockMovement[]      @relation("StockMovementPerformedBy")
+  section_consumptions     SectionConsumption[] @relation("ConsumptionPerformedBy")
+  assigned_section_recipes SectionRecipe[]      @relation("UserAssignedSectionRecipes")
+  recipe_consumptions      RecipeConsumption[]  @relation("RecipeConsumptionPerformedBy")
+  created_purchase_orders  PurchaseOrder[]      @relation("PurchaseOrderCreatedBy")
+  approved_purchase_orders PurchaseOrder[]      @relation("PurchaseOrderApprovedBy")
+  received_receipts        PurchaseReceipt[]    @relation("PurchaseReceiptReceivedBy")
+  created_recipes          Recipe[]             @relation("RecipeCreatedBy")
+  sales_served             Sale[]               @relation("SaleServedBy")
+  created_budgets          Budget[]             @relation("BudgetCreatedBy")
+  created_contracts        VendorContract[]     @relation("VendorContractCreatedBy")
+
   @@index([username])
   @@index([role])
   @@index([is_active])
+  @@map("users")
+}
+
+model Category {
+  id          Int          @id @default(autoincrement())
+  name        String       @unique
+  description String?
+  type        CategoryType
+  is_active   Boolean      @default(true) @map("is_active")
+  created_at  DateTime     @default(now()) @map("created_at")
+  updated_at  DateTime     @updatedAt @map("updated_at")
+
+  // Relationships
+  raw_materials    RawMaterial[]
+  recipes          Recipe[]
+  menu_items       MenuItem[]
+  BudgetAllocation BudgetAllocation[]
+
+  @@index([type])
+  @@index([is_active])
+  @@map("categories")
 }
 
 model RawMaterial {
-  name                 String
-  description          String?
-  category             MaterialCategory
-  unit                 MeasurementUnit
-  unit_cost            Decimal              @map("unit_cost") @db.Decimal(10, 5)
-  supplier             String?
-  min_stock_level      Decimal              @map("min_stock_level") @db.Decimal(10, 2)
-  max_stock_level      Decimal              @map("max_stock_level") @db.Decimal(10, 2)
-  is_active            Boolean              @default(true) @map("is_active")
-  units_per_pack       Int?                 @map("units_per_pack")
-  cost_per_base_unit      Decimal?  @map("cost_per_base_unit") @db.Decimal(10, 5)
-  cost_per_individual_unit Decimal? @map("cost_per_individual_unit") @db.Decimal(12, 5)
-  base_unit            MeasurementUnit?     @map("base_unit")
-  created_at           DateTime             @default(now()) @map("created_at")
-  updated_at           DateTime             @updatedAt @map("updated_at")
-  id                   Int                  @id @default(autoincrement())
-  section_consumptions SectionConsumption[]
+  name                           String
+  description                    String?
+  category_id                    Int                           @map("category_id")
+  unit                           MeasurementUnit
+  unit_cost                      Decimal                       @map("unit_cost") @db.Decimal(10, 5)
+  supplier                       String?
+  min_stock_level                Decimal                       @map("min_stock_level") @db.Decimal(10, 2)
+  max_stock_level                Decimal                       @map("max_stock_level") @db.Decimal(10, 2)
+  is_active                      Boolean                       @default(true) @map("is_active")
+  units_per_pack                 Int?                          @map("units_per_pack")
+  cost_per_base_unit             Decimal?                      @map("cost_per_base_unit") @db.Decimal(10, 5)
+  cost_per_individual_unit       Decimal?                      @map("cost_per_individual_unit") @db.Decimal(12, 5)
+  base_unit                      MeasurementUnit?              @map("base_unit")
+  created_at                     DateTime                      @default(now()) @map("created_at")
+  updated_at                     DateTime                      @updatedAt @map("updated_at")
+  id                             Int                           @id @default(autoincrement())
+  section_consumptions           SectionConsumption[]
   recipe_consumption_ingredients RecipeConsumptionIngredient[]
-  section_inventories  SectionInventory[]
-  stock_entries        StockEntry[]
-  supplier_materials   SupplierMaterial[]
-  purchase_order_items PurchaseOrderItem[]
-  recipe_ingredients   RecipeIngredient[]
+  section_inventories            SectionInventory[]
+  stock_entries                  StockEntry[]
+  supplier_materials             SupplierMaterial[]
+  purchase_order_items           PurchaseOrderItem[]
+  recipe_ingredients             RecipeIngredient[]
+  category                       Category                      @relation(fields: [category_id], references: [id])
 
-  @@index([category])
+  @@index([category_id])
   @@index([is_active])
   @@map("raw_materials")
 }
 
 model Section {
-  name                 String
-  description          String?
-  type                 SectionType
-  is_active            Boolean              @default(true) @map("is_active")
-  created_at           DateTime             @default(now()) @map("created_at")
-  updated_at           DateTime             @updatedAt @map("updated_at")
-  id                   Int                  @id @default(autoincrement())
-  manager_id           Int                  @map("manager_id")
-  section_consumptions SectionConsumption[]
-  section_inventories  SectionInventory[]
-  section_recipes      SectionRecipe[]
-  manager              User                 @relation("SectionManager", fields: [manager_id], references: [id])
-  movements_from       StockMovement[]      @relation("MovementFromSection")
-  movements_to         StockMovement[]      @relation("MovementToSection")
-  recipe_consumptions RecipeConsumption[]
-  sales                Sale[]
+  name                   String
+  description            String?
+  type                   SectionType
+  is_active              Boolean              @default(true) @map("is_active")
+  created_at             DateTime             @default(now()) @map("created_at")
+  updated_at             DateTime             @updatedAt @map("updated_at")
+  id                     Int                  @id @default(autoincrement())
+  manager_id             Int                  @map("manager_id")
+  section_consumptions   SectionConsumption[]
+  section_inventories    SectionInventory[]
+  section_recipes        SectionRecipe[]
+  manager                User                 @relation("SectionManager", fields: [manager_id], references: [id])
+  movements_from         StockMovement[]      @relation("MovementFromSection")
+  movements_to           StockMovement[]      @relation("MovementToSection")
+  recipe_consumptions    RecipeConsumption[]
+  sales                  Sale[]
+  default_for_pos_config POSConfig?           @relation("SectionToPOSConfig")
 
   @@index([manager_id])
   @@index([type])
   @@index([is_active])
   @@map("sections")
+}
+
+model POSConfig {
+  id                 Int      @id @default(autoincrement())
+  tax_rate           Decimal  @default(0) @map("tax_rate") @db.Decimal(5, 2)
+  currency           String   @default("USD")
+  default_section_id Int?     @unique @map("default_section_id")
+  created_at         DateTime @default(now()) @map("created_at")
+  updated_at         DateTime @updatedAt @map("updated_at")
+
+  default_section Section? @relation("SectionToPOSConfig", fields: [default_section_id], references: [id])
+
+  @@map("pos_config")
 }
 
 model SectionInventory {
@@ -113,20 +149,20 @@ model SectionInventory {
 }
 
 model SectionRecipe {
-  id                Int      @id @default(autoincrement())
-  section_id        Int
-  recipe_id         Int
-  assigned_by       Int
-  notes             String?
-  assigned_at       DateTime @default(now())
+  id          Int      @id @default(autoincrement())
+  section_id  Int
+  recipe_id   Int
+  assigned_by Int
+  notes       String?
+  assigned_at DateTime @default(now())
 
-  section           Section   @relation(fields: [section_id], references: [id])
-  recipe            Recipe    @relation(fields: [recipe_id], references: [id])
-  assigned_by_user  User      @relation("UserAssignedSectionRecipes", fields: [assigned_by], references: [id])
-  @@map("section_recipes")
+  section          Section @relation(fields: [section_id], references: [id])
+  recipe           Recipe  @relation(fields: [recipe_id], references: [id])
+  assigned_by_user User    @relation("UserAssignedSectionRecipes", fields: [assigned_by], references: [id])
+
   @@unique([section_id, recipe_id])
+  @@map("section_recipes")
 }
-
 
 model SectionConsumption {
   quantity        Decimal     @db.Decimal(10, 2)
@@ -152,46 +188,46 @@ model SectionConsumption {
 }
 
 model RecipeConsumption {
-  id              Int       @id @default(autoincrement())
-  recipe_id       Int       @map("recipe_id")
-  section_id      Int       @map("section_id")
-  consumed_by     Int       @map("consumed_by")
-  consumed_date   DateTime  @default(now()) @map("consumed_date")
-  order_id        String?   @map("order_id")
-  notes           String?
-  reason          String?
-  created_at      DateTime  @default(now()) @map("created_at")
-  updated_at      DateTime  @updatedAt @map("updated_at")
-  
-  // Relationships
-  recipe          Recipe    @relation(fields: [recipe_id], references: [id], onDelete: Cascade)
-  section         Section   @relation(fields: [section_id], references: [id], onDelete: Cascade)
-  user            User      @relation("RecipeConsumptionPerformedBy", fields: [consumed_by], references: [id], onDelete: Cascade)
-  ingredients     RecipeConsumptionIngredient[]
+  id            Int      @id @default(autoincrement())
+  recipe_id     Int      @map("recipe_id")
+  section_id    Int      @map("section_id")
+  consumed_by   Int      @map("consumed_by")
+  consumed_date DateTime @default(now()) @map("consumed_date")
+  order_id      String?  @map("order_id")
+  notes         String?
+  reason        String?
+  created_at    DateTime @default(now()) @map("created_at")
+  updated_at    DateTime @updatedAt @map("updated_at")
 
-  @@map("recipe_consumptions")
+  // Relationships
+  recipe      Recipe                        @relation(fields: [recipe_id], references: [id], onDelete: Cascade)
+  section     Section                       @relation(fields: [section_id], references: [id], onDelete: Cascade)
+  user        User                          @relation("RecipeConsumptionPerformedBy", fields: [consumed_by], references: [id], onDelete: Cascade)
+  ingredients RecipeConsumptionIngredient[]
+
   @@index([recipe_id])
   @@index([section_id])
   @@index([consumed_date])
   @@index([consumed_by])
+  @@map("recipe_consumptions")
 }
 
 model RecipeConsumptionIngredient {
-  id                      Int             @id @default(autoincrement())
-  recipe_consumption_id   Int             @map("recipe_consumption_id")
-  raw_material_id         Int             @map("raw_material_id")
-  quantity                Decimal         @db.Decimal(10, 3)
-  unit                    MeasurementUnit
-  base_unit               MeasurementUnit @map("base_unit")
-  cost_per_unit           Decimal?        @map("cost_per_unit") @db.Decimal(10, 5)
-  
-  // Relationships
-  recipe_consumption    RecipeConsumption @relation(fields: [recipe_consumption_id], references: [id], onDelete: Cascade)
-  raw_material            RawMaterial       @relation(fields: [raw_material_id], references: [id])
+  id                    Int             @id @default(autoincrement())
+  recipe_consumption_id Int             @map("recipe_consumption_id")
+  raw_material_id       Int             @map("raw_material_id")
+  quantity              Decimal         @db.Decimal(10, 3)
+  unit                  MeasurementUnit
+  base_unit             MeasurementUnit @map("base_unit")
+  cost_per_unit         Decimal?        @map("cost_per_unit") @db.Decimal(10, 5)
 
-  @@map("recipe_consumption_ingredients")
+  // Relationships
+  recipe_consumption RecipeConsumption @relation(fields: [recipe_consumption_id], references: [id], onDelete: Cascade)
+  raw_material       RawMaterial       @relation(fields: [raw_material_id], references: [id])
+
   @@index([recipe_consumption_id])
   @@index([raw_material_id])
+  @@map("recipe_consumption_ingredients")
 }
 
 model StockEntry {
@@ -251,11 +287,10 @@ model OrderCounter {
   last_order_number Int      @default(0) @map("last_order_number")
   created_at        DateTime @default(now()) @map("created_at")
   updated_at        DateTime @updatedAt @map("updated_at")
-  unique_key        String   @default("singleton") @unique
+  unique_key        String   @unique @default("singleton")
 
   @@map("order_counters")
 }
-
 
 enum Role {
   MANAGER
@@ -265,18 +300,12 @@ enum Role {
   @@map("role")
 }
 
-enum MaterialCategory {
-  MEAT
-  VEGETABLES
-  DAIRY
-  BEVERAGES
-  BREAD
-  GRAINS
-  SPICES
-  PACKAGING
-  OTHER
+enum CategoryType {
+  MATERIAL
+  RECIPE
+  MENU_ITEM
 
-  @@map("material_category")
+  @@map("category_type")
 }
 
 enum MeasurementUnit {
@@ -316,326 +345,362 @@ enum MovementType {
 // NEW MODELS FOR COMPREHENSIVE RESTAURANT MANAGEMENT
 
 model Supplier {
-  id              Int             @id @default(autoincrement())
-  name            String
-  contact_person  String?         @map("contact_person")
-  email           String?
-  phone           String?
-  address         String?
-  city            String?
-  state           String?
-  zip_code        String?         @map("zip_code")
-  country         String?         @default("USA")
-  tax_id          String?         @map("tax_id")
-  payment_terms   Int             @default(30) @map("payment_terms") // Days
-  discount_rate   Decimal?        @map("discount_rate") @db.Decimal(5, 2)
-  credit_limit    Decimal?        @map("credit_limit") @db.Decimal(10, 2)
-  is_active       Boolean         @default(true) @map("is_active")
-  rating          Int?            @default(5) // 1-10 scale
-  lead_time_days  Int             @default(7) @map("lead_time_days")
-  minimum_order   Decimal?        @map("minimum_order") @db.Decimal(10, 2)
-  created_at      DateTime        @default(now()) @map("created_at")
-  updated_at      DateTime        @updatedAt @map("updated_at")
-  
+  id             Int      @id @default(autoincrement())
+  name           String
+  contact_person String?  @map("contact_person")
+  email          String?
+  phone          String?
+  address        String?
+  city           String?
+  state          String?
+  zip_code       String?  @map("zip_code")
+  country        String?  @default("USA")
+  tax_id         String?  @map("tax_id")
+  payment_terms  Int      @default(30) @map("payment_terms") // Days
+  discount_rate  Decimal? @map("discount_rate") @db.Decimal(5, 2)
+  credit_limit   Decimal? @map("credit_limit") @db.Decimal(10, 2)
+  is_active      Boolean  @default(true) @map("is_active")
+  rating         Int?     @default(5) // 1-10 scale
+  lead_time_days Int      @default(7) @map("lead_time_days")
+  minimum_order  Decimal? @map("minimum_order") @db.Decimal(10, 2)
+  created_at     DateTime @default(now()) @map("created_at")
+  updated_at     DateTime @updatedAt @map("updated_at")
+
   // Relationships
-  supplier_materials  SupplierMaterial[]
+  supplier_materials SupplierMaterial[]
   purchase_orders    PurchaseOrder[]
   vendor_contracts   VendorContract[]
   supplier_invoices  SupplierInvoice[]
 
-  @@map("suppliers")
   @@index([is_active])
   @@index([rating])
+  @@map("suppliers")
 }
 
 model SupplierMaterial {
-  id              Int         @id @default(autoincrement())
-  supplier_id     Int         @map("supplier_id")
-  raw_material_id Int         @map("raw_material_id")
-  supplier_sku    String?     @map("supplier_sku")
-  unit_cost       Decimal     @map("unit_cost") @db.Decimal(10, 2)
-  minimum_quantity Decimal    @map("minimum_quantity") @db.Decimal(10, 2)
-  lead_time_days  Int         @default(7) @map("lead_time_days")
-  is_preferred    Boolean     @default(false) @map("is_preferred")
+  id                Int       @id @default(autoincrement())
+  supplier_id       Int       @map("supplier_id")
+  raw_material_id   Int       @map("raw_material_id")
+  supplier_sku      String?   @map("supplier_sku")
+  unit_cost         Decimal   @map("unit_cost") @db.Decimal(10, 2)
+  minimum_quantity  Decimal   @map("minimum_quantity") @db.Decimal(10, 2)
+  lead_time_days    Int       @default(7) @map("lead_time_days")
+  is_preferred      Boolean   @default(false) @map("is_preferred")
   last_price_update DateTime? @map("last_price_update")
-  created_at      DateTime    @default(now()) @map("created_at")
-  updated_at      DateTime    @updatedAt @map("updated_at")
-  
-  // Relationships
-  supplier        Supplier    @relation(fields: [supplier_id], references: [id])
-  raw_material    RawMaterial @relation(fields: [raw_material_id], references: [id])
+  created_at        DateTime  @default(now()) @map("created_at")
+  updated_at        DateTime  @updatedAt @map("updated_at")
 
-  @@map("supplier_materials")
+  // Relationships
+  supplier     Supplier    @relation(fields: [supplier_id], references: [id])
+  raw_material RawMaterial @relation(fields: [raw_material_id], references: [id])
+
   @@unique([supplier_id, raw_material_id])
   @@index([supplier_id])
   @@index([raw_material_id])
+  @@map("supplier_materials")
 }
 
 model PurchaseOrder {
-  id              Int             @id @default(autoincrement())
-  po_number       String          @unique @map("po_number")
-  supplier_id     Int             @map("supplier_id")
+  id              Int                 @id @default(autoincrement())
+  po_number       String              @unique @map("po_number")
+  supplier_id     Int                 @map("supplier_id")
   status          PurchaseOrderStatus @default(DRAFT)
-  order_date      DateTime        @map("order_date")
-  expected_date   DateTime        @map("expected_date")
-  received_date   DateTime?       @map("received_date")
-  subtotal        Decimal         @db.Decimal(10, 2)
-  tax_amount      Decimal         @default(0) @map("tax_amount") @db.Decimal(10, 2)
-  discount_amount Decimal         @default(0) @map("discount_amount") @db.Decimal(10, 2)
-  total_amount    Decimal         @map("total_amount") @db.Decimal(10, 5)
+  order_date      DateTime            @map("order_date")
+  expected_date   DateTime            @map("expected_date")
+  received_date   DateTime?           @map("received_date")
+  subtotal        Decimal             @db.Decimal(10, 2)
+  tax_amount      Decimal             @default(0) @map("tax_amount") @db.Decimal(10, 2)
+  discount_amount Decimal             @default(0) @map("discount_amount") @db.Decimal(10, 2)
+  total_amount    Decimal             @map("total_amount") @db.Decimal(10, 5)
   notes           String?
-  approved_by     Int?            @map("approved_by")
-  created_by      Int             @map("created_by")
-  created_at      DateTime        @default(now()) @map("created_at")
-  updated_at      DateTime        @updatedAt @map("updated_at")
-  supplier        Supplier        @relation(fields: [supplier_id], references: [id])
-  creator         User            @relation("PurchaseOrderCreatedBy", fields: [created_by], references: [id])
-  approver        User?           @relation("PurchaseOrderApprovedBy", fields: [approved_by], references: [id])
+  approved_by     Int?                @map("approved_by")
+  created_by      Int                 @map("created_by")
+  created_at      DateTime            @default(now()) @map("created_at")
+  updated_at      DateTime            @updatedAt @map("updated_at")
+  supplier        Supplier            @relation(fields: [supplier_id], references: [id])
+  creator         User                @relation("PurchaseOrderCreatedBy", fields: [created_by], references: [id])
+  approver        User?               @relation("PurchaseOrderApprovedBy", fields: [approved_by], references: [id])
   order_items     PurchaseOrderItem[]
   receipts        PurchaseReceipt[]
 
-  @@map("purchase_orders")
   @@index([supplier_id])
   @@index([status])
   @@index([order_date])
   @@index([created_by])
+  @@map("purchase_orders")
 }
 
 model PurchaseOrderItem {
-  id                Int           @id @default(autoincrement())
-  purchase_order_id Int           @map("purchase_order_id")
-  raw_material_id   Int           @map("raw_material_id")
-  quantity_ordered  Decimal       @map("quantity_ordered") @db.Decimal(10, 2)
-  quantity_received Decimal       @default(0) @map("quantity_received") @db.Decimal(10, 2)
-  unit_cost         Decimal       @map("unit_cost") @db.Decimal(10, 5)
-  line_total        Decimal       @map("line_total") @db.Decimal(10, 5)
+  id                Int      @id @default(autoincrement())
+  purchase_order_id Int      @map("purchase_order_id")
+  raw_material_id   Int      @map("raw_material_id")
+  quantity_ordered  Decimal  @map("quantity_ordered") @db.Decimal(10, 2)
+  quantity_received Decimal  @default(0) @map("quantity_received") @db.Decimal(10, 2)
+  unit_cost         Decimal  @map("unit_cost") @db.Decimal(10, 5)
+  line_total        Decimal  @map("line_total") @db.Decimal(10, 5)
   notes             String?
-  created_at        DateTime      @default(now()) @map("created_at")
-  updated_at        DateTime      @updatedAt @map("updated_at")
-  
-  // Relationships
-  purchase_order    PurchaseOrder @relation(fields: [purchase_order_id], references: [id], onDelete: Cascade)
-  raw_material      RawMaterial   @relation(fields: [raw_material_id], references: [id])
+  created_at        DateTime @default(now()) @map("created_at")
+  updated_at        DateTime @updatedAt @map("updated_at")
 
-  @@map("purchase_order_items")
+  // Relationships
+  purchase_order PurchaseOrder @relation(fields: [purchase_order_id], references: [id], onDelete: Cascade)
+  raw_material   RawMaterial   @relation(fields: [raw_material_id], references: [id])
+
   @@index([purchase_order_id])
   @@index([raw_material_id])
+  @@map("purchase_order_items")
 }
 
 model PurchaseReceipt {
-  id                Int           @id @default(autoincrement())
-  purchase_order_id Int           @map("purchase_order_id")
-  receipt_number    String        @map("receipt_number")
-  received_date     DateTime      @map("received_date")
-  received_by       Int           @map("received_by")
+  id                Int      @id @default(autoincrement())
+  purchase_order_id Int      @map("purchase_order_id")
+  receipt_number    String   @map("receipt_number")
+  received_date     DateTime @map("received_date")
+  received_by       Int      @map("received_by")
   notes             String?
-  is_partial        Boolean       @default(false) @map("is_partial")
-  created_at        DateTime      @default(now()) @map("created_at")
-  updated_at        DateTime      @updatedAt @map("updated_at")
-  
-  // Relationships
-  purchase_order    PurchaseOrder @relation(fields: [purchase_order_id], references: [id])
-  receiver          User          @relation("PurchaseReceiptReceivedBy", fields: [received_by], references: [id])
+  is_partial        Boolean  @default(false) @map("is_partial")
+  created_at        DateTime @default(now()) @map("created_at")
+  updated_at        DateTime @updatedAt @map("updated_at")
 
-  @@map("purchase_receipts")
+  // Relationships
+  purchase_order PurchaseOrder @relation(fields: [purchase_order_id], references: [id])
+  receiver       User          @relation("PurchaseReceiptReceivedBy", fields: [received_by], references: [id])
+
   @@index([purchase_order_id])
   @@index([received_date])
+  @@map("purchase_receipts")
 }
 
 model Recipe {
-  id              Int             @id @default(autoincrement())
-  name            String
-  description     String?
-  category        String?
-  instructions    String?
-  serving_cost Decimal?       @map("serving_cost") @db.Decimal(10, 5)
+  id                  Int                 @id @default(autoincrement())
+  name                String
+  description         String?
+  category_id         Int?                @map("category_id")
+  instructions        String?
+  serving_cost        Decimal?            @map("serving_cost") @db.Decimal(10, 5)
   section_assignments SectionRecipe[]
-  is_active       Boolean         @default(true) @map("is_active")
-  created_by      Int             @map("created_by")
-  created_at      DateTime        @default(now()) @map("created_at")
-  updated_at      DateTime        @updatedAt @map("updated_at")
-  creator         User            @relation("RecipeCreatedBy", fields: [created_by], references: [id])
-  ingredients     RecipeIngredient[]
-  consumptions    RecipeConsumption[]
-  menu_items      MenuItem[]
+  is_active           Boolean             @default(true) @map("is_active")
+  created_by          Int                 @map("created_by")
+  created_at          DateTime            @default(now()) @map("created_at")
+  updated_at          DateTime            @updatedAt @map("updated_at")
+  creator             User                @relation("RecipeCreatedBy", fields: [created_by], references: [id])
+  ingredients         RecipeIngredient[]
+  consumptions        RecipeConsumption[]
+  menu_items          MenuItem[]
+  category            Category?           @relation(fields: [category_id], references: [id])
 
-  @@map("recipes")
-  @@index([category])
+  @@index([category_id])
   @@index([is_active])
   @@index([created_by])
+  @@map("recipes")
 }
 
 model RecipeIngredient {
-  id              Int         @id @default(autoincrement())
-  recipe_id       Int         @map("recipe_id")
-  raw_material_id Int         @map("raw_material_id")
-  quantity        Decimal     @db.Decimal(10, 3)
+  id              Int              @id @default(autoincrement())
+  recipe_id       Int              @map("recipe_id")
+  raw_material_id Int              @map("raw_material_id")
+  quantity        Decimal          @db.Decimal(10, 3)
   unit            MeasurementUnit
   baseUnit        MeasurementUnit? @map("base_unit")
-  cost_per_unit   Decimal?    @map("cost_per_unit") @db.Decimal(10, 5)
+  cost_per_unit   Decimal?         @map("cost_per_unit") @db.Decimal(10, 5)
   notes           String?
-  created_at      DateTime    @default(now()) @map("created_at")
-  updated_at      DateTime    @updatedAt @map("updated_at")
-  
-  // Relationships
-  recipe          Recipe      @relation(fields: [recipe_id], references: [id], onDelete: Cascade)
-  raw_material    RawMaterial @relation(fields: [raw_material_id], references: [id])
+  created_at      DateTime         @default(now()) @map("created_at")
+  updated_at      DateTime         @updatedAt @map("updated_at")
 
-  @@map("recipe_ingredients")
+  // Relationships
+  recipe       Recipe      @relation(fields: [recipe_id], references: [id], onDelete: Cascade)
+  raw_material RawMaterial @relation(fields: [raw_material_id], references: [id])
+
   @@unique([recipe_id, raw_material_id])
   @@index([recipe_id])
   @@index([raw_material_id])
+  @@map("recipe_ingredients")
 }
 
 model MenuItem {
-  id              Int             @id @default(autoincrement())
-  name            String
-  description     String?
-  category        MenuCategory
-  recipe_id       Int?            @map("recipe_id")
-  cost_price      Decimal         @map("cost_price") @db.Decimal(10, 5)
-  selling_price   Decimal         @map("selling_price") @db.Decimal(10, 5)
-  margin_amount   Decimal         @map("margin_amount") @db.Decimal(10, 5)
-  is_available    Boolean         @default(true) @map("is_available")
-  is_popular      Boolean         @default(false) @map("is_popular")
-  allergens       String?         // JSON array of allergens
-  nutritional_info String?        @map("nutritional_info") // JSON
-  created_at      DateTime        @default(now()) @map("created_at")
-  updated_at      DateTime        @updatedAt @map("updated_at")
-  
-  // Relationships
-  recipe          Recipe?         @relation(fields: [recipe_id], references: [id])
-  sales           Sale[]
+  id               Int      @id @default(autoincrement())
+  name             String
+  description      String?
+  category_id      Int      @map("category_id")
+  recipe_id        Int?     @map("recipe_id")
+  cost_price       Decimal  @map("cost_price") @db.Decimal(10, 5)
+  selling_price    Decimal  @map("selling_price") @db.Decimal(10, 5)
+  margin_amount    Decimal  @map("margin_amount") @db.Decimal(10, 5)
+  sales            Sale[]   @relation("MenuItemSales")
+  is_available     Boolean  @default(true) @map("is_available")
+  is_popular       Boolean  @default(false) @map("is_popular")
+  allergens        String? // JSON array of allergens
+  nutritional_info String?  @map("nutritional_info") // JSON
+  created_at       DateTime @default(now()) @map("created_at")
+  updated_at       DateTime @updatedAt @map("updated_at")
+  recipe           Recipe?  @relation(fields: [recipe_id], references: [id])
+  category         Category @relation(fields: [category_id], references: [id])
 
-  @@map("menu_items")
-  @@index([category])
+  @@index([category_id])
   @@index([is_available])
   @@index([recipe_id])
+  @@map("menu_items")
 }
 
 model Sale {
-  id              Int         @id @default(autoincrement())
-  order_number    String      @map("order_number")
-  menu_item_id    Int         @map("menu_item_id")
-  quantity        Int
-  unit_price      Decimal     @map("unit_price") @db.Decimal(10, 5)
-  total_amount    Decimal     @map("total_amount") @db.Decimal(10, 5)
-  sale_date       DateTime    @map("sale_date")
-  section_id      Int?        @map("section_id") // Which section prepared it
-  served_by       Int?        @map("served_by")
-  created_at      DateTime    @default(now()) @map("created_at")
-  
-  // Relationships
-  menu_item       MenuItem    @relation(fields: [menu_item_id], references: [id])
-  section         Section?    @relation(fields: [section_id], references: [id])
-  server          User?       @relation("SaleServedBy", fields: [served_by], references: [id])
+  id             String     @id @default(uuid())
+  invoice_number String?    @unique
+  sectionId      Int
+  cashierId      Int
+  menuItemId     Int?
+  subtotal       Decimal    @db.Decimal(10, 2)
+  total          Decimal    @db.Decimal(10, 2)
+  tax            Decimal    @db.Decimal(10, 2)
+  discount       Decimal    @default(0) @db.Decimal(10, 2)
+  paymentMethod  String
+  status         SaleStatus @default(COMPLETED)
+  saleDate       DateTime
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
 
-  @@map("sales")
-  @@index([sale_date])
-  @@index([menu_item_id])
-  @@index([section_id])
+  items    SaleItem[]
+  cashier  User       @relation("SaleServedBy", fields: [cashierId], references: [id])
+  section  Section    @relation(fields: [sectionId], references: [id])
+  menuItem MenuItem?  @relation("MenuItemSales", fields: [menuItemId], references: [id])
+
+  @@index([sectionId])
+  @@index([cashierId])
+  @@index([saleDate])
+  @@index([status])
+}
+
+model SaleItem {
+  id        String   @id @default(uuid())
+  saleId    String
+  itemId    String
+  itemType  ItemType
+  itemName  String
+  price     Decimal  @db.Decimal(10, 2)
+  quantity  Int
+  cost      Decimal  @db.Decimal(10, 2)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sale Sale @relation(fields: [saleId], references: [id])
+
+  @@index([saleId])
+  @@index([itemId])
+}
+
+enum SaleStatus {
+  PENDING
+  COMPLETED
+  CANCELLED
+  REFUNDED
+}
+
+enum ItemType {
+  ITEM
+  RECIPE
+  MENU_ITEM
 }
 
 model Budget {
-  id              Int             @id @default(autoincrement())
-  name            String
-  description     String?
-  period_type     BudgetPeriod    @map("period_type")
-  start_date      DateTime        @map("start_date")
-  end_date        DateTime        @map("end_date")
-  total_budget    Decimal         @map("total_budget") @db.Decimal(12, 5)
-  allocated_amount Decimal        @default(0) @map("allocated_amount") @db.Decimal(12, 5)
-  spent_amount    Decimal         @default(0) @map("spent_amount") @db.Decimal(12, 5)
-  is_active       Boolean         @default(true) @map("is_active")
-  created_by      Int             @map("created_by")
-  created_at      DateTime        @default(now()) @map("created_at")
-  updated_at      DateTime        @updatedAt @map("updated_at")
-  
-  // Relationships
-  creator         User            @relation("BudgetCreatedBy", fields: [created_by], references: [id])
-  allocations     BudgetAllocation[]
+  id               Int          @id @default(autoincrement())
+  name             String
+  description      String?
+  period_type      BudgetPeriod @map("period_type")
+  start_date       DateTime     @map("start_date")
+  end_date         DateTime     @map("end_date")
+  total_budget     Decimal      @map("total_budget") @db.Decimal(12, 5)
+  allocated_amount Decimal      @default(0) @map("allocated_amount") @db.Decimal(12, 5)
+  spent_amount     Decimal      @default(0) @map("spent_amount") @db.Decimal(12, 5)
+  is_active        Boolean      @default(true) @map("is_active")
+  created_by       Int          @map("created_by")
+  created_at       DateTime     @default(now()) @map("created_at")
+  updated_at       DateTime     @updatedAt @map("updated_at")
 
-  @@map("budgets")
+  // Relationships
+  creator     User               @relation("BudgetCreatedBy", fields: [created_by], references: [id])
+  allocations BudgetAllocation[]
+
   @@index([period_type])
   @@index([start_date, end_date])
   @@index([is_active])
+  @@map("budgets")
 }
 
 model BudgetAllocation {
-  id              Int             @id @default(autoincrement())
-  budget_id       Int             @map("budget_id")
-  category        MaterialCategory
-  allocated_amount Decimal        @map("allocated_amount") @db.Decimal(10, 5)
-  spent_amount    Decimal         @default(0) @map("spent_amount") @db.Decimal(10, 5)
-  notes           String?
-  created_at      DateTime        @default(now()) @map("created_at")
-  updated_at      DateTime        @updatedAt @map("updated_at")
-  
-  // Relationships
-  budget          Budget          @relation(fields: [budget_id], references: [id], onDelete: Cascade)
+  id               Int      @id @default(autoincrement())
+  budget_id        Int      @map("budget_id")
+  category_id      Int      @map("category_id")
+  allocated_amount Decimal  @map("allocated_amount") @db.Decimal(10, 5)
+  spent_amount     Decimal  @default(0) @map("spent_amount") @db.Decimal(10, 5)
+  notes            String?
+  created_at       DateTime @default(now()) @map("created_at")
+  updated_at       DateTime @updatedAt @map("updated_at")
 
-  @@map("budget_allocations")
-  @@unique([budget_id, category])
+  // Relationships
+  budget   Budget   @relation(fields: [budget_id], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [category_id], references: [id])
+
+  @@unique([budget_id, category_id])
   @@index([budget_id])
-  @@index([category])
+  @@index([category_id])
+  @@map("budget_allocations")
 }
 
 model VendorContract {
-  id              Int             @id @default(autoincrement())
-  supplier_id     Int             @map("supplier_id")
-  contract_number String          @unique @map("contract_number")
+  id              Int            @id @default(autoincrement())
+  supplier_id     Int            @map("supplier_id")
+  contract_number String         @unique @map("contract_number")
   title           String
   description     String?
-  start_date      DateTime        @map("start_date")
-  end_date        DateTime        @map("end_date")
-  payment_terms   Int             @map("payment_terms") // Days
-  discount_rate   Decimal?        @map("discount_rate") @db.Decimal(5, 2)
-  minimum_order   Decimal?        @map("minimum_order") @db.Decimal(10, 2)
-  maximum_order   Decimal?        @map("maximum_order") @db.Decimal(10, 2)
-  price_lock      Boolean         @default(false) @map("price_lock")
-  auto_renewal    Boolean         @default(false) @map("auto_renewal")
-  status          ContractStatus  @default(ACTIVE)
-  created_by      Int             @map("created_by")
-  created_at      DateTime        @default(now()) @map("created_at")
-  updated_at      DateTime        @updatedAt @map("updated_at")
-  
-  // Relationships
-  supplier        Supplier        @relation(fields: [supplier_id], references: [id])
-  creator         User            @relation("VendorContractCreatedBy", fields: [created_by], references: [id])
+  start_date      DateTime       @map("start_date")
+  end_date        DateTime       @map("end_date")
+  payment_terms   Int            @map("payment_terms") // Days
+  discount_rate   Decimal?       @map("discount_rate") @db.Decimal(5, 2)
+  minimum_order   Decimal?       @map("minimum_order") @db.Decimal(10, 2)
+  maximum_order   Decimal?       @map("maximum_order") @db.Decimal(10, 2)
+  price_lock      Boolean        @default(false) @map("price_lock")
+  auto_renewal    Boolean        @default(false) @map("auto_renewal")
+  status          ContractStatus @default(ACTIVE)
+  created_by      Int            @map("created_by")
+  created_at      DateTime       @default(now()) @map("created_at")
+  updated_at      DateTime       @updatedAt @map("updated_at")
 
-  @@map("vendor_contracts")
+  // Relationships
+  supplier Supplier @relation(fields: [supplier_id], references: [id])
+  creator  User     @relation("VendorContractCreatedBy", fields: [created_by], references: [id])
+
   @@index([supplier_id])
   @@index([status])
   @@index([start_date, end_date])
+  @@map("vendor_contracts")
 }
 
 model SupplierInvoice {
-  id              Int             @id @default(autoincrement())
-  supplier_id     Int             @map("supplier_id")
-  invoice_number  String          @map("invoice_number")
+  id                Int           @id @default(autoincrement())
+  supplier_id       Int           @map("supplier_id")
+  invoice_number    String        @map("invoice_number")
   purchase_order_id Int?          @map("purchase_order_id")
-  invoice_date    DateTime        @map("invoice_date")
-  due_date        DateTime        @map("due_date")
-  subtotal        Decimal         @db.Decimal(10, 2)
-  tax_amount      Decimal         @default(0) @map("tax_amount") @db.Decimal(10, 2)
-  discount_amount Decimal         @default(0) @map("discount_amount") @db.Decimal(10, 2)
-  total_amount    Decimal         @map("total_amount") @db.Decimal(10, 2)
-  paid_amount     Decimal         @default(0) @map("paid_amount") @db.Decimal(10, 2)
-  status          InvoiceStatus   @default(PENDING)
-  payment_method  String?         @map("payment_method")
-  payment_date    DateTime?       @map("payment_date")
-  notes           String?
-  created_at      DateTime        @default(now()) @map("created_at")
-  updated_at      DateTime        @updatedAt @map("updated_at")
-  
-  // Relationships
-  supplier        Supplier        @relation(fields: [supplier_id], references: [id])
+  invoice_date      DateTime      @map("invoice_date")
+  due_date          DateTime      @map("due_date")
+  subtotal          Decimal       @db.Decimal(10, 2)
+  tax_amount        Decimal       @default(0) @map("tax_amount") @db.Decimal(10, 2)
+  discount_amount   Decimal       @default(0) @map("discount_amount") @db.Decimal(10, 2)
+  total_amount      Decimal       @map("total_amount") @db.Decimal(10, 2)
+  paid_amount       Decimal       @default(0) @map("paid_amount") @db.Decimal(10, 2)
+  status            InvoiceStatus @default(PENDING)
+  payment_method    String?       @map("payment_method")
+  payment_date      DateTime?     @map("payment_date")
+  notes             String?
+  created_at        DateTime      @default(now()) @map("created_at")
+  updated_at        DateTime      @updatedAt @map("updated_at")
 
-  @@map("supplier_invoices")
+  // Relationships
+  supplier Supplier @relation(fields: [supplier_id], references: [id])
+
   @@index([supplier_id])
   @@index([status])
   @@index([invoice_date])
   @@index([due_date])
+  @@map("supplier_invoices")
 }
 
 // NEW ENUMS
@@ -650,22 +715,6 @@ enum PurchaseOrderStatus {
   CANCELLED
 
   @@map("purchase_order_status")
-}
-
-enum MenuCategory {
-  APPETIZER
-  MAIN_COURSE
-  DESSERT
-  BEVERAGE
-  SIDE_DISH
-  SALAD
-  SOUP
-  SPECIAL
-  BREAKFAST
-  LUNCH
-  DINNER
-
-  @@map("menu_category")
 }
 
 enum BudgetPeriod {

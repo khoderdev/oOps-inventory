@@ -1,6 +1,6 @@
 import { apiClient } from "../lib/api";
-import type { ApiResponse, User } from "../types";
-import type { BackendUser, BackendUsersResponse, UserFilters, UserRole, UsersResponse } from "../types/users.types";
+import type { ApiResponse, User, UserRole } from "../types";
+import type { BackendUser, BackendUsersResponse, UserFilters, UsersResponse } from "../types/users.types";
 
 // Transform backend user data to frontend format
 export const transformUser = (backendUser: BackendUser): User => ({
@@ -262,6 +262,33 @@ export class UsersAPI {
         data: {} as User,
         success: false,
         message: error instanceof Error ? error.message : "Failed to update user status"
+      };
+    }
+  }
+
+  static async getCurrent(): Promise<ApiResponse<User | null>> {
+    try {
+      const response = await apiClient.get("/auth/me");
+
+      // response itself is already the JSON body
+      if (!response || !response.user) {
+        return {
+          data: null,
+          success: false,
+          message: "No user in response"
+        };
+      }
+
+      return {
+        data: response.user,
+        success: true,
+        message: "User fetched successfully"
+      };
+    } catch (error) {
+      return {
+        data: null,
+        success: false,
+        message: error instanceof Error ? error.message : "Failed to fetch user"
       };
     }
   }

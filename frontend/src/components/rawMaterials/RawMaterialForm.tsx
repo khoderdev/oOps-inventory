@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useCreateRawMaterial, useUpdateRawMaterial } from "../../hooks/useRawMaterials";
 import { useSuppliers } from "../../hooks/useSuppliers";
-import { MaterialCategory, MeasurementUnit, type RawMaterial } from "../../types";
+import { type Category, MeasurementUnit, type RawMaterial } from "../../types";
 import type { Supplier } from "../../types/suppliers.types";
 import Button from "../ui/Button";
 import Input from "../ui/Input";
@@ -18,7 +18,7 @@ const RawMaterialForm = ({ initialData, onSuccess, onCancel }: RawMaterialFormPr
   const [formData, setFormData] = useState({
     name: "",
     description: "",
-    category: MaterialCategory.OTHER,
+    categoryId: 0,
     unit: MeasurementUnit.PIECES,
     unitCost: 0,
     supplierId: null as number | null,
@@ -27,19 +27,80 @@ const RawMaterialForm = ({ initialData, onSuccess, onCancel }: RawMaterialFormPr
     unitsPerPack: 1,
     baseUnit: MeasurementUnit.PIECES
   });
-
+  const [categoryOptions, setCategoryOptions] = useState<{ value: Category; label: string }[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
-
   const createMutation = useCreateRawMaterial();
   const updateMutation = useUpdateRawMaterial();
 
   useEffect(() => {
     if (initialData) {
-      const normalizeCategory = (category: string): MaterialCategory => {
-        const categoryKey = category.toUpperCase() as keyof typeof MaterialCategory;
-        return MaterialCategory[categoryKey] || MaterialCategory.OTHER;
+      const normalizeUnit = (unit: string): MeasurementUnit => {
+        const unitKey = unit.toUpperCase() as keyof typeof MeasurementUnit;
+        return MeasurementUnit[unitKey] || MeasurementUnit.PIECES;
       };
 
+      let supplierId: number | null = null;
+      if (initialData.supplier) {
+        const parsedId = parseInt(initialData.supplier);
+        if (!isNaN(parsedId)) {
+          supplierId = parsedId;
+        }
+      }
+
+      // Get category ID from the nested category object
+      const categoryId = initialData.category?.id || 0;
+
+      const newFormData = {
+        name: initialData.name || "",
+        description: initialData.description || "",
+        categoryId: categoryId,
+        unit: normalizeUnit(initialData.unit as string),
+        unitCost: initialData.unitCost || 0,
+        supplierId: supplierId,
+        minStockLevel: initialData.minStockLevel || 0,
+        maxStockLevel: initialData.maxStockLevel || 100,
+        unitsPerPack: initialData.unitsPerPack || 1,
+        baseUnit: initialData.baseUnit ? normalizeUnit(initialData.baseUnit as string) : MeasurementUnit.PIECES
+      };
+
+      setFormData(newFormData);
+
+      // If we have the category name in the response, add it to options immediately
+      if (initialData.category) {
+        setCategoryOptions(prev => {
+          const exists = prev.some(opt => opt.value === initialData.category.id.toString());
+          if (!exists) {
+            return [
+              ...prev,
+              {
+                value: initialData.category.id.toString(),
+                label: initialData.category.name.charAt(0).toUpperCase() + initialData.category.name.slice(1).replace("_", " ")
+              }
+            ];
+          }
+          return prev;
+        });
+      }
+    } else {
+      // Reset form for create mode
+      setFormData({
+        name: "",
+        description: "",
+        categoryId: 0,
+        unit: MeasurementUnit.PIECES,
+        unitCost: 0,
+        supplierId: null,
+        minStockLevel: 0,
+        maxStockLevel: 100,
+        unitsPerPack: 1,
+        baseUnit: MeasurementUnit.PIECES
+      });
+    }
+    setErrors({});
+  }, [initialData]);
+
+  useEffect(() => {
+    if (initialData) {
       const normalizeUnit = (unit: string): MeasurementUnit => {
         const unitKey = unit.toUpperCase() as keyof typeof MeasurementUnit;
         return MeasurementUnit[unitKey] || MeasurementUnit.PIECES;
@@ -64,7 +125,7 @@ const RawMaterialForm = ({ initialData, onSuccess, onCancel }: RawMaterialFormPr
       const newFormData = {
         name: initialData.name || "",
         description: initialData.description || "",
-        category: normalizeCategory(initialData.category as string),
+        categoryId: initialData.category?.id || 0,
         unit: normalizeUnit(initialData.unit as string),
         unitCost: initialData.unitCost || 0,
         supplierId: supplierId,
@@ -80,7 +141,7 @@ const RawMaterialForm = ({ initialData, onSuccess, onCancel }: RawMaterialFormPr
       const resetFormData = {
         name: "",
         description: "",
-        category: MaterialCategory.OTHER,
+        categoryId: 0,
         unit: MeasurementUnit.PIECES,
         unitCost: 0,
         supplierId: null,
@@ -141,7 +202,7 @@ const RawMaterialForm = ({ initialData, onSuccess, onCancel }: RawMaterialFormPr
         return {
           name: formData.name,
           description: formData.description || undefined,
-          category: formData.category,
+          categoryId: formData.categoryId,
           unit: formData.unit,
           unitCost: formData.unitCost,
           supplier: formData.supplierId?.toString(),
@@ -176,15 +237,9 @@ const RawMaterialForm = ({ initialData, onSuccess, onCancel }: RawMaterialFormPr
       setErrors(prev => ({ ...prev, [field]: "" }));
     }
   };
+  const multiUnitContainers = new Set([MeasurementUnit.PACKS, MeasurementUnit.BOXES]);
 
-  const isPackOrBox = () => {
-    return formData.unit === MeasurementUnit.PACKS || formData.unit === MeasurementUnit.BOXES;
-  };
-
-  const categoryOptions = Object.values(MaterialCategory).map(category => ({
-    value: category,
-    label: category.charAt(0).toUpperCase() + category.slice(1).replace("_", " ")
-  }));
+  const isPackOrBox = () => multiUnitContainers.has(formData.unit);
 
   const unitOptions = Object.values(MeasurementUnit).map(unit => ({
     value: unit,
@@ -214,8 +269,8 @@ const RawMaterialForm = ({ initialData, onSuccess, onCancel }: RawMaterialFormPr
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Input label="Name" value={formData.name} onChange={e => handleInputChange("name", e.target.value)} error={errors.name} required placeholder="e.g., Fresh Beef, Organic Tomatoes" />
-
-        <Select key={`category-${formData.category}`} label="Category" options={categoryOptions} value={formData.category} onChange={value => handleInputChange("category", value)} required />
+        <Select label="Category" options={categoryOptions} value={formData.categoryId} onChange={value => handleInputChange("categoryId", value)} required />
+        {/* <Select key={`category-${formData.categoryId}`} label="Category" options={categoryOptions} value={formData.categoryId} onChange={value => handleInputChange("categoryId", value)} required /> */}
 
         <Select key={`unit-${formData.unit}`} label="Unit of Measurement" options={unitOptions} value={formData.unit} onChange={value => handleInputChange("unit", value)} required />
 
@@ -234,9 +289,9 @@ const RawMaterialForm = ({ initialData, onSuccess, onCancel }: RawMaterialFormPr
 
         {!isPackOrBox() && <div></div>}
 
-        <Input label="Minimum Stock Level" type="number" min="0" value={formData.minStockLevel} onChange={e => handleInputChange("minStockLevel", parseInt(e.target.value) || 0)} error={errors.minStockLevel} required helperText="Alert threshold for low stock" />
+        <Input label="Minimum Stock Level" type="number" min="0" value={formData.minStockLevel} onChange={e => handleInputChange("minStockLevel", parseInt(e.target.value) || 0)} error={errors.minStockLevel} helperText="Alert threshold for low stock" />
 
-        <Input label="Maximum Stock Level" type="number" min="1" value={formData.maxStockLevel} onChange={e => handleInputChange("maxStockLevel", parseInt(e.target.value) || 0)} error={errors.maxStockLevel} required helperText="Target stock level for ordering" />
+        <Input label="Maximum Stock Level" type="number" min="1" value={formData.maxStockLevel} onChange={e => handleInputChange("maxStockLevel", parseInt(e.target.value) || 0)} error={errors.maxStockLevel} helperText="Target stock level for ordering" />
       </div>
 
       <Input label="Description" value={formData.description} onChange={e => handleInputChange("description", e.target.value)} placeholder="Optional description or notes" />

@@ -1,11 +1,12 @@
 import { clsx } from "clsx";
-import { BarChart3, Building2, ChefHat, ChevronLeft, ChevronRight, DollarSign, Home, Menu, Package, Settings, Users, Warehouse, X } from "lucide-react";
+import { BarChart3, Building2, ChefHat, ChevronLeft, ChevronRight, DollarSign, Home, Menu, Package, Settings, ShoppingCart, Users, Warehouse, X } from "lucide-react";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useApp } from "../../hooks/useApp";
 import Button from "../ui/Button";
 
 const navigationItems = [
   { name: "Dashboard", to: "/dashboard", icon: Home },
+  { name: "POS", to: "/pos", icon: ShoppingCart },
   { name: "Raw Materials", to: "/raw-materials", icon: Package },
   { name: "Stock Management", to: "/stock", icon: Warehouse },
   { name: "Sections", to: "/sections", icon: Building2 },

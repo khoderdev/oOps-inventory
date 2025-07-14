@@ -200,4 +200,4 @@ export const PriorityColors = {
 // Material categories for budget allocation
 export const MaterialCategories = ["MEAT", "VEGETABLES", "DAIRY", "BEVERAGES", "CONDIMENTS", "GRAINS", "SPICES", "PACKAGING", "OTHER"] as const;
 
-export type MaterialCategory = (typeof MaterialCategories)[number];
+export type Category = (typeof MaterialCategories)[number];

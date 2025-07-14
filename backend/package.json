@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "nodemon index.js",
     "migrate": "prisma migrate dev",
+    "format": "npx prisma format",
     "db:push": "prisma db push",
     "db:generate": "prisma generate",
     "db:studio": "prisma studio"

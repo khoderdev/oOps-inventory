@@ -94,3 +94,4 @@ export const rawQuery = async (query, ...params) => {
 
 // Export the singleton instance
 export default getPrisma;
+// export default getPrisma();

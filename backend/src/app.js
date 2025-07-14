@@ -11,6 +11,8 @@ import stockRoutes from "./routes/stock.js";
 import userRoutes from "./routes/users.js";
 // New comprehensive restaurant management routes
 import budgetRoutes from "./routes/budgets.js";
+import categoriesRoutes from "./routes/categories.js";
+import posRoutes from "./routes/pos.js";
 import purchaseOrderRoutes from "./routes/purchaseOrders.js";
 import recipeRoutes from "./routes/recipes.js";
 import supplierRoutes from "./routes/suppliers.js";
@@ -73,6 +75,8 @@ app.use("/api/purchase-orders", purchaseOrderRoutes);
 app.use("/api/suppliers", supplierRoutes);
 app.use("/api/recipes", recipeRoutes);
 app.use("/api/budgets", budgetRoutes);
+app.use("/api/pos", posRoutes);
+app.use("/api/categories", categoriesRoutes);
 
 // 404 handler - catch all unmatched routes
 app.use((req, res) => {

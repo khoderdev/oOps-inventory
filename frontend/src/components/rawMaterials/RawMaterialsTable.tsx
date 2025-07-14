@@ -1,10 +1,11 @@
 import type { ColumnDef } from "@tanstack/react-table";
 import { clsx } from "clsx";
 import { AlertTriangle, Edit, Trash2 } from "lucide-react";
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { categoriesApi } from "../../data/categories.api";
 import { useStockLevels } from "../../hooks/useStock";
 import { useSuppliers } from "../../hooks/useSuppliers";
-import type { RawMaterial } from "../../types";
+import type { CategoryResponse, RawMaterial } from "../../types";
 import Button from "../ui/Button";
 import Table from "../ui/Table";
 
@@ -19,6 +20,19 @@ type RawMaterialsTableProps = {
 export const RawMaterialsTable = ({ data, loading, userRole, onEdit, onDelete }: RawMaterialsTableProps) => {
   const { data: stockLevels = [] } = useStockLevels();
   const { data: suppliersData } = useSuppliers();
+  const [categories, setCategories] = useState<CategoryResponse[]>([]);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const data = await categoriesApi.getCategories();
+        setCategories(data as CategoryResponse[]);
+      } catch (err) {
+        console.error("Failed to fetch categories", err);
+      }
+    };
+    fetchCategories();
+  }, []);
 
   const getStockStatus = useCallback(
     (materialId: string) => {
@@ -79,7 +93,13 @@ export const RawMaterialsTable = ({ data, loading, userRole, onEdit, onDelete }:
         minSize: 120,
         maxSize: 180,
         enableSorting: true,
-        cell: ({ row }) => <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 capitalize whitespace-nowrap">{row.original.category.replace("_", " ")}</span>,
+        cell: ({ row }) => {
+          const categoryId = row.original.categoryId;
+          const category = categories.find(cat => cat.id === categoryId);
+          const label = category?.name.replace("_", " ").toLowerCase() || "Uncategorized";
+
+          return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 capitalize whitespace-nowrap">{label}</span>;
+        },
         meta: {
           align: "center"
         }

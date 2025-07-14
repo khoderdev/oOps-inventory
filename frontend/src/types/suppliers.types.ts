@@ -1,4 +1,4 @@
-import type { MaterialCategory, MeasurementUnit } from "./rawMaterials.types";
+import type { Category, MeasurementUnit } from "./rawMaterials.types";
 
 export interface Supplier {
   id: number;
@@ -46,7 +46,7 @@ export interface SupplierMaterial {
     id: number;
     name: string;
     unit: MeasurementUnit;
-    category: MaterialCategory;
+    category: Category;
   };
 }
 
@@ -90,7 +90,7 @@ export interface SupplierComparison {
   material: {
     id: number;
     name: string;
-    category: MaterialCategory;
+    category: Category;
     unit: MeasurementUnit;
     currentUnitCost: number;
   };

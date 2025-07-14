@@ -38,11 +38,8 @@ export const formatTime = (date: Date | string | null | undefined): string => {
 
 export const formatCurrency = (value: number | string | null | undefined, decimals: number = 2, currency: string = "$"): string => {
   if (value === null || value === undefined) return `${currency}0.00`;
-
   const numValue = typeof value === "string" ? parseFloat(value) : value;
-
   if (isNaN(numValue)) return `${currency}0.00`;
-
   return `${currency}${numValue.toLocaleString(undefined, {
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals
